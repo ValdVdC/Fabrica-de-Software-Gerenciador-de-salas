@@ -78,16 +78,15 @@ Equipe com papéis fixos:
 
 ---
 
-## 7. Review por IA no Pull Request (CodeRabbit AI e Fallback Obrigatório)
-- Todo PR aberto dispara uma revisão automatizada por IA via **CodeRabbit AI** configurada em `.coderabbit.yaml`.
-- O CodeRabbit verifica conformidade com as regras deste `AGENTS.md` (sem lógica no Angular, sem banco no C, migrations presentes, cobertura de testes, conventional commits, zero emojis).
-- **Inspeção Ativa de Comentários (Inviolável):**
-  - Os agentes locais (`sec-reviewer` e `devops-sync`) são terminantemente proibidos de considerar o PR pronto para aprovação apenas pelo status do GitHub Checks (`gh pr checks`).
-  - É obrigatório inspecionar o conteúdo textual dos comentários via `gh pr view <PR> --comments`.
-- **Protocolo de Fallback para Rate Limit do CodeRabbit:**
-  - Se o CodeRabbit indicar limite de taxa atingido (`Review limit reached`, `Review rate limited` ou `manual review required`), o agente `sec-reviewer` DEVE assumir imediatamente a responsabilidade pela auditoria completa.
-  - O `sec-reviewer` inspecionará o diff linha a linha (`gh pr diff <PR>`), verificará as 10 regras de conformidade e emitirá um parecer detalhado diretamente ao usuário.
-  - O agente deve informar explicitamente ao usuário que o CodeRabbit está em período de *cooldown* de requisições e que a auditoria técnica foi realizada pelo `sec-reviewer` local antes de solicitar o Gate 2.
+## 7. Review por IA, Fallback e Debate Adversarial Pré-PR (Inviolável)
+1. **Debate Adversarial Multi-Agente Pré-PR (.agent/workflows/adversarial-debate.md):**
+   - Antes de submeter qualquer entrega para o Gate 2 humano, é mandatório executar a esteira de debate dialético multi-agente via `invoke_subagent`.
+   - O comitê de análise simultânea opera com personas antagônicas: `advocate-mapper` (defesa e rastreabilidade), `adversary-breaker` (casos de borda, concorrência e falhas de lógica), `adversary-security` (OWASP, isolamento multi-campus e autenticação) e `adversary-compliance` (10 regras invioláveis e diff <= 400).
+   - O código só avança com **CONSENSO UNÂNIME** formalizado pelo `debate-arbiter` / `sec-reviewer`. Havendo veto, a tarefa retorna imediatamente para correção técnica.
+2. **Review por IA no GitHub (CodeRabbit AI):**
+   - Todo PR aberto dispara verificação complementar pelo **CodeRabbit AI** configurada em `.coderabbit.yaml`.
+   - **Inspeção Ativa de Comentários:** Terminantemente proibido considerar o PR pronto apenas pelo status do GitHub Checks (`gh pr checks`). É obrigatório inspecionar os comentários textuais via `gh pr view <PR> --comments`.
+   - **Protocolo de Fallback para Rate Limit:** Se o CodeRabbit atingir o teto de requisições (`Review limit reached` ou `Review rate limited`), o relatório do debate adversarial local supre a auditoria externa, devendo ser comunicado expressamente ao usuário antes do Gate 2.
 
 ---
 
