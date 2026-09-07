@@ -157,6 +157,7 @@ def import_csv(args):
             payload = {
                 "name": f"[{sprint}] {tarefa}",
                 "description": desc_body,
+                "markdown_description": desc_body,
                 "tags": tags
             }
             if mapped_status:
@@ -185,6 +186,7 @@ def create_task(args):
     payload = {
         "name": args.name,
         "description": args.description or "",
+        "markdown_description": args.description or "",
         "tags": tags
     }
     if args.status:
@@ -243,6 +245,7 @@ def sync_spec(args):
     parent_payload = {
         "name": f"[SPEC] {title}",
         "description": main_desc,
+        "markdown_description": main_desc,
         "tags": ["sdd-spec", "epic"]
     }
     
