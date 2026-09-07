@@ -1,0 +1,15 @@
+"""
+Roteador central da API versao 1 (v1).
+"""
+
+from fastapi import APIRouter
+
+from app.api.v1.endpoints import campi, usuarios, salas, turmas, horarios
+
+api_router = APIRouter()
+
+api_router.include_router(campi.router, prefix="/campi", tags=["Campi"])
+api_router.include_router(usuarios.router, prefix="/usuarios", tags=["Usuarios"])
+api_router.include_router(salas.router, prefix="/salas", tags=["Salas"])
+api_router.include_router(turmas.router, prefix="/turmas", tags=["Turmas"])
+api_router.include_router(horarios.router, prefix="/horarios", tags=["Horarios"])
