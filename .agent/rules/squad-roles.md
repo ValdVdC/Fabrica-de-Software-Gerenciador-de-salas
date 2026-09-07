@@ -8,6 +8,7 @@ Este documento define os 8 agentes especializados do ecossistema **SIGAAS**, est
 - **Objetivo**: Conduzir o refinamento de requisitos com o usuário via `/grill-me`, estruturar a especificação técnica (SDD) e registrar o backlog no ClickUp.
 - **Entradas**: Ideias em linguagem natural do usuário, documento de partida (`docs/projeto-gestao-salas-escalas.md`).
 - **Saídas**: Arquivo de especificação em `docs/specs/<sprint>-<nome>.md`, tarefas criadas no ClickUp via `scripts/clickup_sync.py`.
+- **Regra de Fatiamento (Diff Limit)**: Toda spec e decomposição de tarefas deve ser desenhada para que cada PR resultante tenha **no máximo 300 a 400 linhas de código modificado**.
 - **Gatilho de Handoff**: Submeter a Spec para **Aprovação Humana (Gate 1)** antes de disparar os agentes de desenvolvimento.
 
 ---
@@ -53,14 +54,18 @@ Este documento define os 8 agentes especializados do ecossistema **SIGAAS**, est
 ---
 
 ## 7. `sec-reviewer` (Auditor de Segurança e Qualidade)
-- **Objetivo**: Revisar todo o código gerado antes do commit final.
-- **Entradas**: Diffs de código das tarefas concluídas.
+- **Objetivo**: Revisar todo o código gerado e os apontamentos de revisão por IA antes da aprovação final.
+- **Entradas**: Diffs de código das tarefas concluídas e comentários do **CodeRabbit AI** no PR (`gh pr view --comments`).
 - **Saídas**: Relatório de auditoria (OWASP top 10, sanitização de inputs, validação de tokens JWT, controle de acesso por perfil, linters e formatação).
-- **Regra de Ouro**: Bloquear o avanço caso haja credenciais hardcoded, endpoints desprotegidos ou SQL injection.
+- **Regra de Ouro**: Bloquear o avanço caso haja credenciais hardcoded, endpoints desprotegidos, diff excessivo (>400 linhas) ou pendências críticas do CodeRabbit.
 
 ---
 
-## 8. `devops-sync` (Gestor de Release e Sincronização ClickUp)
-- **Objetivo**: Finalizar o ciclo da tarefa, garantir integridade dos containers Docker, gerar commits padronizados e atualizar o ClickUp.
-- **Entradas**: Código revisado e aprovado pelo usuário (Gate 2).
-- **Saídas**: Commits Git no padrão `sprintN: descrição curta`, transição de status no ClickUp via `scripts/clickup_sync.py update-status`.
+## 8. `devops-sync` (Gestor de Release, Branches e Sincronização ClickUp)
+- **Objetivo**: Gerenciar o ciclo Git da tarefa: criação de branch, abertura de Pull Request para `homolog`, verificação do CI e atualização do ClickUp.
+- **Entradas**: Tarefa iniciada a partir de `homolog` e código testado.
+- **Comandos Padrão**:
+  - Início: `git checkout homolog && git pull origin homolog && git checkout -b feature/sprintX-<nome>`
+  - Abertura de PR: `gh pr create --base homolog --title "sprintX: <descrição>" --body "<template preenchido>"`
+  - Pós-merge: `python scripts/clickup_sync.py update-status --task-id <ID> --status "Concluído"`
+- **Regra Inviolável**: NUNCA commitar ou dar push direto para `main` ou `homolog`. Todo código entra exclusivamente via Pull Request.

@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "pt-BR"
+early_access: false
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+      - "homolog"
+
+  # Diretrizes customizadas para o CodeRabbit validar contra o AGENTS.md
+  instructions: |
+    Você é o revisor de código por IA para o projeto acadêmico SIGAAS (Sistema de Gestão de Salas e Escalas com IA).
+    Siga rigorosamente as seguintes diretrizes invioláveis definidas em AGENTS.md:
+
+    1. **Frontend (Angular)**: NENHUMA regra de negócio ou cálculo pesado deve existir no código Angular. Ele deve ser estritamente uma SPA de apresentação consumindo a API FastAPI.
+    2. **Motor de Alocação (C + OpenMP)**: O código C em `backend/motor_alocacao` deve ser completamente livre de conexões com banco de dados e livre de dependências externas. Deve focar na busca paralela com OpenMP e interface ctypes.
+    3. **Banco de Dados (PostgreSQL & Alembic)**: Toda alteração em modelos de banco de dados (`backend/app/models`) DEVE ser acompanhada de uma migration correspondente do Alembic.
+    4. **IA Preditiva de Falta**: O módulo de IA nunca pode atualizar ou gravar diretamente na tabela `Horario`. Ele deve apenas sugerir e gravar em `SugestaoRemanejamento` com status `pendente`.
+    5. **Tamanho do PR**: Verifique se o PR excede ~400 linhas de código modificado. Se exceder, sugira educadamente que o PR seja fatiado em subtarefas menores.
+    6. **Testes Automatizados (TDD)**: Toda nova funcionalidade deve vir acompanhada de testes unitários ou de integração correspondentes (Pytest).
+    7. **Estilo e Segurança**: Sinalize credenciais expostas, falhas de autorização de rotas (FastAPI) e ausência de tipagem (Pydantic / TypeScript).
+
+chat:
+  auto_reply: true

@@ -60,3 +60,23 @@ Equipe com papéis fixos:
   - Implementação ou alteração do motor de alocação em C / OpenMP.
   - Endpoints que alterem a tabela `Horario` ou aprovem `SugestaoRemanejamento`.
   - Commits e merges finais de Sprint.
+
+---
+
+## 6. Política de Branches, PRs e Limite de Diff (Inviolável)
+1. **Zero Push Direto**: Ninguém (humano ou agente) faz `git push` direto para `main` ou `homolog`. Ambas as branches são protegidas.
+2. **Fluxo de Branches**:
+   - Todo trabalho começa criando uma branch a partir de `homolog`: `git checkout -b feature/sprintX-<nome>`.
+   - Ao concluir a tarefa, o agente `devops-sync` abre o PR para `homolog`: `gh pr create --base homolog`.
+   - Após aprovação humana e merge, o GitHub exclui a branch de feature automaticamente (*auto-delete*).
+   - Ao final da Sprint, um PR de `homolog` para `main` consolida a Release com sua respectiva Tag (`v*.*.*`).
+3. **Limite de Diff por PR**:
+   - Cada PR deve conter no **máximo 300 a 400 linhas de código modificado** (excluindo migrações de banco ou lockfiles).
+   - Se uma feature exigir mais código, o `planner-sdd` deve fatiá-la em subtarefas com PRs incrementais e testáveis.
+
+---
+
+## 7. Review por IA no Pull Request (CodeRabbit AI)
+- Todo PR aberto dispara uma revisão automatizada por IA via **CodeRabbit AI** configurada em `.coderabbit.yaml`.
+- O CodeRabbit verifica conformidade com as regras deste `AGENTS.md` (sem lógica no Angular, sem banco no C, migrations presentes, cobertura de testes).
+- Os agentes locais (`sec-reviewer` e `devops-sync`) devem inspecionar os comentários do CodeRabbit (`gh pr view --comments`) antes de solicitar a aprovação humana final (Gate 2).
