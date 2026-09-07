@@ -44,7 +44,7 @@ def is_code_file(path_str: str) -> bool:
     return ext in CODE_EXTENSIONS
 
 
-def get_diff_stats(base_ref: str = "origin/homolog") -> list[tuple[int, int, str]]:
+def get_diff_stats(base_ref: str = "origin/main") -> list[tuple[int, int, str]]:
     """
     Executa git diff --numstat contra a branch base.
     Retorna lista de (adicoes, remocoes, caminho).

@@ -19,7 +19,7 @@ flowchart TD
     end
     
     UserApproval1 -- Não --> Planner
-    UserApproval1 -- Sim --> DevOpsBranch[devops-sync: Cria branch feat/... ou fix/... a partir de homolog]
+    UserApproval1 -- Sim --> DevOpsBranch[devops-sync: Cria branch feat/... ou fix/... a partir de main]
     DevOpsBranch --> Tester[tdd-tester]
     
     subgraph TDD_Cycle [Ciclo TDD na Feature Branch]
@@ -29,7 +29,7 @@ flowchart TD
         Codebase -->|8. Executa Testes e Refatora| TestSuite
     end
     
-    Codebase --> OpenPR[devops-sync: Abre PR via gh pr create --base homolog]
+    Codebase --> OpenPR[devops-sync: Abre PR via gh pr create --base main]
     OpenPR --> AIRabbit[CodeRabbit AI: Review automatizado no PR]
     AIRabbit --> SecReview[sec-reviewer: Inspeciona comentários do CodeRabbit e AGENTS.md]
     SecReview --> AuditReport[Relatório de Review Consolidado]
@@ -39,7 +39,7 @@ flowchart TD
     end
     
     UserApproval2 -- Rejeitado/Ajustes --> Dev
-    UserApproval2 -- Aprovado (Merge) --> AutoDelete[GitHub: Merge em homolog + Auto-Delete da branch]
+    UserApproval2 -- Aprovado (Merge) --> AutoDelete[GitHub: Merge em main + Auto-Delete da branch]
     
     AutoDelete --> FinalSync[devops-sync: Atualiza Status para Concluído no ClickUp]
 ```
@@ -59,10 +59,10 @@ flowchart TD
 5. **Gate 1**: O usuário aprova a spec.
 
 ### Etapa 2: Criação da Branch e Red Phase do TDD (`devops-sync` e `tdd-tester`)
-1. O agente cria a branch semântica a partir de `homolog`:
+1. O agente cria a branch semântica a partir de `main`:
    ```bash
-   git checkout homolog
-   git pull origin homolog
+   git checkout main
+   git pull origin main
    git checkout -b feat/<nome-da-tarefa>
    ```
 2. Baseado nos critérios de aceite em Gherkin da Spec, o agente `tdd-tester` cria os testes automatizados correspondentes.
@@ -87,9 +87,9 @@ flowchart TD
    git commit -m "feat(<escopo>): breve descrição da funcionalidade"
    git push origin feat/<nome-da-tarefa>
    ```
-2. O agente abre o Pull Request mirando `homolog`:
+2. O agente abre o Pull Request mirando `main`:
    ```bash
-   gh pr create --base homolog --title "feat(<escopo>): breve descrição" --body-file .github/pull_request_template.md
+   gh pr create --base main --title "feat(<escopo>): breve descrição" --body-file .github/pull_request_template.md
    ```
 3. O **CodeRabbit AI** analisa o PR no GitHub e deixa comentários linha a linha.
 4. O agente `sec-reviewer` inspeciona os comentários do CodeRabbit via `gh pr view --comments` e sana apontamentos se necessário.

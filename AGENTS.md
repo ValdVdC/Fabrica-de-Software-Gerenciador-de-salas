@@ -65,12 +65,13 @@ Equipe com papéis fixos:
 ---
 
 ## 6. Política de Branches, PRs e Limite de Diff (Inviolável)
-1. **Zero Push Direto**: Ninguém (humano ou agente) faz `git push` direto para `main` ou `homolog`. Ambas as branches são protegidas.
-2. **Fluxo de Branches**:
-   - Todo trabalho começa criando uma branch semântica a partir de `homolog`: `git checkout -b feat/<nome>` (ou `fix/<nome>`, `docs/<nome>`, `chore/<nome>`, `perf/<nome>`).
-   - Ao concluir a tarefa, o agente `devops-sync` abre o PR para `homolog`: `gh pr create --base homolog`.
+1. **Zero Push Direto**: Ninguém (humano ou agente) faz `git push` direto para `main`. A branch `main` é protegida e representa o estado contínuo e estável do produto.
+2. **Fluxo de Branches (Trunk-Based Development)**:
+   - Todo trabalho começa criando uma branch semântica a partir de `main`: `git checkout -b feat/<nome>` (ou `fix/<nome>`, `docs/<nome>`, `chore/<nome>`, `perf/<nome>`, `test/<nome>`).
+   - Ao concluir a tarefa, o agente `devops-sync` abre o PR mirando a `main`: `gh pr create --base main`.
+   - O PR passa obrigatoriamente por todos os checks de CI (Pytest >=85%, Motor C, Diff <= 400 linhas) e CodeRabbit AI.
    - Após aprovação humana e merge, o GitHub exclui a branch efêmera automaticamente (*auto-delete*).
-   - Ao final da Sprint, um PR de `homolog` para `main` consolida a Release com sua respectiva Tag (`v*.*.*-sprint*`).
+   - Ao final da Sprint ou marco estável, a Release é publicada via Git Tag na `main` (`v*.*.*-sprint*` ou `v*.*.*`), acionando o workflow de deploy/release.
 3. **Limite de Diff por PR**:
    - Cada PR deve conter no **máximo 300 a 400 linhas de código modificado** (excluindo migrações de banco ou lockfiles).
    - Se uma feature exigir mais código, o `planner-sdd` deve fatiá-la em subtarefas com PRs incrementais e testáveis.
