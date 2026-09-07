@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+.git
+.gitignore
+.agent
+dist
+**/dist
+.angular
+**/.angular
+.pytest_cache
+**/.pytest_cache
+__pycache__
+**/__pycache__
+.venv
+*.log
+docs/
+*.md
