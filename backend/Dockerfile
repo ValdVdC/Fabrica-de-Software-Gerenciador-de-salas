@@ -4,8 +4,7 @@ WORKDIR /app
 
 # Instala dependencias de compilacao C e OpenMP
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    make \
+    build-essential \
     libomp-dev \
     && rm -rf /var/lib/apt/lists/*
 
