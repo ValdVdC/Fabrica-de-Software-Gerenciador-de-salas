@@ -132,6 +132,11 @@ jobs:
           cd frontend
           npm ci
 
+      - name: Verificar Formatacao de Codigo (Prettier Check)
+        run: |
+          cd frontend
+          npm run format:check
+
       - name: Executar Testes Unitarios do Frontend (Karma + ChromeHeadless)
         run: |
           cd frontend

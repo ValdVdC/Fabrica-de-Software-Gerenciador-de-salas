@@ -15,12 +15,32 @@ export const routes: Routes = [
     component: ShellComponent,
     canActivate: [authGuard],
     children: [
-      { path: 'admin', component: AdminComponent, canActivate: [roleGuard], data: { role: 'admin' } },
-      { path: 'secretaria', component: SecretariaComponent, canActivate: [roleGuard], data: { role: 'secretaria' } },
-      { path: 'professor', component: ProfessorComponent, canActivate: [roleGuard], data: { role: 'professor' } },
-      { path: 'aluno', component: AlunoComponent, canActivate: [roleGuard], data: { role: 'aluno' } },
-      { path: '', redirectTo: 'admin', pathMatch: 'full' }
-    ]
+      {
+        path: 'admin',
+        component: AdminComponent,
+        canActivate: [roleGuard],
+        data: { role: 'admin' },
+      },
+      {
+        path: 'secretaria',
+        component: SecretariaComponent,
+        canActivate: [roleGuard],
+        data: { role: 'secretaria' },
+      },
+      {
+        path: 'professor',
+        component: ProfessorComponent,
+        canActivate: [roleGuard],
+        data: { role: 'professor' },
+      },
+      {
+        path: 'aluno',
+        component: AlunoComponent,
+        canActivate: [roleGuard],
+        data: { role: 'aluno' },
+      },
+      { path: '', redirectTo: 'admin', pathMatch: 'full' },
+    ],
   },
-  { path: '**', redirectTo: 'login' }
+  { path: '**', redirectTo: 'login' },
 ];
