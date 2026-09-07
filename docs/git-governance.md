@@ -6,39 +6,32 @@ Este documento estabelece o modelo de versionamento, fluxo de branches, polític
 
 ## 1. Modelo de Branches
 
-Adotamos um modelo baseado em **GitFlow Simplificado (Trunk-based adaptado para Sprints acadêmicas)**:
+Adotamos o modelo **Trunk-Based Development puro com Releases orientadas a Git Tags**:
 
 ```mermaid
 gitGraph
     commit id: "chore: setup inicial"
-    branch homolog
-    checkout homolog
     commit id: "chore: infraestrutura"
     branch feat/schema-postgres
     checkout feat/schema-postgres
     commit id: "test(db): testes alembic"
     commit id: "feat(db): schema postgres"
-    checkout homolog
-    merge feat/schema-postgres id: "PR: feat -> homolog"
     checkout main
-    merge homolog id: "PR: homolog -> main"
+    merge feat/schema-postgres id: "PR: feat -> main"
     commit id: "tag: v0.2.0-sprint2"
 ```
 
-### 1.1 Branches Principais (Permanentes e Protegidas)
-- **`main` (Produção / Release Estável):**
-  - Contém o código aprovado e estável de cada Sprint.
-  - **Nunca recebe commits diretos.** Apenas via Pull Request aprovado vindo de `homolog`.
-  - Cada marco de Sprint gera uma Tag de release (`v0.1.0`, `v0.2.0-sprint2`, etc.).
-- **`homolog` (Ambiente de Integração Contínua):**
-  - Onde as features e correções são integradas e testadas pelo CI antes de ir para a `main`.
-  - Protegida contra push direto. Atualizada via PR das branches de features.
+### 1.1 Branch Principal (Única, Permanente e Protegida)
+- **`main` (Trunk / Produção Estável):**
+  - Contém o código integrado e sempre estável da aplicação.
+  - **Nunca recebe commits diretos.** Todo código entra exclusivamente via Pull Request aprovado e com CI 100% verde.
+  - Cada marco ou fechamento de Sprint gera uma Tag de release (`v0.1.0-sprint1`, `v0.2.0-sprint2`, `v1.0.0`, etc.).
 
 ### 1.2 Branches Temporárias (Efêmeras / Auto-delete)
 - **`feat/<nome>`** (ex: `feat/schema-postgres`, `feat/login-coordenador`):
   - Para implementação de novas funcionalidades derivadas de Specs SDD.
 - **`fix/<nome>`** (ex: `fix/cors-origins`, `fix/alocacao-capacidade`):
-  - Para correções de bugs identificados nos testes ou em homologação.
+  - Para correções de bugs identificados nos testes ou em produção.
 - **`docs/<nome>`** (ex: `docs/spec-sprint2`, `docs/atualizar-arquitetura`):
   - Para criação ou alteração de especificações, diagramas e documentação.
 - **`chore/<nome>`** (ex: `chore/atualizar-dependencias`, `chore/config-ci`):
@@ -53,14 +46,15 @@ gitGraph
 
 ## 2. Políticas de Proteção de Branch (Branch Policies)
 
-Para as branches `main` e `homolog`:
+Para a branch `main`:
 1. **Require a pull request before merging:**
-   - Bloqueia `git push` direto para `main` e `homolog`.
+   - Bloqueia `git push` direto para `main`.
    - Exige abertura formal de PR.
 2. **Require approvals (Mínimo 1 revisão):**
-   - Garante que nenhuma mudança entre sem revisão humana ou do responsável técnico.
+   - Garante que nenhuma mudança entre sem revisão do responsável técnico ou autorização de bypass administrativa.
 3. **Require status checks to pass before merging:**
    - O PR só pode ser mesclado se o GitHub Actions CI estiver 100% verde:
+     - `Auditoria de Tamanho de PR (Max 400 linhas de codigo)`
      - `Backend (FastAPI, Ruff, Bandit & Pytest)`
      - `Motor de Alocacao (C + OpenMP)`
      - `Validacao de Scripts e Ferramentas`
@@ -77,8 +71,8 @@ Para as branches `main` e `homolog`:
 
 ### 3.1 Pipeline de CI (`.github/workflows/ci.yml`)
 - Disparada em:
-  - Qualquer `push` para `main` ou `homolog`.
-  - Qualquer `pull_request` aberto contra `main` ou `homolog`.
+  - Qualquer `push` para `main`.
+  - Qualquer `pull_request` aberto contra `main`.
 - Etapas:
   1. Instalação do Python 3.12 e dependências.
   2. Linting estático com `Ruff`.

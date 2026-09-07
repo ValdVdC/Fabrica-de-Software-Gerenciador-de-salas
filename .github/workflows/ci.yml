@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - homolog
     paths-ignore:
       - "docs/**"
       - "*.md"
@@ -12,7 +11,6 @@ on:
   pull_request:
     branches:
       - main
-      - homolog
     paths-ignore:
       - "docs/**"
       - "*.md"

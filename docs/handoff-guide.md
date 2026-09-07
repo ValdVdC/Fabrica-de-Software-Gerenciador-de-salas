@@ -37,7 +37,7 @@ Este documento e o guia pratico para abertura de novas sessoes com o Antigravity
 
 ### Cenario D: Correcao de Bug ou Ajuste Rapido (Hotfix)
 > *"A rota de login esta retornando erro 500 quando o email nao existe no banco (deveria ser 401). Vamos criar um teste que reproduza esse cenario e corrigir esse bug?"*
-- **Comportamento do Agente:** Cria branch `fix/...`, cria o teste que reproduz a falha, corrige o codigo da rota, valida a suite de testes e abre o PR para `homolog`.
+- **Comportamento do Agente:** Cria branch `fix/...`, cria o teste que reproduz a falha, corrige o codigo da rota, valida a suite de testes e abre o PR para `main`.
 
 ---
 
@@ -63,6 +63,6 @@ Este documento e o guia pratico para abertura de novas sessoes com o Antigravity
 
 ```
 [Mensagem do Usuario] -> [Spec / Alinhamento] -> [Branch feat/...] -> [Testes RED] 
-       -> [Codigo GREEN] -> [PR para homolog] -> [CodeRabbit AI + CI 85%] 
+       -> [Codigo GREEN] -> [PR para main] -> [CodeRabbit AI + CI 85%] 
        -> [Aprovacao Humana] -> [Merge + Auto-Delete] -> [ClickUp Concluido]
 ```
