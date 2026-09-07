@@ -70,7 +70,7 @@ def get_diff_stats(base_ref: str = "origin/main") -> list[tuple[int, int, str]]:
 
 
 def main():
-    base_ref = sys.argv[1] if len(sys.argv) > 1 else "origin/homolog"
+    base_ref = sys.argv[1] if len(sys.argv) > 1 else "origin/main"
     max_lines = int(sys.argv[2]) if len(sys.argv) > 2 else 400
 
     print("=" * 60)
