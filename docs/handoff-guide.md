@@ -31,7 +31,7 @@ Este documento e o guia pratico para abertura de novas sessoes com o Antigravity
 
 ### Cenario C: Feature com Requisitos Ja Claros (Sem Necessidade de Perguntas)
 > *"Quero criar um endpoint simples GET /campi/{id}/salas que retorne apenas as salas ativas de um campus especifico. Pode criar os testes que falham e implementar direto via TDD."*
-- **Comportamento do Agente:** Pula o `/grill-me`, cria a branch `feature/...`, implementa o teste Pytest (RED), escreve a rota (GREEN) e abre o PR.
+- **Comportamento do Agente:** Pula o `/grill-me`, cria a branch `feat/...`, implementa o teste Pytest (RED), escreve a rota (GREEN) e abre o PR.
 
 ---
 
@@ -62,7 +62,7 @@ Este documento e o guia pratico para abertura de novas sessoes com o Antigravity
 ## 3. Fluxo de Execucao Padrao
 
 ```
-[Mensagem do Usuario] -> [Spec / Alinhamento] -> [Branch feature/...] -> [Testes RED] 
+[Mensagem do Usuario] -> [Spec / Alinhamento] -> [Branch feat/...] -> [Testes RED] 
        -> [Codigo GREEN] -> [PR para homolog] -> [CodeRabbit AI + CI 85%] 
        -> [Aprovacao Humana] -> [Merge + Auto-Delete] -> [ClickUp Concluido]
 ```
