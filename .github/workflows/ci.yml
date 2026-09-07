@@ -23,6 +23,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pr-size-ci:
+    name: Auditoria de Tamanho de PR (Max 400 linhas de codigo)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do codigo completo (fetch-depth=0 para diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Auditar volume de codigo de producao no PR
+        run: |
+          python scripts/check_pr_size.py origin/${{ github.base_ref }} 400
+
   backend-ci:
     name: Backend (FastAPI, Ruff, Bandit & Pytest)
     runs-on: ubuntu-latest
@@ -92,3 +112,4 @@ jobs:
       - name: Compilar sintaxe dos scripts
         run: |
           python -m py_compile scripts/clickup_sync.py
+          python -m py_compile scripts/check_pr_size.py
