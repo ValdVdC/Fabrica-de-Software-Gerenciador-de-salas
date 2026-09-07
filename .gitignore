@@ -53,3 +53,33 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Python / FastAPI
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+
+*.pkl
+*.joblib
+/ia_previsao/dados/*
+!/ia_previsao/dados/.gitkeep
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+
+# Antigravity (estado local, não versionar)
+.agent/cache/
