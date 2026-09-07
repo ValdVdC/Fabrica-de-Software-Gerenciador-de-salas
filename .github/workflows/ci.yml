@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout do codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Python 3.12
         uses: actions/setup-python@v5
@@ -49,7 +49,7 @@ jobs:
 
     steps:
       - name: Checkout do codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Instalar dependencias de compilacao C e OpenMP
         run: |
@@ -69,7 +69,7 @@ jobs:
 
     steps:
       - name: Checkout do codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Python 3.12
         uses: actions/setup-python@v5
