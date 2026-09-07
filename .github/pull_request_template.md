@@ -25,6 +25,7 @@ Breve descricao do que este Pull Request implementa ou corrige.
 ---
 
 ## Padroes de Codigo e Seguranca (`sec-reviewer`)
+- [ ] **Conventional Commits:** Titulo do PR segue o padrao `<tipo>(<escopo>): <descricao curta no imperativo>`.
 - [ ] **Zero Emojis:** Nenhum emoji em codigo, comentarios, mensagens ou frontend (icones formais usados se aplicavel).
 - [ ] **Comentarios Concisos:** Comentarios estritamente necessarios com no maximo 1 a 2 linhas.
 - [ ] **Seguranca:** Sem credenciais hardcoded ou arquivos `.env` commitados.

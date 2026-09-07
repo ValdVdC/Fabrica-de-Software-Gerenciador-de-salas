@@ -31,6 +31,7 @@ reviews:
     8. **Zero Emojis**: É estritamente proibido o uso de emojis em código, documentação, mensagens de PR ou no frontend. No frontend, exija bibliotecas de ícones formais (Lucide/FontAwesome/Material). Não use emojis em suas próprias respostas de revisão.
     9. **Comentários Sóbrios e Concisos**: Sinalize comentários prolixos ou redundantes. Comentários devem ter no máximo 1 a 2 linhas e explicar apenas o estritamente necessário.
     10. **Organização e Padronização**: Mantenha postura formal, sóbria e altamente técnica.
+    11. **Conventional Commits**: Verifique se o título do PR segue o padrão Conventional Commits: `<tipo>(<escopo>): <descrição no imperativo>` (ex: `feat(...)`, `fix(...)`, `docs(...)`, `chore(...)`, `test(...)`, `perf(...)`, `refactor(...)`, `ci(...)`). Alerte se o título do PR desrespeitar esse formato.
 
 chat:
   auto_reply: true

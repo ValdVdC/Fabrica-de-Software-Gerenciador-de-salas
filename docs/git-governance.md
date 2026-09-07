@@ -10,18 +10,18 @@ Adotamos um modelo baseado em **GitFlow Simplificado (Trunk-based adaptado para 
 
 ```mermaid
 gitGraph
-    commit id: "setup"
+    commit id: "chore: setup inicial"
     branch homolog
     checkout homolog
-    commit id: "sprint1: setup inicial"
-    branch feature/sprint2-schema
-    checkout feature/sprint2-schema
-    commit id: "sprint2: testes alembic"
-    commit id: "sprint2: schema postgres"
+    commit id: "chore: infraestrutura"
+    branch feat/schema-postgres
+    checkout feat/schema-postgres
+    commit id: "test(db): testes alembic"
+    commit id: "feat(db): schema postgres"
     checkout homolog
-    merge feature/sprint2-schema id: "PR: feature -> homolog"
+    merge feat/schema-postgres id: "PR: feat -> homolog"
     checkout main
-    merge homolog id: "PR: homolog -> main (Release)"
+    merge homolog id: "PR: homolog -> main"
     commit id: "tag: v0.2.0-sprint2"
 ```
 
@@ -35,12 +35,18 @@ gitGraph
   - Protegida contra push direto. Atualizada via PR das branches de features.
 
 ### 1.2 Branches Temporárias (Efêmeras / Auto-delete)
-- **`feature/<sprint>-<nome>`** (ex: `feature/sprint2-schema-postgres`):
-  - Criadas a partir de `homolog` para desenvolver uma Spec.
-- **`fix/<nome>`** (ex: `fix/cors-origins`):
-  - Para correções de bugs identificados nos testes.
-- **`chore/<nome>`** (ex: `chore/atualizar-dependencias`):
-  - Para melhorias de tooling, documentação ou scripts.
+- **`feat/<nome>`** (ex: `feat/schema-postgres`, `feat/login-coordenador`):
+  - Para implementação de novas funcionalidades derivadas de Specs SDD.
+- **`fix/<nome>`** (ex: `fix/cors-origins`, `fix/alocacao-capacidade`):
+  - Para correções de bugs identificados nos testes ou em homologação.
+- **`docs/<nome>`** (ex: `docs/spec-sprint2`, `docs/atualizar-arquitetura`):
+  - Para criação ou alteração de especificações, diagramas e documentação.
+- **`chore/<nome>`** (ex: `chore/atualizar-dependencias`, `chore/config-ci`):
+  - Para melhorias de tooling, scripts, CI/CD ou dependências.
+- **`perf/<nome>`** (ex: `perf/paralelismo-openmp`):
+  - Para otimizações de performance e paralelismo no motor em C.
+- **`test/<nome>`** (ex: `test/cobertura-alocacao`):
+  - Para adição ou ajuste exclusivo de testes automatizados.
 - **Auto-delete:** Assim que o PR for aprovado e mesclado, a branch efêmera é automaticamente excluída pelo GitHub.
 
 ---
@@ -87,12 +93,28 @@ Para as branches `main` e `homolog`:
 ---
 
 ## 4. Convenção de Commits e Releases
-
-- Commits: `sprintN: descrição curta`
+ 
+- **Padrão de Commits (Conventional Commits):**
+  - Formato: `<tipo>(<escopo>): <descrição curta no imperativo>`
+  - Tipos válidos:
+    - `feat`: Nova funcionalidade no sistema.
+    - `fix`: Correção de defeito/bug.
+    - `docs`: Documentação e especificações SDD.
+    - `test`: Adição ou refatoração de testes.
+    - `perf`: Otimizações de desempenho (ex.: OpenMP no motor C).
+    - `refactor`: Refatoração interna sem alteração de comportamento.
+    - `chore`: Tarefas de build, dependências ou governança.
+    - `ci`: Alterações no pipeline de CI/CD e automações GitHub.
   - Exemplos:
-    - `sprint2: migration inicial alembic com schema de salas`
-    - `sprint3: prototipo navegavel angular com telas de login`
-    - `sprint5: paralelismo openmp no motor de alocacao em c`
-- Tags de Release:
-  - `git tag -a v0.1.0 -m "Release Sprint 1: Setup e Infraestrutura Inicial"`
-  - `git push origin v0.1.0`
+    - `feat(schema): adicionar tabelas de salas, blocos e horarios`
+    - `feat(auth): implementar geracao e validacao de token jwt`
+    - `test(engine): adicionar testes de integracao ctypes para motor c`
+    - `perf(engine): paralelizar alocacao de horarios com openmp`
+    - `fix(auth): tratar erro 401 para credenciais invalidas`
+    - `docs(specs): adicionar especificacao sdd da sprint 2`
+    - `ci(pr-size): validar limite de 400 linhas de codigo no pr`
+- **Rastreamento de Sprints:**
+  - O controle por Sprint é mantido exclusivamente no ClickUp, GitHub Milestones e tags de release. Commits e branches permanecem desacoplados e semânticos.
+- **Tags de Release (Consolidação na `main` ao final da Sprint):**
+  - `git tag -a v0.2.0-sprint2 -m "Release Sprint 2: Schema PostgreSQL e Casos de Uso"`
+  - `git push origin v0.2.0-sprint2`
