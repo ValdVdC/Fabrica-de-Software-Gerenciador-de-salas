@@ -5,6 +5,7 @@ Este arquivo é a fonte de verdade normativa para qualquer agente autônomo ou a
 O documento de requisitos e arquitetura oficial está em `docs/projeto-gestao-salas-escalas.md`.
 O catálogo e regras do Squad de agentes estão em `.agent/rules/squad-roles.md`.
 O fluxo SDD + TDD está documentado em `.agent/workflows/sdd-cycle.md`.
+O guia de prompts e handoff entre sessões está em `docs/handoff-guide.md`.
 
 ---
 
