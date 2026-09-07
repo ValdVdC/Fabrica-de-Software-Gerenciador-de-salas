@@ -5,6 +5,7 @@ Ponto de entrada do FastAPI para o SIGAAS.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
+from app.api.v1.api import api_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -16,11 +17,12 @@ app = FastAPI(
 # Configuração de CORS para consumo pelo Angular SPA
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:4200", "http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 @app.get("/health", tags=["Health"])
@@ -38,3 +40,7 @@ def root_api():
         "message": "Bem-vindo à API do SIGAAS - Sistema de Gestão de Salas e Escalas com IA",
         "docs": f"{settings.API_V1_STR}/docs"
     }
+
+
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
