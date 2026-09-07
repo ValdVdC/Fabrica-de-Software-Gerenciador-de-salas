@@ -1,2 +1,2 @@
-﻿include:
+include:
   - docker/compose/docker-compose.local.yml
