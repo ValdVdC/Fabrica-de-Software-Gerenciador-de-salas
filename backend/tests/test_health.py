@@ -21,3 +21,16 @@ def test_root_api():
     assert response.status_code == 200
     data = response.json()
     assert "docs" in data
+
+
+def test_docs_redirect():
+    response = client.get("/docs", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/api/v1/docs"
+
+
+def test_root_redirect():
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/api/v1"
+

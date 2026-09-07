@@ -1,4 +1,4 @@
-name: CI - Integracao Continua
+name: CI - Esteira de Integracao Continua Enterprise
 
 on:
   push:
@@ -21,13 +21,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pr-size-ci:
-    name: Auditoria de Tamanho de PR (Max 400 linhas de codigo)
-    if: github.event_name == 'pull_request'
+  # ============================================================================
+  # ESTAGIO 1: GOVERNANCA, LINT E FAST-FAIL (~15s)
+  # Se houver erro de formatacao, tamanho ou lint, aborta antes de rodar testes
+  # ============================================================================
+  stage-governance:
+    name: 1. Governanca, Lint & Fast-Fail
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout do codigo completo (fetch-depth=0 para diff)
+      - name: Checkout do codigo completo (fetch-depth=0)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -37,12 +40,44 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Auditar volume de codigo de producao no PR
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Validar Tamanho do PR (Politica <= 400 linhas de codigo)
+        if: github.event_name == 'pull_request'
         run: |
           python scripts/check_pr_size.py origin/${{ github.base_ref }} 400
 
-  backend-ci:
-    name: Backend (FastAPI, Ruff, Bandit & Pytest)
+      - name: Validar Sintaxe dos Scripts
+        run: |
+          python -m py_compile scripts/clickup_sync.py scripts/check_pr_size.py
+
+      - name: Analise Estatica e Linter do Backend (Ruff)
+        run: |
+          pip install ruff
+          ruff check backend/ scripts/
+
+      - name: Auditoria de Seguranca do Backend (Bandit)
+        run: |
+          pip install bandit
+          bandit -r backend/app -ll -ii
+
+      - name: Validar Formatacao do Frontend (Prettier Check)
+        run: |
+          cd frontend
+          npm ci
+          npm run format:check
+
+  # ============================================================================
+  # ESTAGIO 2: TESTES AUTOMATIZADOS EM PARALELO (Depende do Estagio 1)
+  # ============================================================================
+  test-backend:
+    name: 2.1 Backend (Pytest com Cobertura >= 85%)
+    needs: [stage-governance]
     runs-on: ubuntu-latest
 
     steps:
@@ -61,28 +96,21 @@ jobs:
           pip install -r backend/requirements.txt
           pip install -r scripts/requirements.txt
 
-      - name: Analise estatica e Linting (Ruff)
-        run: |
-          ruff check backend/ scripts/ || true
-
-      - name: Auditoria de Seguranca (Bandit)
-        run: |
-          bandit -r backend/app -ll -ii || true
-
-      - name: Executar Testes Automatizados com Cobertura Minima (Pytest + Cov >= 85%)
+      - name: Executar Testes com Cobertura Minima (Pytest + Cov >= 85%)
         run: |
           cd backend
           pytest tests -v --cov=app --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=85 --junitxml=backend-test-results.xml
 
-  motor-c-ci:
-    name: Motor de Alocacao (C + OpenMP)
+  test-motor-c:
+    name: 2.2 Motor C (Compilacao OpenMP)
+    needs: [stage-governance]
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout do codigo
         uses: actions/checkout@v4
 
-      - name: Instalar dependencias de compilacao C e OpenMP
+      - name: Instalar compilador e dependencias OpenMP
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libomp-dev
@@ -94,26 +122,9 @@ jobs:
           make
           ls -la motor_alocacao.so
 
-  scripts-ci:
-    name: Validacao de Scripts e Ferramentas
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout do codigo
-        uses: actions/checkout@v4
-
-      - name: Configurar Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Compilar sintaxe dos scripts
-        run: |
-          python -m py_compile scripts/clickup_sync.py
-          python -m py_compile scripts/check_pr_size.py
-
-  frontend-ci:
-    name: Frontend (Angular Tests, Build & Typecheck)
+  test-frontend:
+    name: 2.3 Frontend (Karma Unit Tests & Build)
+    needs: [stage-governance]
     runs-on: ubuntu-latest
 
     steps:
@@ -132,19 +143,67 @@ jobs:
           cd frontend
           npm ci
 
-      - name: Verificar Formatacao de Codigo (Prettier Check)
-        run: |
-          cd frontend
-          npm run format:check
-
-      - name: Executar Testes Unitarios do Frontend (Karma + ChromeHeadless)
+      - name: Executar Testes Unitarios (Karma + ChromeHeadless)
         run: |
           cd frontend
           npx ng test --no-watch --browsers=ChromeHeadless
 
-      - name: Compilar Frontend Angular (Build)
+      - name: Compilar Frontend Angular para Producao
         run: |
           cd frontend
-          npm run build
+          npm run build -- --configuration production
 
+  # ============================================================================
+  # ESTAGIO 3: INTEGRACAO & DOCKER SMOKE TEST (Depende do Estagio 2)
+  # ============================================================================
+  docker-smoke-test:
+    name: 3. Docker Smoke Test (Boot & Healthcheck)
+    needs: [test-backend, test-motor-c, test-frontend]
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@v4
+
+      - name: Validar Sintaxe do Docker Compose
+        run: |
+          docker compose config
+
+      - name: Compilar Imagens Docker
+        run: |
+          docker compose build
+
+      - name: Inicializar Ecossistema Full-Stack
+        run: |
+          docker compose up -d
+
+      - name: Aguardar Inicializacao e Healthcheck
+        run: |
+          echo "Aguardando containers ficarem prontos..."
+          for i in {1..30}; do
+            if docker compose ps | grep -q "healthy"; then
+              echo "PostgreSQL esta saudavel!"
+              break
+            fi
+            sleep 2
+          done
+          sleep 5
+          docker compose ps
+
+      - name: Executar Smoke Test nos Endpoints HTTP
+        run: |
+          echo "Testando Health Check da API..."
+          curl -f -s http://localhost:8000/health || exit 1
+          echo "Testando Redirecionamento da Documentacao..."
+          curl -f -s -L http://localhost:8000/docs | grep -i "swagger" || true
+          echo "Testando Status do Motor C OpenMP..."
+          curl -f -s http://localhost:8000/api/v1/motor/status | grep -i "online" || exit 1
+          echo "Testando Frontend SPA Nginx..."
+          curl -f -s http://localhost:4200 | grep -i "<html" || exit 1
+          echo "Testando Proxy Reverso Nginx -> Backend..."
+          curl -f -s http://localhost:4200/api/v1/motor/status | grep -i "online" || exit 1
+
+      - name: Desmontar Ecossistema
+        if: always()
+        run: |
+          docker compose down -v
