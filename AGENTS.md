@@ -49,7 +49,7 @@ Equipe com papéis fixos:
 3. O job de IA só gera `SugestaoRemanejamento` — a troca real de sala só ocorre com aprovação humana via endpoint `PATCH /sugestoes/{id}`.
 4. No motor de alocação em C, sempre meça e registre o tempo sequencial vs. paralelo (essencial para as entregas e vídeos acadêmicos).
 5. Toda funcionalidade deve ter testes automatizados cobrindo os critérios de aceite antes de ser concluída.
-6. Commits devem seguir o padrão: `sprintN: descrição curta` (ex.: `sprint2: schema inicial postgres com alembic`).
+6. Commits e PRs devem seguir rigorosamente o padrão Conventional Commits: `<tipo>(<escopo>): <descrição curta no imperativo>` (ex.: `feat(schema): adicionar models postgres e migrations alembic`). Tipos válidos: `feat`, `fix`, `docs`, `test`, `perf`, `refactor`, `chore`, `ci`.
 7. Valide integrações de alto risco primeiro: a integração FastAPI ↔ C via `ctypes` deve ser validada com prova de conceito antes do algoritmo de alocação completo.
 
 ---
@@ -67,10 +67,10 @@ Equipe com papéis fixos:
 ## 6. Política de Branches, PRs e Limite de Diff (Inviolável)
 1. **Zero Push Direto**: Ninguém (humano ou agente) faz `git push` direto para `main` ou `homolog`. Ambas as branches são protegidas.
 2. **Fluxo de Branches**:
-   - Todo trabalho começa criando uma branch a partir de `homolog`: `git checkout -b feature/sprintX-<nome>`.
+   - Todo trabalho começa criando uma branch semântica a partir de `homolog`: `git checkout -b feat/<nome>` (ou `fix/<nome>`, `docs/<nome>`, `chore/<nome>`, `perf/<nome>`).
    - Ao concluir a tarefa, o agente `devops-sync` abre o PR para `homolog`: `gh pr create --base homolog`.
-   - Após aprovação humana e merge, o GitHub exclui a branch de feature automaticamente (*auto-delete*).
-   - Ao final da Sprint, um PR de `homolog` para `main` consolida a Release com sua respectiva Tag (`v*.*.*`).
+   - Após aprovação humana e merge, o GitHub exclui a branch efêmera automaticamente (*auto-delete*).
+   - Ao final da Sprint, um PR de `homolog` para `main` consolida a Release com sua respectiva Tag (`v*.*.*-sprint*`).
 3. **Limite de Diff por PR**:
    - Cada PR deve conter no **máximo 300 a 400 linhas de código modificado** (excluindo migrações de banco ou lockfiles).
    - Se uma feature exigir mais código, o `planner-sdd` deve fatiá-la em subtarefas com PRs incrementais e testáveis.
@@ -94,3 +94,6 @@ Equipe com papéis fixos:
 3. **Organização e Padronização Extrema**:
    - Manter rigor absoluto na estrutura de diretórios, nomenclatura de rotas, classes, tipos e contratos.
    - Documentação, PRs e commits devem ser estritamente profissionais, objetivos e técnicos.
+4. **Padronização de Commits e PRs (Conventional Commits)**:
+   - Todo commit e título de PR deve seguir a convenção: `<tipo>(<escopo>): <descrição curta no imperativo>` (ex.: `feat(auth): implementar geracao de jwt`).
+   - O escopo de sprint/acadêmico é rastreado via ClickUp, Milestones do GitHub e tags de release (`v*.*.*-sprint*`), nunca no prefixo de commits ou branches.

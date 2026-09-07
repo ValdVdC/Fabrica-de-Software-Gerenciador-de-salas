@@ -65,7 +65,7 @@ Este documento define os 8 agentes especializados do ecossistema **SIGAAS**, est
 - **Objetivo**: Gerenciar o ciclo Git da tarefa: criação de branch, abertura de Pull Request para `homolog`, verificação do CI e atualização do ClickUp.
 - **Entradas**: Tarefa iniciada a partir de `homolog` e código testado.
 - **Comandos Padrão**:
-  - Início: `git checkout homolog && git pull origin homolog && git checkout -b feature/sprintX-<nome>`
-  - Abertura de PR: `gh pr create --base homolog --title "sprintX: <descrição>" --body "<template preenchido>"`
+  - Início: `git checkout homolog && git pull origin homolog && git checkout -b feat/<nome>` (ou `fix/`, `docs/`, `chore/`, `perf/`)
+  - Abertura de PR: `gh pr create --base homolog --title "<tipo>(<escopo>): <descrição>" --body "<template preenchido>"`
   - Pós-merge: `python scripts/clickup_sync.py update-status --task-id <ID> --status "Concluído"`
 - **Regra Inviolável**: NUNCA commitar ou dar push direto para `main` ou `homolog`. Todo código entra exclusivamente via Pull Request.

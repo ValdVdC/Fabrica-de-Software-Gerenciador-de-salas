@@ -19,7 +19,7 @@ flowchart TD
     end
     
     UserApproval1 -- Não --> Planner
-    UserApproval1 -- Sim --> DevOpsBranch[devops-sync: Cria branch feature/... a partir de homolog]
+    UserApproval1 -- Sim --> DevOpsBranch[devops-sync: Cria branch feat/... ou fix/... a partir de homolog]
     DevOpsBranch --> Tester[tdd-tester]
     
     subgraph TDD_Cycle [Ciclo TDD na Feature Branch]
@@ -59,11 +59,11 @@ flowchart TD
 5. **Gate 1**: O usuário aprova a spec.
 
 ### Etapa 2: Criação da Branch e Red Phase do TDD (`devops-sync` e `tdd-tester`)
-1. O agente cria a branch a partir de `homolog`:
+1. O agente cria a branch semântica a partir de `homolog`:
    ```bash
    git checkout homolog
    git pull origin homolog
-   git checkout -b feature/sprintX-<nome-da-tarefa>
+   git checkout -b feat/<nome-da-tarefa>
    ```
 2. Baseado nos critérios de aceite em Gherkin da Spec, o agente `tdd-tester` cria os testes automatizados correspondentes.
 3. Os testes são executados e devem falhar com clareza:
@@ -81,22 +81,22 @@ flowchart TD
 3. Refatoração de código mantendo os testes passando e aderindo aos padrões PEP 8 / TypeScript.
 
 ### Etapa 4: Abertura do Pull Request e Review por IA (`devops-sync` e `sec-reviewer`)
-1. O commit é gerado na branch:
+1. O commit é gerado na branch com Conventional Commits:
    ```bash
    git add .
-   git commit -m "sprintX: breve descrição da funcionalidade"
-   git push origin feature/sprintX-<nome-da-tarefa>
+   git commit -m "feat(<escopo>): breve descrição da funcionalidade"
+   git push origin feat/<nome-da-tarefa>
    ```
 2. O agente abre o Pull Request mirando `homolog`:
    ```bash
-   gh pr create --base homolog --title "sprintX: breve descrição" --body-file .github/pull_request_template.md
+   gh pr create --base homolog --title "feat(<escopo>): breve descrição" --body-file .github/pull_request_template.md
    ```
 3. O **CodeRabbit AI** analisa o PR no GitHub e deixa comentários linha a linha.
 4. O agente `sec-reviewer` inspeciona os comentários do CodeRabbit via `gh pr view --comments` e sana apontamentos se necessário.
 
 ### Etapa 5: Gate 2 Humano, Merge e Auto-Delete
 1. Você revisa o PR no GitHub e autoriza o **Merge**.
-2. O GitHub automaticamente deleta a branch `feature/sprintX-<nome-da-tarefa>` (*auto-delete*).
+2. O GitHub automaticamente deleta a branch efêmera (*auto-delete*).
 3. O agente atualiza o ClickUp para `Concluído`:
    ```bash
    python scripts/clickup_sync.py update-status --task-id <ID> --status "Concluído"
