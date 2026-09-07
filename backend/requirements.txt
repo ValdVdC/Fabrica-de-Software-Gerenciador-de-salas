@@ -6,7 +6,7 @@ pydantic-settings>=2.2.0
 
 # Banco de Dados & ORM / Migrações
 sqlalchemy>=2.0.28
-sqlmodel>=0.0.16
+sqlmodel>=0.0.42
 alembic>=1.13.1
 psycopg2-binary>=2.9.9
 
