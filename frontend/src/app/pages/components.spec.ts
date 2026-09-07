@@ -10,7 +10,7 @@ describe('Componentes Shell e Login', () => {
     router = jasmine.createSpyObj('Router', ['navigate']);
     await TestBed.configureTestingModule({
       imports: [ShellComponent, LoginComponent],
-      providers: [AuthService, { provide: Router, useValue: router }]
+      providers: [AuthService, { provide: Router, useValue: router }],
     }).compileComponents();
     auth = TestBed.inject(AuthService);
   });
