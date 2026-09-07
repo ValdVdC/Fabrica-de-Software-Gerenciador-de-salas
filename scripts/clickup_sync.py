@@ -12,7 +12,6 @@ Suporta:
 import os
 import sys
 import csv
-import json
 import argparse
 import re
 from pathlib import Path
@@ -62,7 +61,7 @@ def test_connection(args):
         sys.exit(1)
     
     user_data = res.json().get("user", {})
-    print(f"[OK] Conexao bem-sucedida!")
+    print("[OK] Conexao bem-sucedida!")
     print(f"    Usuario: {user_data.get('username')} ({user_data.get('email')})")
     
     # Listar equipes/workspaces
@@ -157,7 +156,7 @@ def import_csv(args):
             payload = {
                 "name": f"[{sprint}] {tarefa}",
                 "description": desc_body,
-                "markdown_description": desc_body,
+                "markdown_content": desc_body,
                 "tags": tags
             }
             if mapped_status:
@@ -186,7 +185,7 @@ def create_task(args):
     payload = {
         "name": args.name,
         "description": args.description or "",
-        "markdown_description": args.description or "",
+        "markdown_content": args.description or "",
         "tags": tags
     }
     if args.status:
@@ -197,7 +196,7 @@ def create_task(args):
     resp = requests.post(f"{CLICKUP_BASE_URL}/list/{list_id}/task", headers=headers, json=payload)
     if resp.status_code in [200, 201]:
         data = resp.json()
-        print(f"[OK] Tarefa criada com sucesso!")
+        print("[OK] Tarefa criada com sucesso!")
         print(f"    ID: {data.get('id')}")
         print(f"    Nome: {data.get('name')}")
         print(f"    URL: {data.get('url')}")
@@ -245,7 +244,7 @@ def sync_spec(args):
     parent_payload = {
         "name": f"[SPEC] {title}",
         "description": main_desc,
-        "markdown_description": main_desc,
+        "markdown_content": main_desc,
         "tags": ["sdd-spec", "epic"]
     }
     
@@ -281,7 +280,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Comandos disponíveis")
 
     # test-connection
-    sub_test = subparsers.add_parser("test-connection", help="Testa conectividade e lista Workspaces/Listas")
+    subparsers.add_parser("test-connection", help="Testa conectividade e lista Workspaces/Listas")
 
     # import-csv
     sub_import = subparsers.add_parser("import-csv", help="Importa tarefas de um arquivo CSV")

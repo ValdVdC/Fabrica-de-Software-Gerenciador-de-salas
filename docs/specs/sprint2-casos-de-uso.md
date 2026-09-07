@@ -62,15 +62,26 @@ Cenario: Falha ao cadastrar sala com capacidade invalida
 > **Quero** matricular um aluno em uma turma ofertada no periodo letivo vigente  
 > **Para que** o aluno componha a lista de matriculados utilizada no calculo de ocupacao da sala.
 
+#### Regras de Negocio e Capacidade:
+- **Determinacao da Capacidade**: A capacidade maxima da turma e definida pela capacidade fisica da sala vinculada a ela em `horario`. Caso a turma ainda nao possua sala alocada, adota-se o limite pedagogico configurado na criacao da turma.
+- **Atomicidade e Concorrencia**: A verificacao de vagas disponiveis (`num_matriculados < capacidade`) e o incremento de `num_matriculados` devem ocorrer atomicamente dentro da mesma transacao no PostgreSQL (via bloqueio pessimista `SELECT ... FOR UPDATE` na linha da turma ou atualizacao condicional `UPDATE turma SET num_matriculados = num_matriculados + 1 WHERE id = :id AND num_matriculados < :capacidade`).
+
 #### Criterios de Aceite:
 ```gherkin
 Cenario: Matricula realizada com sucesso dentro da capacidade
-  Dado que o usuario esta autenticado com perfil "secretaria"
-  E existe uma turma com vagas disponiveis no mesmo campus do aluno
-  Quando enviar POST para "/api/v1/matriculas" com aluno_id e turma_id
+  Dado que o operador da secretaria esta autenticado no campus 1
+  E existe uma turma ofertada no campus 1 com capacidade para 40 alunos e 39 matriculados
+  Quando enviar POST para "/api/v1/matriculas" com aluno_id (do campus 1) e turma_id
   Entao o sistema deve registrar a matricula com data atual
-  E incrementar o contador num_matriculados da turma
+  E incrementar atomicamente o contador num_matriculados para 40
   E retornar codigo HTTP 201 Created
+
+Cenario: Bloqueio de matricula por capacidade excedida
+  Dado que o operador da secretaria esta autenticado no campus 1
+  E a turma ofertada no campus 1 ja atingiu a capacidade maxima de matriculados
+  Quando submeter solicitacao de matricula de novo aluno
+  Entao o sistema deve rejeitar o registro em transacao atomica
+  E retornar codigo HTTP 409 Conflict com mensagem "Capacidade maxima da turma atingida"
 
 Cenario: Bloqueio de matricula duplicada
   Dado que o aluno ja esta matriculado na turma solicitada
@@ -78,10 +89,12 @@ Cenario: Bloqueio de matricula duplicada
   Entao o sistema deve rejeitar o registro
   E retornar codigo HTTP 409 Conflict com mensagem "Aluno ja matriculado nesta turma"
 
-Cenario: Bloqueio de matricula de aluno de campus diferente
-  Dado que o aluno pertence ao campus 1 e a turma pertence ao campus 2
-  Quando a secretaria tentar vincular a matricula
-  Entao o sistema deve retornar codigo HTTP 400 Bad Request com mensagem "Incompatibilidade de campus entre aluno e turma"
+Cenario: Bloqueio de matricula em turma fora do campus autorizado
+  Dado que o operador da secretaria esta autenticado no campus 1
+  E a turma solicitada pertence ao campus 2
+  Quando a secretaria tentar submeter a matricula
+  Entao o sistema deve recusar a operacao
+  E retornar codigo HTTP 403 Forbidden com mensagem "Acesso negado: turma fora do escopo do campus autorizado"
 ```
 
 ---
@@ -139,11 +152,12 @@ Cenario: Rejeicao de sugestao de remanejamento
 
 ## 4. Contratos de API e Estruturas de Payload (Pydantic v2)
 
+> **Regra de Seguranca de Multi-Tenancy**: Os endpoints nunca recebem `campus_id` no corpo da requisicao. O identificador do campus e obrigatoriamente extraido e validado pelo backend a partir das claims do token JWT (`sub` e `campus_id`). Qualquer tentativa de manipular recursos de outro campus e sumariamente rejeitada com HTTP 403 Forbidden.
+
 ### 4.1 UC01: Cadastro de Sala
 - `POST /api/v1/salas`
 ```json
 {
-  "campus_id": 1,
   "bloco": "Bloco B",
   "numero": "204",
   "tipo": "laboratorio",
@@ -152,6 +166,7 @@ Cenario: Rejeicao de sugestao de remanejamento
   "equipamento_ids": [1, 3]
 }
 ```
+*Nota*: `turnos_disponiveis` e informado como array de strings `list[str]` na API e validado pelo Pydantic contra os enums permitidos (`matutino`, `vespertino`, `noturno`, `integral`), sendo serializado como `JSONB` no PostgreSQL.
 
 ### 4.2 UC02: Matricula de Aluno
 - `POST /api/v1/matriculas`
@@ -166,10 +181,10 @@ Cenario: Rejeicao de sugestao de remanejamento
 - `POST /api/v1/alocacao/gerar`
 ```json
 {
-  "campus_id": 1,
   "periodo_letivo": "2026.1"
 }
 ```
+*Nota*: O campus de destino e obtido exclusivamente do token JWT do coordenador autenticado.
 
 ### 4.4 UC04: Avaliacao de Remanejamento
 - `PATCH /api/v1/sugestoes/{id}`
@@ -179,19 +194,21 @@ Cenario: Rejeicao de sugestao de remanejamento
   "justificativa": "Remanejamento deferido para otimizacao energetica"
 }
 ```
+*Nota*: O campo `motivo` contem a explicacao original gerada pelo job preditivo de IA e permanece imutavel. O campo `justificativa` e opcional, armazenando a observacao humana inserida no momento da aprovacao ou rejeicao.
 
 ---
 
 ## 5. Plano de Testes TDD (Fase RED)
 
 ### 5.1 Testes de Casos de Uso e Regras de Negocio
-- [ ] `tests/test_usecases_sala.py::test_cadastrar_sala_valida`: Valida persistencia de sala regular e vinculo de equipamentos.
+- [ ] `tests/test_usecases_sala.py::test_cadastrar_sala_valida`: Valida persistencia de sala regular e vinculo de equipamentos com campus derivado do JWT.
 - [ ] `tests/test_usecases_sala.py::test_impedir_sala_duplicada`: Valida restricao de unicidade campus + bloco + numero.
 - [ ] `tests/test_usecases_matricula.py::test_matricular_aluno_sucesso`: Valida criacao da matricula e contagem da turma.
 - [ ] `tests/test_usecases_matricula.py::test_impedir_matricula_duplicada`: Valida integridade e codigo 409.
+- [ ] `tests/test_usecases_matricula.py::test_matricula_concorrente_respeita_capacidade_maxima`: Valida que chamadas concorrentes simultaneas respeitam atomicamente o teto de capacidade da turma sem overflow.
 - [ ] `tests/test_usecases_alocacao.py::test_alocacao_gera_horarios_e_auditoria`: Valida criacao de horario e entrada em log_alocacao.
-- [ ] `tests/test_usecases_remanejamento.py::test_aprovar_remanejamento_atualiza_horario`: Valida transicao atomica de horario.
-- [ ] `tests/test_usecases_remanejamento.py::test_rejeitar_remanejamento_mantem_horario`: Valida integridade do horario original.
+- [ ] `tests/test_usecases_remanejamento.py::test_aprovar_remanejamento_atualiza_horario`: Valida transicao atomica de horario e registro de justificativa.
+- [ ] `tests/test_usecases_remanejamento.py::test_rejeitar_remanejamento_mantem_horario`: Valida integridade do horario original e persistencia do status rejeitado.
 
 ---
 

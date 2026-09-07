@@ -18,8 +18,8 @@ O SIGAAS necessita de uma camada de persistencia relacional robusta, transaciona
 
 1. **Identificadores (PKs)**: Inteiros sequenciais (`Integer` / `BigInteger` com autoincremento/IDENTITY) para permitir interoperabilidade direta com vetores de estruturas de alocacao em C (`ctypes`).
 2. **Campos Categoricos / Enums**: Mapeados como `VARCHAR` com `native_enum=False` e validacao estrita no modelo Python (`enum.Enum`), garantindo compatibilidade total e migrações Alembic sem bloqueios de DDL transacional no PostgreSQL.
-3. **Controle Temporal**: Colunas padrao `created_at` e `updated_at` com timezone (`DateTime(timezone=True)`).
-4. **Isolamento Multi-Campus**: Coluna `campus_id` indexada em tabelas de fronteira (`usuario`, `sala`, `curso`).
+3. **Controle Temporal e Triggers**: Colunas padrao `created_at` e `updated_at` com timezone (`DateTime(timezone=True)`). Como o PostgreSQL nao possui sintaxe DDL nativa de coluna `ON UPDATE now()`, a garantia no banco e provida por uma trigger function (`trigger_set_timestamp()`) criada na migration inicial do Alembic e disparada em eventos `BEFORE UPDATE`. No SQLAlchemy, a classe declara `onupdate=func.now()` para sincronizacao ORM.
+4. **Isolamento Multi-Campus**: Coluna `campus_id` indexada em tabelas de fronteira (`usuario`, `sala`, `curso`, `horario`), assegurando segregacao fisica estrita por campus.
 
 ---
 
@@ -34,7 +34,7 @@ O SIGAAS necessita de uma camada de persistencia relacional robusta, transaciona
 - `endereco`: String(255), Not Null
 - `ativo`: Boolean, Default True, Not Null
 - `created_at`: DateTime(timezone=True), Server Default now()
-- `updated_at`: DateTime(timezone=True), Server Default now(), On Update now()
+- `updated_at`: DateTime(timezone=True), Server Default now() (atualizado via trigger de banco e onupdate ORM)
 
 #### Tabela `usuario`
 - `id`: Integer, Primary Key, Autoincrement
@@ -45,7 +45,7 @@ O SIGAAS necessita de uma camada de persistencia relacional robusta, transaciona
 - `perfil`: String(30), Not Null (Valores: admin, coordenador, professor, aluno, secretaria)
 - `ativo`: Boolean, Default True, Not Null
 - `created_at`: DateTime(timezone=True), Server Default now()
-- `updated_at`: DateTime(timezone=True), Server Default now(), On Update now()
+- `updated_at`: DateTime(timezone=True), Server Default now()
 
 #### Tabela `equipamento`
 - `id`: Integer, Primary Key, Autoincrement
@@ -60,10 +60,10 @@ O SIGAAS necessita de uma camada de persistencia relacional robusta, transaciona
 - `numero`: String(50), Not Null
 - `tipo`: String(30), Not Null (Valores: regular, laboratorio, auditorio, reuniao)
 - `capacidade`: Integer, Not Null (Check: capacidade > 0)
-- `turnos_disponiveis`: String(100), Not Null (Ex.: "matutino,vespertino,noturno")
+- `turnos_disponiveis`: JSONB, Not Null (Array JSON de strings, ex.: ["matutino", "vespertino"])
 - `ativo`: Boolean, Default True, Not Null
 - `created_at`: DateTime(timezone=True), Server Default now()
-- `updated_at`: DateTime(timezone=True), Server Default now(), On Update now()
+- `updated_at`: DateTime(timezone=True), Server Default now()
 - *Constraint*: `UniqueConstraint("campus_id", "bloco", "numero", name="uq_sala_campus_bloco_numero")`
 
 #### Tabela `sala_equipamento` (Associativa N-N)
@@ -119,14 +119,18 @@ O SIGAAS necessita de uma camada de persistencia relacional robusta, transaciona
 
 #### Tabela `horario`
 - `id`: Integer, Primary Key, Autoincrement
+- `campus_id`: Integer, ForeignKey("campus.id", ondelete="RESTRICT"), Not Null, Index
 - `turma_id`: Integer, ForeignKey("turma.id", ondelete="CASCADE"), Not Null, Index
 - `sala_id`: Integer, ForeignKey("sala.id", ondelete="RESTRICT"), Not Null, Index
 - `dia_semana`: SmallInteger, Not Null (Valores: 0=Segunda a 6=Domingo)
 - `hora_inicio`: Time, Not Null
 - `hora_fim`: Time, Not Null
 - `created_at`: DateTime(timezone=True), Server Default now()
-- `updated_at`: DateTime(timezone=True), Server Default now(), On Update now()
-- *Constraint*: `UniqueConstraint("sala_id", "dia_semana", "hora_inicio", name="uq_horario_sala_dia_hora")`
+- `updated_at`: DateTime(timezone=True), Server Default now()
+- *Constraints e Integridade*:
+  - `CheckConstraint("hora_inicio < hora_fim", name="ck_horario_inicio_anterior_fim")`
+  - `ExclusionConstraint` no PostgreSQL (extensao `btree_gist`): impede sobreposicao de intervalos temporais para a mesma sala e mesmo dia da semana (`sala_id WITH =, dia_semana WITH =, timerange(hora_inicio, hora_fim) WITH &&`). Na camada de aplicacao/ORM, validacao logica equivalente assegura portabilidade nos testes em SQLite em memoria.
+  - Regra de Integridade de Campus: Turma e Sala associadas ao horario devem pertencer obrigatoriamente ao mesmo `campus_id`, validado transacionalmente na camada de servico antes da gravacao.
 
 #### Tabela `frequencia` (Base de Treinamento da IA)
 - `id`: Integer, Primary Key, Autoincrement
@@ -150,15 +154,18 @@ O SIGAAS necessita de uma camada de persistencia relacional robusta, transaciona
 - `horario_id`: Integer, ForeignKey("horario.id", ondelete="CASCADE"), Not Null, Index
 - `sala_atual_id`: Integer, ForeignKey("sala.id", ondelete="RESTRICT"), Not Null
 - `sala_sugerida_id`: Integer, ForeignKey("sala.id", ondelete="RESTRICT"), Not Null
-- `motivo`: Text, Not Null
+- `motivo`: Text, Not Null (motivo original computado pelo modelo preditivo de IA)
+- `justificativa`: Text, Nullable (justificativa humana opcional informada na decisao de aprovacao/rejeicao)
 - `status`: String(20), Default "pendente", Not Null (Valores: pendente, aprovado, rejeitado)
 - `aprovado_por`: Integer, ForeignKey("usuario.id", ondelete="SET NULL"), Nullable
 - `criado_em`: DateTime(timezone=True), Server Default now()
-- `atualizado_em`: DateTime(timezone=True), Server Default now(), On Update now()
+- `atualizado_em`: DateTime(timezone=True), Server Default now()
+- *Integridade de Campus*: A `sala_sugerida_id` deve pertencer ao mesmo campus da `sala_atual_id` e do `horario_id`.
 
-#### Tabela `log_alocacao` (Auditoria)
+#### Tabela `log_alocacao` (Auditoria Imutavel)
 - `id`: Integer, Primary Key, Autoincrement
-- `horario_id`: Integer, ForeignKey("horario.id", ondelete="CASCADE"), Not Null, Index
+- `horario_id`: Integer, ForeignKey("horario.id", ondelete="SET NULL"), Nullable, Index (preserva auditoria caso horario seja expurgado)
+- `snapshot_evento`: JSONB, Nullable (snapshot dos dados essenciais do horario, sala e turma no instante do evento)
 - `tipo_evento`: String(50), Not Null (Valores: criacao, remanejamento, cancelamento)
 - `usuario_responsavel`: Integer, ForeignKey("usuario.id", ondelete="RESTRICT"), Not Null
 - `detalhes`: Text, Nullable
@@ -191,7 +198,8 @@ backend/
 │       ├── alocacao.py
 │       └── ia.py
 └── tests/
-    └── test_models.py
+    ├── test_models.py
+    └── test_migrations.py
 scripts/
 └── seed_db.py
 ```
@@ -200,15 +208,22 @@ scripts/
 
 ## 5. Plano de Testes TDD (Fase RED)
 
-### 5.1 Testes de Integridade Estrutural e Modelos
+### 5.1 Testes de Integridade Estrutural e Modelos (SQLite em Memoria)
 - [ ] `tests/test_models.py::test_create_tables`: Valida criacao de todas as 14 tabelas sem erros de definicao.
 - [ ] `tests/test_models.py::test_campus_usuario_relationship`: Valida associacao 1-N entre Campus e Usuario.
 - [ ] `tests/test_models.py::test_unique_email_constraint`: Valida rejeicao de emails duplicados em Usuario.
 - [ ] `tests/test_models.py::test_unique_sala_constraint`: Valida restricao uq_sala_campus_bloco_numero.
 - [ ] `tests/test_models.py::test_sala_equipamento_cascade`: Valida que remocao de sala remove associacoes mas preserva o equipamento.
 - [ ] `tests/test_models.py::test_matricula_unique_constraint`: Valida restricao de unicidade aluno_id + turma_id.
-- [ ] `tests/test_models.py::test_horario_conflict_constraint`: Valida conflito de horario para mesma sala no mesmo dia/hora.
-- [ ] `tests/test_models.py::test_sugestao_remanejamento_status_default`: Valida status inicial pendente.
+- [ ] `tests/test_models.py::test_horario_check_hora_inicio_anterior_fim`: Valida CheckConstraint hora_inicio < hora_fim.
+- [ ] `tests/test_models.py::test_alocacao_rejeita_turma_e_sala_de_campi_distintos`: Valida regra de integridade de campus na alocacao.
+- [ ] `tests/test_models.py::test_log_alocacao_preserva_auditoria_em_delecao_de_horario`: Valida que delecao de horario define horario_id como NULL e preserva snapshot.
+- [ ] `tests/test_models.py::test_sugestao_remanejamento_status_default_e_justificativa`: Valida status inicial pendente e persistencia de justificativa.
+
+### 5.2 Testes de Integracao PostgreSQL (Migrations e Extensoes Reais)
+- [ ] `tests/test_migrations.py::test_alembic_upgrade_downgrade_postgres`: Executa ciclo completo de migracao em container PostgreSQL real.
+- [ ] `tests/test_migrations.py::test_postgres_triggers_updated_at`: Valida atualizacao automatica de updated_at via trigger de banco em operacoes UPDATE diretas.
+- [ ] `tests/test_migrations.py::test_postgres_exclusion_constraint_sobreposicao_horario`: Valida bloqueio fisico de sobreposicao de intervalos pela ExclusionConstraint (btree_gist).
 
 ---
 
@@ -216,6 +231,7 @@ scripts/
 
 - [ ] [SDD] Definir schema relacional e contratos tecnicos das 14 tabelas
 - [ ] [TDD] Criar suíte de testes de schema e relacionamentos em SQLite em memoria
+- [ ] [TDD] Criar testes de integracao de migrations e triggers contra PostgreSQL real
 - [ ] [Backend] Implementar classes DeclarativeBase e Mapped[T] em app/models/
 - [ ] [Backend] Configurar SQLAlchemy Engine e sessionmaker em app/db/session.py
 - [ ] [Backend] Configurar ambiente Alembic e gerar migration inicial 001_initial_schema.py
