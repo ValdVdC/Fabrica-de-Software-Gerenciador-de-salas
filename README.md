@@ -8,13 +8,13 @@ Projeto desenvolvido com engenharia de software orientada por IA (**SDD + TDD**)
 
 ---
 
-## Documentação Essencial
-- 📄 **Documento Normativo Completo** (arquitetura, modelo de dados, backlog inicial): [`docs/projeto-gestao-salas-escalas.md`](docs/projeto-gestao-salas-escalas.md)
-- 🤖 **Regras para Agentes de IA**: [`AGENTS.md`](AGENTS.md)
-- 🚀 **Guia de Handoff e Prompts**: [`docs/handoff-guide.md`](docs/handoff-guide.md)
-- 👥 **Catálogo do Squad de Agentes**: [`.agent/rules/squad-roles.md`](.agent/rules/squad-roles.md)
-- 🔄 **Ciclo de Desenvolvimento SDD + TDD**: [`.agent/workflows/sdd-cycle.md`](.agent/workflows/sdd-cycle.md)
-- 📋 **Especificações Técnicas por Feature**: [`docs/specs/`](docs/specs/)
+## Documentacao Essencial
+- **Documento Normativo Completo** (arquitetura, modelo de dados, backlog inicial): [`docs/projeto-gestao-salas-escalas.md`](docs/projeto-gestao-salas-escalas.md)
+- **Regras para Agentes de IA**: [`AGENTS.md`](AGENTS.md)
+- **Guia de Handoff e Prompts**: [`docs/handoff-guide.md`](docs/handoff-guide.md)
+- **Catalogo do Squad de Agentes**: [`.agent/rules/squad-roles.md`](.agent/rules/squad-roles.md)
+- **Ciclo de Desenvolvimento SDD + TDD**: [`.agent/workflows/sdd-cycle.md`](.agent/workflows/sdd-cycle.md)
+- **Especificacoes Tecnicas por Feature**: [`docs/specs/`](docs/specs/)
 
 ---
 

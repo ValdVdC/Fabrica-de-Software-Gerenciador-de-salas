@@ -28,6 +28,9 @@ reviews:
     5. **Tamanho do PR**: Verifique se o PR excede ~400 linhas de código modificado. Se exceder, sugira educadamente que o PR seja fatiado em subtarefas menores.
     6. **Testes Automatizados (TDD)**: Toda nova funcionalidade deve vir acompanhada de testes unitários ou de integração correspondentes (Pytest).
     7. **Estilo e Segurança**: Sinalize credenciais expostas, falhas de autorização de rotas (FastAPI) e ausência de tipagem (Pydantic / TypeScript).
+    8. **Zero Emojis**: É estritamente proibido o uso de emojis em código, documentação, mensagens de PR ou no frontend. No frontend, exija bibliotecas de ícones formais (Lucide/FontAwesome/Material). Não use emojis em suas próprias respostas de revisão.
+    9. **Comentários Sóbrios e Concisos**: Sinalize comentários prolixos ou redundantes. Comentários devem ter no máximo 1 a 2 linhas e explicar apenas o estritamente necessário.
+    10. **Organização e Padronização**: Mantenha postura formal, sóbria e altamente técnica.
 
 chat:
   auto_reply: true
