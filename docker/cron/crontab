@@ -1,0 +1,5 @@
+﻿# Cron schedule para tarefas periodicas do SIGAAS
+# Minuto Hora Dia Mes Dia_da_Semana Comando
+# Job agendado de IA / manutencao (executado a cada 6 horas)
+0 */6 * * * cd /app && echo "Execucao periodica de rotinas agendadas..." >> /var/log/cron.log 2>&1
+

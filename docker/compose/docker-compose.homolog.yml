@@ -1,0 +1,81 @@
+﻿services:
+  db:
+    image: postgres:16-alpine
+    container_name: sigaas_postgres_homolog
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gestao_salas_homolog}
+      POSTGRES_USER: ${POSTGRES_USER:-gestao_salas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_homolog_only}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - db_data_homolog:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gestao_salas} -d ${POSTGRES_DB:-gestao_salas_homolog}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sigaas_homolog_network
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: docker/backend/Dockerfile
+    container_name: sigaas_backend_homolog
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-gestao_salas_homolog}
+      - POSTGRES_USER=${POSTGRES_USER:-gestao_salas}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme_homolog_only}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-gestao_salas}:${POSTGRES_PASSWORD:-changeme_homolog_only}@db:5432/${POSTGRES_DB:-gestao_salas_homolog}
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - sigaas_homolog_network
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: docker/frontend/Dockerfile
+    container_name: sigaas_frontend_homolog
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - sigaas_homolog_network
+
+  cron:
+    build:
+      context: ../..
+      dockerfile: docker/cron/Dockerfile
+    container_name: sigaas_cron_homolog
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-gestao_salas_homolog}
+      - POSTGRES_USER=${POSTGRES_USER:-gestao_salas}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme_homolog_only}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-gestao_salas}:${POSTGRES_PASSWORD:-changeme_homolog_only}@db:5432/${POSTGRES_DB:-gestao_salas_homolog}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sigaas_homolog_network
+
+networks:
+  sigaas_homolog_network:
+    driver: bridge
+
+volumes:
+  db_data_homolog:
