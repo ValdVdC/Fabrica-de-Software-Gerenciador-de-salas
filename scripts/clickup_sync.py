@@ -62,26 +62,26 @@ def test_connection(args):
         sys.exit(1)
     
     user_data = res.json().get("user", {})
-    print(f"[✓] Conexão bem-sucedida!")
-    print(f"    Usuário: {user_data.get('username')} ({user_data.get('email')})")
+    print(f"[OK] Conexao bem-sucedida!")
+    print(f"    Usuario: {user_data.get('username')} ({user_data.get('email')})")
     
     # Listar equipes/workspaces
     res_teams = requests.get(f"{CLICKUP_BASE_URL}/team", headers=headers)
     if res_teams.status_code == 200:
         teams = res_teams.json().get("teams", [])
-        print(f"\nWorkspaces disponíveis ({len(teams)}):")
+        print(f"\nWorkspaces disponiveis ({len(teams)}):")
         for team in teams:
             team_id = team.get("id")
             print(f"  - [{team_id}] {team.get('name')}")
             
-            # Listar espaços
+            # Listar espacos
             res_spaces = requests.get(f"{CLICKUP_BASE_URL}/team/{team_id}/space?archived=false", headers=headers)
             if res_spaces.status_code == 200:
                 spaces = res_spaces.json().get("spaces", [])
                 for sp in spaces:
                     space_id = sp.get("id")
-                    print(f"    * Espaço: [{space_id}] {sp.get('name')}")
-                    # Listar listas avulsas do espaço
+                    print(f"    * Espaco: [{space_id}] {sp.get('name')}")
+                    # Listar listas avulsas do espaco
                     res_lists = requests.get(f"{CLICKUP_BASE_URL}/space/{space_id}/list?archived=false", headers=headers)
                     if res_lists.status_code == 200:
                         lists = res_lists.json().get("lists", [])
@@ -93,7 +93,7 @@ def test_connection(args):
                     if res_folders.status_code == 200:
                         folders = res_folders.json().get("folders", [])
                         for fld in folders:
-                            print(f"        📁 Pasta: [{fld.get('id')}] {fld.get('name')}")
+                            print(f"        Pasta: [{fld.get('id')}] {fld.get('name')}")
                             for flist in fld.get("lists", []):
                                 print(f"           -> Lista: [{flist.get('id')}] {flist.get('name')}")
 
@@ -165,7 +165,7 @@ def import_csv(args):
             resp = requests.post(f"{CLICKUP_BASE_URL}/list/{list_id}/task", headers=headers, json=payload)
             if resp.status_code in [200, 201]:
                 task_data = resp.json()
-                print(f" [✓] Criada: [{sprint}] {tarefa} -> ID: {task_data.get('id')}")
+                print(f" [OK] Criada: [{sprint}] {tarefa} -> ID: {task_data.get('id')}")
                 created_count += 1
             else:
                 print(f" [X] Falha ao criar '{tarefa}': HTTP {resp.status_code} - {resp.text}")
@@ -195,7 +195,7 @@ def create_task(args):
     resp = requests.post(f"{CLICKUP_BASE_URL}/list/{list_id}/task", headers=headers, json=payload)
     if resp.status_code in [200, 201]:
         data = resp.json()
-        print(f"[✓] Tarefa criada com sucesso!")
+        print(f"[OK] Tarefa criada com sucesso!")
         print(f"    ID: {data.get('id')}")
         print(f"    Nome: {data.get('name')}")
         print(f"    URL: {data.get('url')}")
@@ -210,7 +210,7 @@ def update_status(args):
     payload = {"status": args.status}
     resp = requests.put(f"{CLICKUP_BASE_URL}/task/{args.task_id}", headers=headers, json=payload)
     if resp.status_code in [200, 201]:
-        print(f"[✓] Status da tarefa {args.task_id} atualizado para '{args.status}'")
+        print(f"[OK] Status da tarefa {args.task_id} atualizado para '{args.status}'")
     else:
         print(f"[X] Erro ao atualizar status: HTTP {resp.status_code} - {resp.text}", file=sys.stderr)
         sys.exit(1)
@@ -252,7 +252,7 @@ def sync_spec(args):
         sys.exit(1)
 
     parent_id = resp_parent.json().get("id")
-    print(f"[✓] Tarefa Principal criada: {title} (ID: {parent_id})")
+    print(f"[OK] Tarefa Principal criada: {title} (ID: {parent_id})")
 
     # Extrair tarefas/subtarefas da seção de tarefas ou checklists
     # Procura por linhas como "- [ ] Tarefa tal" ou "### Tarefa"
@@ -269,7 +269,7 @@ def sync_spec(args):
         }
         r_sub = requests.post(f"{CLICKUP_BASE_URL}/list/{list_id}/task", headers=headers, json=sub_payload)
         if r_sub.status_code in [200, 201]:
-            print(f"   └── Subtarefa criada: {subtask_name.strip()}")
+            print(f"   - Subtarefa criada: {subtask_name.strip()}")
 
 
 def main():
