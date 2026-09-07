@@ -72,7 +72,12 @@ Equipe com papéis fixos:
    - O PR passa obrigatoriamente por todos os checks de CI (Pytest >=85%, Motor C, Diff <= 400 linhas) e CodeRabbit AI.
    - Após aprovação humana e merge, o GitHub exclui a branch efêmera automaticamente (*auto-delete*).
    - Ao final da Sprint ou marco estável, a Release é publicada via Git Tag na `main` (`v*.*.*-sprint*` ou `v*.*.*`), acionando o workflow de deploy/release.
-3. **Limite de Diff por PR**:
+3. **Squash and Merge Exclusivo e Obrigatório**:
+   - Todo merge para a `main` DEVE ser realizado obrigatoriamente via **Squash and Merge** (`gh pr merge <PR> --squash --delete-branch`).
+   - O repositório no GitHub está configurado com `allow_merge_commit=false` e `allow_rebase_merge=false`, tornando tecnicamente impossível a criação acidental de commits de merge tradicionais ou rebase via interface web ou CLI.
+   - Cada PR condensado resulta em exatamente 1 commit atômico e linear na branch `main`, preservando o histórico limpo, rastreável e aderente aos Conventional Commits (`<tipo>(<escopo>): <descrição curta> (#<PR>)`).
+   - O título do commit condensado segue o padrão Conventional Commits do PR (`PR_TITLE`) e o corpo registra a descrição do PR (`PR_BODY`), suprimindo commits intermediários de desenvolvimento.
+4. **Limite de Diff por PR**:
    - Cada PR deve conter no **máximo 300 a 400 linhas de código modificado** (excluindo migrações de banco ou lockfiles).
    - Se uma feature exigir mais código, o `planner-sdd` deve fatiá-la em subtarefas com PRs incrementais e testáveis.
 

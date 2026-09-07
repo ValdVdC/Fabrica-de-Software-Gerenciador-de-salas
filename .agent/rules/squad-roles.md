@@ -70,8 +70,9 @@ Este documento define os 8 agentes especializados do ecossistema **SIGAAS**, est
 - **Comandos Padrão**:
   - Início: `git checkout main && git pull origin main && git checkout -b feat/<nome>` (ou `fix/`, `docs/`, `chore/`, `perf/`, `test/`)
   - Abertura de PR: `gh pr create --base main --title "<tipo>(<escopo>): <descrição>" --body "<template preenchido>"`
+  - Merge de PR: `gh pr merge <PR> --squash --delete-branch` (Squash and Merge exclusivo)
   - Pós-merge: `python scripts/clickup_sync.py update-status --task-id <ID> --status "Concluído"`
-- **Regra Inviolável**: NUNCA commitar ou dar push direto para a `main`. Todo código entra exclusivamente via Pull Request.
+- **Regra Inviolável**: NUNCA commitar ou dar push direto para a `main`. Todo código entra exclusivamente via Pull Request com Squash and Merge.
 - **Proibição de Complacência**: Jamais solicitar o Gate 2 humano sem que o relatório do Comitê de Debate Adversarial tenha atingido consenso unânime.
 
 ---

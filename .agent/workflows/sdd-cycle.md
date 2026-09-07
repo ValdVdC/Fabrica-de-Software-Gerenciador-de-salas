@@ -43,7 +43,7 @@ flowchart TD
     end
     
     UserApproval2 -- Rejeitado/Ajustes --> Dev
-    UserApproval2 -- Aprovado (Merge) --> AutoDelete[GitHub: Merge em main + Auto-Delete da branch]
+    UserApproval2 -- Aprovado (Squash) --> AutoDelete["GitHub: Squash and Merge em main + Auto-Delete da branch"]
     
     AutoDelete --> FinalSync[devops-sync: Atualiza Status para Concluído no ClickUp]
 ```
@@ -107,10 +107,11 @@ flowchart TD
 3. O **CodeRabbit AI** analisa o PR no GitHub e deixa comentários linha a linha.
 4. O agente `sec-reviewer` inspeciona os comentários do CodeRabbit via `gh pr view --comments`. Caso o CodeRabbit esteja bloqueado por *rate limit*, o relatório do debate adversarial local supre a auditoria externa.
 
-### Etapa 6: Gate 2 Humano, Merge e Auto-Delete
-1. Você revisa o PR no GitHub com o parecer consolidado e autoriza o **Merge**.
-2. O GitHub automaticamente deleta a branch efêmera (*auto-delete*).
-3. O agente atualiza o ClickUp para `Concluído`:
+### Etapa 6: Gate 2 Humano, Squash and Merge e Auto-Delete
+1. Você revisa o PR no GitHub com o parecer consolidado e autoriza o **Squash and Merge** (pelo botão verde na UI web ou via `gh pr merge <PR> --squash --delete-branch`). O repositório está travado para aceitar exclusivamente esta estratégia.
+2. Cada PR resulta em exatamente 1 commit atômico e linear na branch `main`.
+3. O GitHub automaticamente deleta a branch efêmera (*auto-delete*).
+4. O agente atualiza o ClickUp para `Concluído`:
    ```bash
    python scripts/clickup_sync.py update-status --task-id <ID> --status "Concluído"
    ```
