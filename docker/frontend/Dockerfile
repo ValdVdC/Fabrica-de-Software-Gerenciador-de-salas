@@ -1,4 +1,4 @@
-﻿# Estagio 1: Compilacao da aplicacao Angular
+# Estagio 1: Compilacao da aplicacao Angular
 FROM node:22-alpine AS builder
 
 WORKDIR /app
