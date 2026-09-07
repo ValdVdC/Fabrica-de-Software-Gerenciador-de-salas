@@ -11,7 +11,7 @@ flowchart TD
     User([Usuário / Líder Técnico]) -->|1. Ideia / Sprint / Fix| Planner[planner-sdd]
     Planner -->|2. Entrevista /grill-me| User
     User -->|3. Respostas e Alinhamento| Planner
-    Planner -->|4. Gera Spec docs/specs/*.md| Spec[(Spec SDD)]
+    Planner -->|4. Gera Spec docs/specs/*.md| Spec[(Spec SDD: Max 400 linhas)]
     Planner -->|5. Cria Épico/Tarefas| ClickUp[(ClickUp Board)]
     
     subgraph Gate1 [Portão 1: Aprovação da Spec]
@@ -19,27 +19,29 @@ flowchart TD
     end
     
     UserApproval1 -- Não --> Planner
-    UserApproval1 -- Sim --> Tester[tdd-tester]
+    UserApproval1 -- Sim --> DevOpsBranch[devops-sync: Cria branch feature/... a partir de homolog]
+    DevOpsBranch --> Tester[tdd-tester]
     
-    subgraph TDD_Cycle [Ciclo TDD]
+    subgraph TDD_Cycle [Ciclo TDD na Feature Branch]
         Tester -->|6. Escreve Testes Falhos RED| TestSuite[backend/tests ou frontend/*.spec.ts]
         TestSuite --> Dev[backend-dev / frontend-dev / engine-dev]
         Dev -->|7. Implementa Código GREEN| Codebase[Código da Aplicação]
         Codebase -->|8. Executa Testes e Refatora| TestSuite
     end
     
-    Codebase --> SecReview[sec-reviewer]
-    SecReview -->|9. Análise OWASP, Linters e AGENTS.md| AuditReport[Relatório de Review]
+    Codebase --> OpenPR[devops-sync: Abre PR via gh pr create --base homolog]
+    OpenPR --> AIRabbit[CodeRabbit AI: Review automatizado no PR]
+    AIRabbit --> SecReview[sec-reviewer: Inspeciona comentários do CodeRabbit e AGENTS.md]
+    SecReview --> AuditReport[Relatório de Review Consolidado]
     
-    subgraph Gate2 [Portão 2: Revisão Crítica Humana]
-        AuditReport --> UserApproval2{Revisão Aprovada?}
+    subgraph Gate2 [Portão 2: Revisão Humana no PR]
+        AuditReport --> UserApproval2{PR Aprovado no GitHub?}
     end
     
-    UserApproval2 -- Rejeitado --> Dev
-    UserApproval2 -- Aprovado --> DevOps[devops-sync]
+    UserApproval2 -- Rejeitado/Ajustes --> Dev
+    UserApproval2 -- Aprovado (Merge) --> AutoDelete[GitHub: Merge em homolog + Auto-Delete da branch]
     
-    DevOps -->|10. Git Commit sprintN: ...| GitRepo[(Repositório Git)]
-    DevOps -->|11. Atualiza Status para Concluído| ClickUp
+    AutoDelete --> FinalSync[devops-sync: Atualiza Status para Concluído no ClickUp]
 ```
 
 ---
@@ -49,20 +51,26 @@ flowchart TD
 ### Etapa 1: Planejamento & SDD (`planner-sdd`)
 1. O usuário inicia a sessão descrevendo o objetivo da Sprint ou da tarefa.
 2. O agente ativa `/grill-me`, questionando detalhes de arquitetura, contratos de API, cenários e critérios de aceite um por um.
-3. É gerado o arquivo `docs/specs/sprintX-<nome>.md` seguindo o template oficial.
+3. É gerado o arquivo `docs/specs/sprintX-<nome>.md` seguindo o template oficial, garantindo que o escopo caiba em **no máximo 300 a 400 linhas de código**.
 4. O agente executa:
    ```bash
    python scripts/clickup_sync.py sync-spec docs/specs/sprintX-<nome>.md
    ```
 5. **Gate 1**: O usuário aprova a spec.
 
-### Etapa 2: Red Phase do TDD (`tdd-tester`)
-1. Baseado nos critérios de aceite em Gherkin da Spec, o agente cria os testes automatizados correspondentes.
-2. Os testes são executados e devem falhar com clareza:
+### Etapa 2: Criação da Branch e Red Phase do TDD (`devops-sync` e `tdd-tester`)
+1. O agente cria a branch a partir de `homolog`:
+   ```bash
+   git checkout homolog
+   git pull origin homolog
+   git checkout -b feature/sprintX-<nome-da-tarefa>
+   ```
+2. Baseado nos critérios de aceite em Gherkin da Spec, o agente `tdd-tester` cria os testes automatizados correspondentes.
+3. Os testes são executados e devem falhar com clareza:
    ```bash
    pytest backend/tests/test_<feature>.py
    ```
-3. O status da tarefa no ClickUp é atualizado para `Em andamento`.
+4. O status da tarefa no ClickUp é atualizado para `Em andamento`.
 
 ### Etapa 3: Green & Refactor (`backend-dev`, `frontend-dev`, `engine-dev`)
 1. O desenvolvedor implementa a rota FastAPI, o modelo de banco ou o componente Angular necessário.
@@ -72,20 +80,24 @@ flowchart TD
    ```
 3. Refatoração de código mantendo os testes passando e aderindo aos padrões PEP 8 / TypeScript.
 
-### Etapa 4: Auditoria de Segurança e Qualidade (`sec-reviewer`)
-1. Análise de vulnerabilidades:
-   - Checagem de injeção SQL, integridade de tokens JWT, validação rigorosa com Pydantic.
-   - Verificação das regras invioláveis do `AGENTS.md`.
-2. O auditor reporta as constatações para o usuário.
-
-### Etapa 5: Gate 2 & DevOps (`devops-sync`)
-1. O usuário dá a aprovação final.
-2. Commit é realizado no padrão do repositório:
+### Etapa 4: Abertura do Pull Request e Review por IA (`devops-sync` e `sec-reviewer`)
+1. O commit é gerado na branch:
    ```bash
    git add .
    git commit -m "sprintX: breve descrição da funcionalidade"
+   git push origin feature/sprintX-<nome-da-tarefa>
    ```
-3. Atualização do ClickUp para `Concluído`:
+2. O agente abre o Pull Request mirando `homolog`:
+   ```bash
+   gh pr create --base homolog --title "sprintX: breve descrição" --body-file .github/pull_request_template.md
+   ```
+3. O **CodeRabbit AI** analisa o PR no GitHub e deixa comentários linha a linha.
+4. O agente `sec-reviewer` inspeciona os comentários do CodeRabbit via `gh pr view --comments` e sana apontamentos se necessário.
+
+### Etapa 5: Gate 2 Humano, Merge e Auto-Delete
+1. Você revisa o PR no GitHub e autoriza o **Merge**.
+2. O GitHub automaticamente deleta a branch `feature/sprintX-<nome-da-tarefa>` (*auto-delete*).
+3. O agente atualiza o ClickUp para `Concluído`:
    ```bash
    python scripts/clickup_sync.py update-status --task-id <ID> --status "Concluído"
    ```
