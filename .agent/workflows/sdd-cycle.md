@@ -29,9 +29,13 @@ flowchart TD
         Codebase -->|8. Executa Testes e Refatora| TestSuite
     end
     
-    Codebase --> OpenPR[devops-sync: Abre PR via gh pr create --base main]
+    Codebase --> AdversarialDebate[Comitê de Debate Adversarial: advocate vs breaker vs security vs compliance]
+    AdversarialDebate --> ArbiterVerdict{Consenso Unânime?}
+    ArbiterVerdict -- Veto Bloqueante --> Dev
+    ArbiterVerdict -- Aprovado --> OpenPR[devops-sync: Abre PR via gh pr create --base main]
+    
     OpenPR --> AIRabbit[CodeRabbit AI: Review automatizado no PR]
-    AIRabbit --> SecReview[sec-reviewer: Inspeciona comentários do CodeRabbit e AGENTS.md]
+    AIRabbit --> SecReview[sec-reviewer: Inspeciona comentários do CodeRabbit ou Fallback Local]
     SecReview --> AuditReport[Relatório de Review Consolidado]
     
     subgraph Gate2 [Portão 2: Revisão Humana no PR]
@@ -80,7 +84,16 @@ flowchart TD
    ```
 3. Refatoração de código mantendo os testes passando e aderindo aos padrões PEP 8 / TypeScript.
 
-### Etapa 4: Abertura do Pull Request e Review por IA (`devops-sync` e `sec-reviewer`)
+### Etapa 4: Debate Adversarial Multi-Agente Pré-PR (`sec-reviewer` e Comitê)
+1. O `sec-reviewer` dispara o comitê dialético concorrente via `invoke_subagent` (`.agent/workflows/adversarial-debate.md`):
+   - `advocate-mapper` (mapeia implementações e formula defesa)
+   - `adversary-breaker` (ataca casos de borda e concorrência)
+   - `adversary-security` (ataca segurança e multi-tenancy)
+   - `adversary-compliance` (fiscaliza as 10 regras de AGENTS.md e diff <= 400)
+2. Se houver qualquer veto fundamentado, a tarefa retorna imediatamente ao desenvolvedor para correção antes de chamar o humano.
+3. O árbitro consolida o parecer e emite **Consenso Unânime**.
+
+### Etapa 5: Abertura do Pull Request e Review Complementar (`devops-sync`)
 1. O commit é gerado na branch com Conventional Commits:
    ```bash
    git add .
@@ -92,10 +105,10 @@ flowchart TD
    gh pr create --base main --title "feat(<escopo>): breve descrição" --body-file .github/pull_request_template.md
    ```
 3. O **CodeRabbit AI** analisa o PR no GitHub e deixa comentários linha a linha.
-4. O agente `sec-reviewer` inspeciona os comentários do CodeRabbit via `gh pr view --comments`. Caso o CodeRabbit esteja bloqueado por *rate limit*, o `sec-reviewer` é obrigado a auditar o diff localmente (`gh pr diff`) e apresentar o parecer ao usuário antes de prosseguir.
+4. O agente `sec-reviewer` inspeciona os comentários do CodeRabbit via `gh pr view --comments`. Caso o CodeRabbit esteja bloqueado por *rate limit*, o relatório do debate adversarial local supre a auditoria externa.
 
-### Etapa 5: Gate 2 Humano, Merge e Auto-Delete
-1. Você revisa o PR no GitHub e autoriza o **Merge**.
+### Etapa 6: Gate 2 Humano, Merge e Auto-Delete
+1. Você revisa o PR no GitHub com o parecer consolidado e autoriza o **Merge**.
 2. O GitHub automaticamente deleta a branch efêmera (*auto-delete*).
 3. O agente atualiza o ClickUp para `Concluído`:
    ```bash

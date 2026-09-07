@@ -53,14 +53,14 @@ Este documento define os 8 agentes especializados do ecossistema **SIGAAS**, est
 
 ---
 
-## 7. `sec-reviewer` (Auditor de Segurança e Qualidade)
-- **Objetivo**: Revisar todo o código gerado e os apontamentos de revisão por IA antes da aprovação final.
-- **Entradas**: Diffs de código das tarefas concluídas e comentários do **CodeRabbit AI** no PR (`gh pr view --comments`).
-- **Saídas**: Relatório de auditoria (OWASP top 10, sanitização de inputs, validação de tokens JWT, controle de acesso por perfil, linters e formatação).
-- **Regra de Ouro (Fallback Obrigatório do CodeRabbit)**:
-  - Nunca considerar o PR aprovado apenas com base em `gh pr checks` verde.
-  - Se o CodeRabbit estiver em *rate limit* ou não emitir parecer linha a linha, o `sec-reviewer` DEVE analisar o diff linha a linha (`gh pr diff`), validar todas as regras do `AGENTS.md` e emitir relatório explícito ao usuário.
-  - Bloquear o avanço caso haja credenciais hardcoded, endpoints desprotegidos, diff excessivo (>400 linhas) ou pendências críticas.
+## 7. `sec-reviewer` (Auditor Líder e Árbitro do Debate Adversarial)
+- **Objetivo**: Liderar a auditoria de segurança, presidir o **Comitê de Debate Adversarial Pré-PR** e emitir o relatório de consenso unânime.
+- **Entradas**: Diffs de código das tarefas concluídas (`git diff origin/main...HEAD`) e comentários do **CodeRabbit AI** no PR (`gh pr view --comments`).
+- **Saídas**: Relatório consolidado de debate dialético e veredito formal (Aprovação Unânime vs. Veto Bloqueante).
+- **Regra de Ouro (Debate Obrigatório)**:
+  - Nunca considerar o PR pronto para o Gate 2 sem antes executar a esteira de debate adversarial simultâneo (`.agent/workflows/adversarial-debate.md`).
+  - Se o CodeRabbit estiver em *rate limit*, o parecer consolidado do comitê adversarial local supre a auditoria externa.
+  - Bloquear imediatamente o avanço caso haja veto de qualquer um dos atacantes adversariais.
 
 ---
 
@@ -72,4 +72,13 @@ Este documento define os 8 agentes especializados do ecossistema **SIGAAS**, est
   - Abertura de PR: `gh pr create --base main --title "<tipo>(<escopo>): <descrição>" --body "<template preenchido>"`
   - Pós-merge: `python scripts/clickup_sync.py update-status --task-id <ID> --status "Concluído"`
 - **Regra Inviolável**: NUNCA commitar ou dar push direto para a `main`. Todo código entra exclusivamente via Pull Request.
-- **Proibição de Complacência**: Jamais solicitar o Gate 2 humano sem que o `sec-reviewer` tenha confirmado a inspeção dos comentários do CodeRabbit ou emitido a auditoria local de fallback.
+- **Proibição de Complacência**: Jamais solicitar o Gate 2 humano sem que o relatório do Comitê de Debate Adversarial tenha atingido consenso unânime.
+
+---
+
+## 9. Subagentes do Comitê de Debate Adversarial (Disparados via `invoke_subagent`)
+- **`advocate-mapper`**: Mapeia todas as implementações e formula a tese de conformidade com a Spec SDD.
+- **`adversary-breaker`**: Ataca a implementação buscando casos de borda, concorrência, inputs nulos e falhas de integridade.
+- **`adversary-security`**: Ataca autenticação, tokens JWT, OWASP e isolamento multi-campus (`campus_id`).
+- **`adversary-compliance`**: Ataca violações contratuais (regras no Angular, banco no C, migrations ausentes, emojis, diff > 400).
+- **`debate-arbiter`**: Preside o contraditório e emite o veredito final (Consenso vs. Veto Bloqueante).
