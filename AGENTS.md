@@ -81,3 +81,16 @@ Equipe com papéis fixos:
 - Todo PR aberto dispara uma revisão automatizada por IA via **CodeRabbit AI** configurada em `.coderabbit.yaml`.
 - O CodeRabbit verifica conformidade com as regras deste `AGENTS.md` (sem lógica no Angular, sem banco no C, migrations presentes, cobertura de testes).
 - Os agentes locais (`sec-reviewer` e `devops-sync`) devem inspecionar os comentários do CodeRabbit (`gh pr view --comments`) antes de solicitar a aprovação humana final (Gate 2).
+
+---
+
+## 8. Padrões de Código, Estilo e Comunicação Profissional (Invioláveis)
+1. **Proibição Total de Emojis**:
+   - É estritamente proibido o uso de emojis em qualquer artefato do projeto: títulos de PRs, descrições, mensagens de commit, arquivos de documentação, specs, código-fonte e telas da aplicação.
+   - No frontend (Angular), utilize exclusivamente bibliotecas profissionais de ícones vetoriais (ex.: Lucide Icons, FontAwesome ou ícones SVG do Material Design). Jamais utilize emojis como ícones de UI.
+2. **Comentários Sóbrios e Concisos**:
+   - Proibidos comentários prolixos, narrativos ou redundantes. O código deve ser limpo e autoexplicativo por si só.
+   - Comente apenas casos não-óbvios ou decisões críticas de algoritmo, com explicação sucinta de no máximo 1 a 2 linhas (ex.: `// X faz isso`).
+3. **Organização e Padronização Extrema**:
+   - Manter rigor absoluto na estrutura de diretórios, nomenclatura de rotas, classes, tipos e contratos.
+   - Documentação, PRs e commits devem ser estritamente profissionais, objetivos e técnicos.
