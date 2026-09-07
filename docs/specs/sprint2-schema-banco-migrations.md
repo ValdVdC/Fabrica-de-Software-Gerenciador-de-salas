@@ -81,7 +81,7 @@ O SIGAAS necessita de uma camada de persistencia relacional robusta, transaciona
 - `nome`: String(150), Not Null
 - `codigo`: String(30), Not Null
 - `created_at`: DateTime(timezone=True), Server Default now()
-- `updated_at`: DateTime(timezone=True), Server Default now(), On Update now()
+- `updated_at`: DateTime(timezone=True), Server Default now() (atualizado via trigger de banco e onupdate ORM)
 - *Constraint*: `UniqueConstraint("campus_id", "codigo", name="uq_curso_campus_codigo")`
 
 #### Tabela `disciplina`
@@ -91,7 +91,7 @@ O SIGAAS necessita de uma camada de persistencia relacional robusta, transaciona
 - `codigo`: String(30), Not Null
 - `carga_horaria`: Integer, Not Null (Check: carga_horaria > 0)
 - `created_at`: DateTime(timezone=True), Server Default now()
-- `updated_at`: DateTime(timezone=True), Server Default now(), On Update now()
+- `updated_at`: DateTime(timezone=True), Server Default now() (atualizado via trigger de banco e onupdate ORM)
 - *Constraint*: `UniqueConstraint("curso_id", "codigo", name="uq_disciplina_curso_codigo")`
 
 #### Tabela `turma`
@@ -102,7 +102,7 @@ O SIGAAS necessita de uma camada de persistencia relacional robusta, transaciona
 - `num_matriculados`: Integer, Default 0, Not Null (Check: num_matriculados >= 0)
 - `turno_preferido`: String(20), Not Null (Valores: matutino, vespertino, noturno, integral)
 - `created_at`: DateTime(timezone=True), Server Default now()
-- `updated_at`: DateTime(timezone=True), Server Default now(), On Update now()
+- `updated_at`: DateTime(timezone=True), Server Default now() (atualizado via trigger de banco e onupdate ORM)
 
 #### Tabela `matricula`
 - `id`: Integer, Primary Key, Autoincrement
