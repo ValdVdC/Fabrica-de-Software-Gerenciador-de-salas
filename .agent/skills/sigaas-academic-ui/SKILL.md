@@ -75,3 +75,13 @@ Component (timetable-cell-conflict, timetable-header, profile-badge)
 3. No decorative gradient text.
 4. No emojis under any circumstance. Replace with Lucide icons (`Calendar`, `Clock`, `MapPin`, `Users`, `CheckCircle2`, `AlertTriangle`).
 5. Design for real academic strings: accommodate long course names (e.g. "Algoritmos e Estruturas de Dados II") without clipping or layout breakage using `truncate` with full tooltip on hover.
+
+## Detailed Reference Guides
+
+Consult the dedicated manuals for deep implementation specifications:
+
+| Manual | Reference File | Coverage |
+| :--- | :--- | :--- |
+| **Token System & Tailwind** | [references/token-architecture.md](references/token-architecture.md) | Variáveis CSS, mapeamento Tailwind e contraste WCAG |
+| **Matriz e Grade Horária** | [references/timetable-matrix-patterns.md](references/timetable-matrix-patterns.md) | Dimensões M1-N4, sticky headers e responsividade |
+| **Alertas & Remanejamento** | [references/conflict-remanejamento-badges.md](references/conflict-remanejamento-badges.md) | Badges de conflito, aprovação de IA e Lucide Icons |
