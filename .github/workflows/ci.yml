@@ -5,10 +5,22 @@ on:
     branches:
       - main
       - homolog
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - ".gitignore"
   pull_request:
     branches:
       - main
       - homolog
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - ".gitignore"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-ci:
@@ -33,15 +45,16 @@ jobs:
 
       - name: Analise estatica e Linting (Ruff)
         run: |
-          ruff check backend/ app/ scripts/ || true
+          ruff check backend/ scripts/ || true
 
       - name: Auditoria de Seguranca (Bandit)
         run: |
           bandit -r backend/app -ll -ii || true
 
-      - name: Executar Testes Automatizados (Pytest)
+      - name: Executar Testes Automatizados com Cobertura Minima (Pytest + Cov >= 85%)
         run: |
-          pytest backend/tests -v --junitxml=backend-test-results.xml
+          cd backend
+          pytest tests -v --cov=app --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=85 --junitxml=backend-test-results.xml
 
   motor-c-ci:
     name: Motor de Alocacao (C + OpenMP)
