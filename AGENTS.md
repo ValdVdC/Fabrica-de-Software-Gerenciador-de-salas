@@ -78,10 +78,16 @@ Equipe com papéis fixos:
 
 ---
 
-## 7. Review por IA no Pull Request (CodeRabbit AI)
+## 7. Review por IA no Pull Request (CodeRabbit AI e Fallback Obrigatório)
 - Todo PR aberto dispara uma revisão automatizada por IA via **CodeRabbit AI** configurada em `.coderabbit.yaml`.
-- O CodeRabbit verifica conformidade com as regras deste `AGENTS.md` (sem lógica no Angular, sem banco no C, migrations presentes, cobertura de testes).
-- Os agentes locais (`sec-reviewer` e `devops-sync`) devem inspecionar os comentários do CodeRabbit (`gh pr view --comments`) antes de solicitar a aprovação humana final (Gate 2).
+- O CodeRabbit verifica conformidade com as regras deste `AGENTS.md` (sem lógica no Angular, sem banco no C, migrations presentes, cobertura de testes, conventional commits, zero emojis).
+- **Inspeção Ativa de Comentários (Inviolável):**
+  - Os agentes locais (`sec-reviewer` e `devops-sync`) são terminantemente proibidos de considerar o PR pronto para aprovação apenas pelo status do GitHub Checks (`gh pr checks`).
+  - É obrigatório inspecionar o conteúdo textual dos comentários via `gh pr view <PR> --comments`.
+- **Protocolo de Fallback para Rate Limit do CodeRabbit:**
+  - Se o CodeRabbit indicar limite de taxa atingido (`Review limit reached`, `Review rate limited` ou `manual review required`), o agente `sec-reviewer` DEVE assumir imediatamente a responsabilidade pela auditoria completa.
+  - O `sec-reviewer` inspecionará o diff linha a linha (`gh pr diff <PR>`), verificará as 10 regras de conformidade e emitirá um parecer detalhado diretamente ao usuário.
+  - O agente deve informar explicitamente ao usuário que o CodeRabbit está em período de *cooldown* de requisições e que a auditoria técnica foi realizada pelo `sec-reviewer` local antes de solicitar o Gate 2.
 
 ---
 

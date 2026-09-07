@@ -92,7 +92,7 @@ flowchart TD
    gh pr create --base main --title "feat(<escopo>): breve descrição" --body-file .github/pull_request_template.md
    ```
 3. O **CodeRabbit AI** analisa o PR no GitHub e deixa comentários linha a linha.
-4. O agente `sec-reviewer` inspeciona os comentários do CodeRabbit via `gh pr view --comments` e sana apontamentos se necessário.
+4. O agente `sec-reviewer` inspeciona os comentários do CodeRabbit via `gh pr view --comments`. Caso o CodeRabbit esteja bloqueado por *rate limit*, o `sec-reviewer` é obrigado a auditar o diff localmente (`gh pr diff`) e apresentar o parecer ao usuário antes de prosseguir.
 
 ### Etapa 5: Gate 2 Humano, Merge e Auto-Delete
 1. Você revisa o PR no GitHub e autoriza o **Merge**.

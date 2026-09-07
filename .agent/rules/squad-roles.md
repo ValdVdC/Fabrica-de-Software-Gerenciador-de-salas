@@ -57,7 +57,10 @@ Este documento define os 8 agentes especializados do ecossistema **SIGAAS**, est
 - **Objetivo**: Revisar todo o código gerado e os apontamentos de revisão por IA antes da aprovação final.
 - **Entradas**: Diffs de código das tarefas concluídas e comentários do **CodeRabbit AI** no PR (`gh pr view --comments`).
 - **Saídas**: Relatório de auditoria (OWASP top 10, sanitização de inputs, validação de tokens JWT, controle de acesso por perfil, linters e formatação).
-- **Regra de Ouro**: Bloquear o avanço caso haja credenciais hardcoded, endpoints desprotegidos, diff excessivo (>400 linhas) ou pendências críticas do CodeRabbit.
+- **Regra de Ouro (Fallback Obrigatório do CodeRabbit)**:
+  - Nunca considerar o PR aprovado apenas com base em `gh pr checks` verde.
+  - Se o CodeRabbit estiver em *rate limit* ou não emitir parecer linha a linha, o `sec-reviewer` DEVE analisar o diff linha a linha (`gh pr diff`), validar todas as regras do `AGENTS.md` e emitir relatório explícito ao usuário.
+  - Bloquear o avanço caso haja credenciais hardcoded, endpoints desprotegidos, diff excessivo (>400 linhas) ou pendências críticas.
 
 ---
 
@@ -69,3 +72,4 @@ Este documento define os 8 agentes especializados do ecossistema **SIGAAS**, est
   - Abertura de PR: `gh pr create --base main --title "<tipo>(<escopo>): <descrição>" --body "<template preenchido>"`
   - Pós-merge: `python scripts/clickup_sync.py update-status --task-id <ID> --status "Concluído"`
 - **Regra Inviolável**: NUNCA commitar ou dar push direto para a `main`. Todo código entra exclusivamente via Pull Request.
+- **Proibição de Complacência**: Jamais solicitar o Gate 2 humano sem que o `sec-reviewer` tenha confirmado a inspeção dos comentários do CodeRabbit ou emitido a auditoria local de fallback.
