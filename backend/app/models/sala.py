@@ -4,7 +4,10 @@ Modelos de dados para Sala, Equipamento e associação SalaEquipamento.
 
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import String, Integer, Boolean, ForeignKey, UniqueConstraint, CheckConstraint, DateTime, func, JSON
+from sqlalchemy import (
+    String, Integer, Boolean, ForeignKey, UniqueConstraint,
+    CheckConstraint, DateTime, func, JSON, Enum as SQLEnum
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
 from app.models.base import TimestampMixin
@@ -36,7 +39,10 @@ class Sala(TimestampMixin, Base):
     campus_id: Mapped[int] = mapped_column(ForeignKey("campus.id", ondelete="RESTRICT"), nullable=False, index=True)
     bloco: Mapped[str] = mapped_column(String(50), nullable=False)
     numero: Mapped[str] = mapped_column(String(50), nullable=False)
-    tipo: Mapped[TipoSala] = mapped_column(String(30), nullable=False)
+    tipo: Mapped[TipoSala] = mapped_column(
+        SQLEnum(TipoSala, native_enum=False, create_constraint=True, validate_strings=True, values_callable=lambda x: [e.value for e in x], length=30),
+        nullable=False
+    )
     capacidade: Mapped[int] = mapped_column(Integer, nullable=False)
     turnos_disponiveis: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
