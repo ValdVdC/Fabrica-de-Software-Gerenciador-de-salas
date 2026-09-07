@@ -2,10 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Instala dependencias de compilacao C e OpenMP
+# Instala dependencias de compilacao C (GCC, Make, libc-dev e OpenMP nativo)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libomp-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia e instala dependencias Python
