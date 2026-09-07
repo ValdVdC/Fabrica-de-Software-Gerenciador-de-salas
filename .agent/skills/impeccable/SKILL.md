@@ -39,3 +39,21 @@ Verify built results across these dimensions:
 - **Side-Stripe Borders**: Thick colored left or right borders (> 1px) on cards or alerts are banned.
 - **Hard Offset Shadows**: No `box-shadow: 4px 4px 0` unless the system is genuinely neobrutalist.
 - **Unicode Glyphs / Emojis as Icons**: Strictly prohibited. All icons must come from an authored SVG or vetted icon library (e.g. Lucide Icons) with consistent stroke and weight.
+
+## Reference Manuals Index
+
+When tackling specific design tasks, consult the detailed guides in the `reference/` directory:
+
+| Design Task | Reference File | Focus Area |
+| :--- | :--- | :--- |
+| **Piso de Qualidade** | [reference/craft-floor.md](reference/craft-floor.md) | Regras mecânicas inegociáveis de acabamento e contraste |
+| **Tipografia** | [reference/typeset.md](reference/typeset.md) | Medidas, entrelinha, tracking, fontes e hierarquia |
+| **Layout & Espaçamento** | [reference/layout.md](reference/layout.md) | Composição espacial, grelhas, ritmo e densidade |
+| **Animação & Movimento** | [reference/animate.md](reference/animate.md) | Transições intencionais, easing e respeito ao usuário |
+| **Cores & Superfícies** | [reference/colorize.md](reference/colorize.md) | Paletas funcionais, superfícies e contraste sem monotonia |
+| **Crítica & Auditoria** | [reference/critique.md](reference/critique.md) | Avaliação holística de UX, ruído visual e usabilidade |
+| **Declutter / Limpeza** | [reference/distill.md](reference/distill.md) | Remoção de decorações inúteis e foco na tarefa |
+| **Polimento Visual** | [reference/polish.md](reference/polish.md) | Micro-interações, alinhamento fino e estados de transição |
+| **Performance de UI** | [reference/optimize.md](reference/optimize.md) | Prevenção de CLS, reflows e custo de renderização |
+| **Resiliência e Casos de Borda**| [reference/harden.md](reference/harden.md) | Strings longas, overflow, falhas de rede e estados vazios |
+| **Design de Nova Superfície** | [reference/new-work.md](reference/new-work.md) | Estabelecimento de identidade e linguagem visual original |
