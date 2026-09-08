@@ -87,7 +87,8 @@ Equipe com papéis fixos:
 1. **Debate Adversarial Multi-Agente Pré-PR (.agent/workflows/adversarial-debate.md):**
    - Antes de submeter qualquer entrega para o Gate 2 humano, é mandatório executar a esteira de debate dialético multi-agente via `invoke_subagent`.
    - O comitê de análise simultânea opera com personas antagônicas: `advocate-mapper` (defesa e rastreabilidade), `adversary-breaker` (casos de borda, concorrência e falhas de lógica), `adversary-security` (OWASP, isolamento multi-campus e autenticação) e `adversary-compliance` (10 regras invioláveis e diff <= 400).
-   - O código só avança com **CONSENSO UNÂNIME** formalizado pelo `debate-arbiter` / `sec-reviewer`. Havendo veto, a tarefa retorna imediatamente para correção técnica.
+   - O código só avança para abertura de PR com **CONSENSO UNÂNIME (Zero Vetos)** formalizado pelo `debate-arbiter` / `sec-reviewer`.
+   - **Ciclo Obrigatório de Re-Review em Loop**: Havendo qualquer veto ou apontamento crítico, o desenvolvedor implementa a remediação e é **terminantemente obrigatório executar uma rodada de Re-Review (segundo ciclo de auditoria com os mesmos subagentes)** sobre o diff corrigido (`git diff origin/main...HEAD`). É expressamente proibido abrir PR após correções sem que os subagentes auditem a versão final corrigida e atestem formalmente a resolução de todas as pendências. O ciclo de Re-Review repete-se em loop contínuo até a obtenção de aprovação unânime e sem ressalvas impeditivas.
 2. **Review por IA no GitHub (CodeRabbit AI):**
    - Todo PR aberto dispara verificação complementar pelo **CodeRabbit AI** configurada em `.coderabbit.yaml`.
    - **Inspeção Ativa de Comentários:** Terminantemente proibido considerar o PR pronto apenas pelo status do GitHub Checks (`gh pr checks`). É obrigatório inspecionar os comentários textuais via `gh pr view <PR> --comments`.
