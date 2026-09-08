@@ -120,3 +120,37 @@ def test_associar_equipamento_a_sala(client, setup_cenario, test_db):
     assert resp.status_code == 201 and resp.json()["quantidade"] == 2
     assert client.post("/api/v1/salas/9999/equipamentos", json=payload, headers={"Authorization": f"Bearer {token}"}).status_code == 404
     assert client.post(f"/api/v1/salas/{sala.id}/equipamentos", json={"equipamento_id": 9999, "quantidade": 1}, headers={"Authorization": f"Bearer {token}"}).status_code == 404
+
+
+def test_validacao_campos_e_limites_sala(client, setup_cenario):
+    token = setup_cenario["token_admin"]
+    cid = setup_cenario["campus_a"].id
+    for b, n, cap in [("   ", "101", 30), ("A", "   ", 30), ("A", "101", 0), ("A", "101", 5001)]:
+        p = {"campus_id": cid, "bloco": b, "numero": n, "tipo": "regular", "capacidade": cap, "turnos_disponiveis": ["matutino"]}
+        assert client.post("/api/v1/salas", json=p, headers={"Authorization": f"Bearer {token}"}).status_code == 422
+    p_cid = {"campus_id": 99999, "bloco": "A", "numero": "101", "tipo": "regular", "capacidade": 30, "turnos_disponiveis": ["matutino"]}
+    assert client.post("/api/v1/salas", json=p_cid, headers={"Authorization": f"Bearer {token}"}).status_code == 404
+
+
+def test_validacao_equipamento_e_associacao_limites(client, setup_cenario, test_db):
+    token = setup_cenario["token_admin"]
+    sala = Sala(campus_id=setup_cenario["campus_a"].id, bloco="E", numero="1", tipo=TipoSala.REGULAR, capacidade=30, turnos_disponiveis=["matutino"])
+    equip = Equipamento(nome="Quadro Branco")
+    test_db.add_all([sala, equip])
+    test_db.commit()
+    for nome in ["   ", "A "]:
+        assert client.post("/api/v1/equipamentos", json={"nome": nome}, headers={"Authorization": f"Bearer {token}"}).status_code == 422
+    for q in [0, 1001]:
+        assert client.post(f"/api/v1/salas/{sala.id}/equipamentos", json={"equipamento_id": equip.id, "quantidade": q}, headers={"Authorization": f"Bearer {token}"}).status_code == 422
+
+
+def test_obter_sala_e_associar_equipamento_isolamento_tenant_404(client, setup_cenario, test_db):
+    sala_b = Sala(campus_id=setup_cenario["campus_b"].id, bloco="B", numero="99", tipo=TipoSala.REGULAR, capacidade=30, turnos_disponiveis=["matutino"])
+    equip = Equipamento(nome="Microfone Sem Fio")
+    test_db.add_all([sala_b, equip])
+    test_db.commit()
+    h_coord = {"Authorization": f"Bearer {setup_cenario['token_coord_a']}"}
+    assert client.get(f"/api/v1/salas/{sala_b.id}", headers=h_coord).status_code == 404
+    assert client.post(f"/api/v1/salas/{sala_b.id}/equipamentos", json={"equipamento_id": equip.id, "quantidade": 1}, headers=h_coord).status_code == 404
+    h_admin = {"Authorization": f"Bearer {setup_cenario['token_admin']}"}
+    assert client.get(f"/api/v1/salas/{sala_b.id}", headers=h_admin).status_code == 200

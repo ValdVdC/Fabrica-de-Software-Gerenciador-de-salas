@@ -11,6 +11,7 @@ from app.main import app as fastapi_app
 from app.db.session import Base, get_db
 from app.models import Campus, Usuario, Sala, PerfilUsuario, TipoSala, Turno
 from app.schemas.horario import HorarioCreate
+from app.core.security import create_access_token
 
 
 @pytest.fixture
@@ -71,10 +72,19 @@ def test_serializacao_entidades_com_dados(client, test_db):
     test_db.commit()
     res_u = client.get(f"/api/v1/usuarios/{u.id}")
     assert res_u.status_code == 200 and "senha_hash" not in res_u.json() and res_u.json()["perfil"] == "professor"
-    res_s = client.get(f"/api/v1/salas/{s.id}")
+    token = create_access_token({"sub": str(u.id), "perfil": u.perfil.value})
+    res_s = client.get(f"/api/v1/salas/{s.id}", headers={"Authorization": f"Bearer {token}"})
     assert res_s.status_code == 200 and res_s.json()["tipo"] == "regular"
 
 
 @pytest.mark.parametrize("endpoint", ["usuarios", "salas", "turmas", "horarios"])
-def test_listar_e_obter_404_recursos(client, endpoint):
-    assert client.get(f"/api/v1/{endpoint}").status_code == 200 and client.get(f"/api/v1/{endpoint}/9999").status_code == 404
+def test_listar_e_obter_404_recursos(client, endpoint, test_db):
+    c = Campus(nome="Campus Central", cidade="Teresina", endereco="Av Central")
+    test_db.add(c)
+    test_db.commit()
+    u = Usuario(campus_id=c.id, nome="Admin", email=f"admin_{endpoint}@sigaas.edu", senha_hash="h", perfil=PerfilUsuario.ADMIN)
+    test_db.add(u)
+    test_db.commit()
+    token = create_access_token({"sub": str(u.id), "perfil": u.perfil.value})
+    headers = {"Authorization": f"Bearer {token}"}
+    assert client.get(f"/api/v1/{endpoint}", headers=headers).status_code == 200 and client.get(f"/api/v1/{endpoint}/9999", headers=headers).status_code == 404
