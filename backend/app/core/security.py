@@ -7,13 +7,17 @@ from jose import jwt, JWTError
 from app.config import settings
 
 
+# Hash dummy constante pre-calculado para consumo equivalente de tempo em timing attacks
+DUMMY_HASH = "$2b$12$e8Ym2bA1w8s9.3u2KzM3Seo/v9mQfJ5bW8d0CqQy5J7L1p2E3R4Tu"
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Valida correspondencia entre senha plana e hash bcrypt."""
+    """Valida correspondencia entre senha plana e hash bcrypt com protecao de tamanho."""
     try:
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8"),
-            hashed_password.encode("utf-8"),
-        )
+        raw_bytes = plain_password.encode("utf-8")
+        if len(raw_bytes) > 72:
+            return False
+        return bcrypt.checkpw(raw_bytes, hashed_password.encode("utf-8"))
     except Exception:
         return False
 

@@ -26,6 +26,8 @@ def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         user_id = int(user_id_str)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -42,22 +44,19 @@ def get_current_user(
         )
     if not user.ativo:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Usuario inativo",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario inativo no sistema",
         )
     return user
 
 
 def require_role(*roles: PerfilUsuario):
-    """Fabrica de dependencia para controle de acesso baseado em perfil (RBAC)."""
+    """Fabrica de dependencia para controle de acesso estrito baseado em perfil (RBAC)."""
     def role_checker(current_user: Usuario = Depends(get_current_user)) -> Usuario:
-        if current_user.perfil in roles:
-            return current_user
-        # Coordenador possui privilegios compativeis com administrador
-        if PerfilUsuario.ADMIN in roles and current_user.perfil == PerfilUsuario.COORDENADOR:
-            return current_user
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Acesso negado: privilegio insuficiente",
-        )
+        if current_user.perfil not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acesso negado: privilegio insuficiente",
+            )
+        return current_user
     return role_checker

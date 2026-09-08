@@ -1,5 +1,7 @@
 """Testes automatizados para autenticacao JWT, hash de senhas e RBAC."""
+from datetime import timedelta
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -14,6 +16,7 @@ from app.core.security import (
     create_access_token,
     decode_access_token,
 )
+from app.api.deps import require_role
 
 
 @pytest.fixture
@@ -63,6 +66,7 @@ def test_password_hashing_and_verification():
     assert hashed != raw_pass
     assert verify_password(raw_pass, hashed) is True
     assert verify_password("senha_errada", hashed) is False
+    assert verify_password("a" * 80, hashed) is False
 
 
 def test_token_creation_and_decoding():
@@ -85,6 +89,13 @@ def test_login_sucesso(client, usuario_teste):
     assert data["usuario"]["perfil"] == "admin"
 
 
+def test_login_email_normalizacao(client, usuario_teste):
+    payload = {"email": "  Admin@Sigaas.Edu  ", "senha": "sigaas123"}
+    res = client.post("/api/v1/auth/login", json=payload)
+    assert res.status_code == 200
+    assert res.json()["usuario"]["email"] == "admin@sigaas.edu"
+
+
 def test_login_senha_incorreta(client, usuario_teste):
     payload = {"email": "admin@sigaas.edu", "senha": "senha_errada"}
     res = client.post("/api/v1/auth/login", json=payload)
@@ -97,6 +108,22 @@ def test_login_usuario_inexistente(client, test_db):
     res = client.post("/api/v1/auth/login", json=payload)
     assert res.status_code == 401
     assert "Credenciais invalidas" in res.json()["detail"]
+
+
+def test_login_usuario_inativo_retorna_403(client, test_db, usuario_teste):
+    usuario_teste.ativo = False
+    test_db.commit()
+
+    payload = {"email": "admin@sigaas.edu", "senha": "sigaas123"}
+    res = client.post("/api/v1/auth/login", json=payload)
+    assert res.status_code == 403
+    assert "Usuario inativo" in res.json()["detail"]
+
+
+def test_login_senha_maior_que_72_bytes_rejeitada_422(client):
+    payload = {"email": "admin@sigaas.edu", "senha": "a" * 75}
+    res = client.post("/api/v1/auth/login", json=payload)
+    assert res.status_code == 422
 
 
 def test_auth_me_com_token_valido(client, usuario_teste):
@@ -114,3 +141,26 @@ def test_auth_me_com_token_valido(client, usuario_teste):
 def test_auth_me_sem_token_retorna_401(client):
     res = client.get("/api/v1/auth/me")
     assert res.status_code == 401
+
+
+def test_token_expirado_rejeitado(client):
+    token_expirado = create_access_token(data={"sub": "1"}, expires_delta=timedelta(minutes=-10))
+    res = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token_expirado}"})
+    assert res.status_code == 401
+
+
+def test_token_sem_sub_retorna_401(client):
+    token_sem_sub = create_access_token(data={"role": "admin"})
+    res = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token_sem_sub}"})
+    assert res.status_code == 401
+
+
+def test_require_role_autorizacao(usuario_teste):
+    checker_admin = require_role(PerfilUsuario.ADMIN)
+    assert checker_admin(usuario_teste) == usuario_teste
+
+    checker_aluno = require_role(PerfilUsuario.ALUNO)
+    with pytest.raises(HTTPException) as exc_info:
+        checker_aluno(usuario_teste)
+    assert exc_info.value.status_code == 403
+    assert "privilegio insuficiente" in exc_info.value.detail
