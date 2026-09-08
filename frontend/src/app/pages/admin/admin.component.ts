@@ -22,6 +22,7 @@ import { AuthService } from '../../services/auth.service';
         <button type="button" [class.active]="abaAtiva() === 'resumo'" (click)="selecionarAba('resumo')">Resumo &amp; Metricas</button>
       </nav>
 
+      @if (campusId <= 0) { <div class="alert alert-error">Campus nao identificado para o usuario autenticado.</div> }
       @if (adminService.errorMessage()) { <div class="alert alert-error">{{ adminService.errorMessage() }}</div> }
       @if (mensagemSucesso()) { <div class="alert alert-success">{{ mensagemSucesso() }}</div> }
 
@@ -38,7 +39,7 @@ import { AuthService } from '../../services/auth.service';
               <option value="reuniao">Reuniao</option>
             </select>
             <input type="number" [(ngModel)]="formCapacidade" name="capacidade" min="1" max="5000" placeholder="Capacidade" class="form-input tabular-nums" />
-            <button type="submit" [disabled]="adminService.isLoading()" class="btn-primary">Salvar Sala</button>
+            <button type="submit" [disabled]="adminService.isLoading() || campusId <= 0" class="btn-primary">Salvar Sala</button>
           </form>
         </div>
 
@@ -53,7 +54,7 @@ import { AuthService } from '../../services/auth.service';
                   <td class="font-bold">{{ sala.bloco }} - Sala {{ sala.numero }}</td>
                   <td><span class="badge">{{ sala.tipo }}</span></td>
                   <td class="tabular-nums">{{ sala.capacidade }} alunos</td>
-                  <td>{{ sala.turnos_disponiveis.join(', ') || 'Nenhum' }}</td>
+                  <td>{{ (sala.turnos_disponiveis || []).join(', ') || 'Nenhum' }}</td>
                 </tr>
               } @empty {
                 <tr><td colspan="4" class="empty-msg">Nenhuma sala cadastrada neste campus.</td></tr>
@@ -156,7 +157,7 @@ export class AdminComponent implements OnInit {
   readonly abaAtiva = signal<'salas' | 'equipamentos' | 'resumo'>('salas');
   readonly mensagemSucesso = signal<string | null>(null);
 
-  campusId = 1;
+  campusId = 0;
   formBloco = '';
   formNumero = '';
   formTipo: 'regular' | 'laboratorio' | 'auditorio' | 'reuniao' = 'regular';
@@ -173,8 +174,10 @@ export class AdminComponent implements OnInit {
 
   ngOnInit(): void {
     const user = this.authService.currentUser();
-    this.campusId = user?.campus_id && user.campus_id > 0 ? user.campus_id : 1;
-    this.adminService.listarSalas(this.campusId).subscribe({ error: () => {} });
+    this.campusId = user?.campus_id && user.campus_id > 0 ? user.campus_id : 0;
+    if (this.campusId > 0) {
+      this.adminService.listarSalas(this.campusId).subscribe({ error: () => {} });
+    }
     this.adminService.listarEquipamentos().subscribe({ error: () => {} });
   }
 
@@ -184,18 +187,22 @@ export class AdminComponent implements OnInit {
   }
 
   cadastrarSala(): void {
+    this.mensagemSucesso.set(null);
+    if (this.adminService.isLoading() || this.campusId <= 0) return;
+
     const bloco = this.formBloco.trim();
     const numero = this.formNumero.trim();
     if (!bloco || !numero) return;
 
-    this.mensagemSucesso.set(null);
-    const capacidade = Math.max(1, Math.min(5000, Number(this.formCapacidade) || 40));
+    const capNum = Math.floor(Number(this.formCapacidade));
+    if (isNaN(capNum) || capNum < 1 || capNum > 5000) return;
+
     const payload: SalaCreate = {
       campus_id: this.campusId,
       bloco,
       numero,
       tipo: this.formTipo,
-      capacidade,
+      capacidade: capNum,
       turnos_disponiveis: ['matutino', 'vespertino'],
     };
 
@@ -204,6 +211,7 @@ export class AdminComponent implements OnInit {
         this.mensagemSucesso.set(`Sala ${s.bloco}-${s.numero} cadastrada com sucesso!`);
         this.formBloco = '';
         this.formNumero = '';
+        this.formTipo = 'regular';
         this.formCapacidade = 40;
       },
       error: () => {},
@@ -211,13 +219,16 @@ export class AdminComponent implements OnInit {
   }
 
   cadastrarEquipamento(): void {
+    this.mensagemSucesso.set(null);
+    if (this.adminService.isLoading()) return;
+
     const nome = this.formEquipNome.trim();
     if (nome.length < 2) return;
 
-    this.mensagemSucesso.set(null);
+    const desc = this.formEquipDesc.trim();
     const payload: EquipamentoCreate = {
       nome,
-      descricao: this.formEquipDesc.trim() || undefined,
+      descricao: desc.length > 0 ? desc : undefined,
     };
 
     this.adminService.criarEquipamento(payload).subscribe({

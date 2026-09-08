@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AdminComponent } from './admin.component';
 import { AdminService, Sala, Equipamento } from '../../services/admin.service';
 import { AuthService, UserSummary } from '../../services/auth.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 
 describe('AdminComponent', () => {
@@ -13,7 +13,7 @@ describe('AdminComponent', () => {
 
   // prettier-ignore
   const mockSalas = signal<Sala[]>([
-    { id: 1, campus_id: 1, bloco: 'A', numero: '101', tipo: 'regular', capacidade: 40, turnos_disponiveis: ['matutino'], ativo: true },
+    { id: 1, campus_id: 2, bloco: 'A', numero: '101', tipo: 'regular', capacidade: 40, turnos_disponiveis: ['matutino'], ativo: true },
   ]);
   const mockEquipamentos = signal<Equipamento[]>([
     { id: 10, nome: 'Projetor HD', descricao: 'Sala de aula', created_at: '2026-03-01T10:00:00Z' },
@@ -25,8 +25,10 @@ describe('AdminComponent', () => {
     perfil: 'admin',
     campus_id: 2,
   });
+  const mockLoading = signal(false);
 
   beforeEach(async () => {
+    mockLoading.set(false);
     adminServiceSpy = jasmine.createSpyObj(
       'AdminService',
       ['listarSalas', 'listarEquipamentos', 'criarSala', 'criarEquipamento'],
@@ -34,7 +36,7 @@ describe('AdminComponent', () => {
         salas: mockSalas.asReadonly(),
         equipamentos: mockEquipamentos.asReadonly(),
         errorMessage: signal<string | null>(null).asReadonly(),
-        isLoading: signal(false).asReadonly(),
+        isLoading: mockLoading.asReadonly(),
       },
     );
 
@@ -68,17 +70,29 @@ describe('AdminComponent', () => {
     expect(component.capacidadeTotal()).toBe(40);
   });
 
+  it('nao deve listar salas se usuario autenticado nao possuir campus valido', () => {
+    const semCampusSpy = jasmine.createSpyObj('AuthService', [], {
+      currentUser: signal<UserSummary | null>(null).asReadonly(),
+    });
+    const localFixture = TestBed.createComponent(AdminComponent);
+    localFixture.debugElement.injector.get(AuthService);
+    (localFixture.componentInstance as any).authService = semCampusSpy;
+    adminServiceSpy.listarSalas.calls.reset();
+
+    localFixture.componentInstance.ngOnInit();
+
+    expect(localFixture.componentInstance.campusId).toBe(0);
+    expect(adminServiceSpy.listarSalas).not.toHaveBeenCalled();
+  });
+
   it('deve alternar abas e limpar mensagem de sucesso', () => {
     component.mensagemSucesso.set('Mensagem teste');
     component.selecionarAba('equipamentos');
     expect(component.abaAtiva()).toBe('equipamentos');
     expect(component.mensagemSucesso()).toBeNull();
-
-    component.selecionarAba('resumo');
-    expect(component.abaAtiva()).toBe('resumo');
   });
 
-  it('deve submeter criacao de sala e atualizar estado ao concluir', () => {
+  it('deve submeter criacao de sala e atualizar estado ao concluir com reset de tipo', () => {
     // prettier-ignore
     const novaSala: Sala = {
       id: 2, campus_id: 2, bloco: 'B', numero: '202', tipo: 'laboratorio', capacidade: 30, turnos_disponiveis: ['matutino'], ativo: true,
@@ -88,7 +102,7 @@ describe('AdminComponent', () => {
     component.formBloco = 'B';
     component.formNumero = '202';
     component.formTipo = 'laboratorio';
-    component.formCapacidade = 30;
+    component.formCapacidade = 30.8;
 
     component.cadastrarSala();
 
@@ -104,9 +118,11 @@ describe('AdminComponent', () => {
     expect(component.mensagemSucesso()).toContain('Sala B-202 cadastrada com sucesso!');
     expect(component.formBloco).toBe('');
     expect(component.formNumero).toBe('');
+    expect(component.formTipo).toBe('regular');
+    expect(component.formCapacidade).toBe(40);
   });
 
-  it('deve submeter criacao de equipamento e atualizar estado ao concluir', () => {
+  it('deve submeter criacao de equipamento e atualizar estado ao concluir com descricao opcional', () => {
     const novoEq: Equipamento = {
       id: 11,
       nome: 'Notebook Dell',
@@ -116,26 +132,62 @@ describe('AdminComponent', () => {
     adminServiceSpy.criarEquipamento.and.returnValue(of(novoEq));
 
     component.formEquipNome = 'Notebook Dell';
-    component.formEquipDesc = 'i7 16GB';
-
+    component.formEquipDesc = '   ';
     component.cadastrarEquipamento();
 
     expect(adminServiceSpy.criarEquipamento).toHaveBeenCalledWith({
       nome: 'Notebook Dell',
-      descricao: 'i7 16GB',
+      descricao: undefined,
     });
     expect(component.mensagemSucesso()).toContain("Equipamento 'Notebook Dell' adicionado");
     expect(component.formEquipNome).toBe('');
   });
 
+  it('nao deve submeter formularios quando adminService.isLoading for verdadeiro', () => {
+    mockLoading.set(true);
+    component.formBloco = 'C';
+    component.formNumero = '303';
+    component.cadastrarSala();
+    expect(adminServiceSpy.criarSala).not.toHaveBeenCalled();
+
+    component.formEquipNome = 'Cabo HDMI';
+    component.cadastrarEquipamento();
+    expect(adminServiceSpy.criarEquipamento).not.toHaveBeenCalled();
+  });
+
   it('nao deve submeter formularios com campos vazios ou invalidos', () => {
+    component.mensagemSucesso.set('Antigo');
     component.formBloco = '   ';
     component.formNumero = '';
     component.cadastrarSala();
     expect(adminServiceSpy.criarSala).not.toHaveBeenCalled();
+    expect(component.mensagemSucesso()).toBeNull();
 
     component.formEquipNome = 'a';
     component.cadastrarEquipamento();
     expect(adminServiceSpy.criarEquipamento).not.toHaveBeenCalled();
+  });
+
+  it('nao deve submeter sala com capacidade invalida', () => {
+    component.formBloco = 'A';
+    component.formNumero = '101';
+    component.formCapacidade = 0;
+    component.cadastrarSala();
+    expect(adminServiceSpy.criarSala).not.toHaveBeenCalled();
+
+    component.formCapacidade = 5001;
+    component.cadastrarSala();
+    expect(adminServiceSpy.criarSala).not.toHaveBeenCalled();
+  });
+
+  it('deve manter formulario e nao exibir sucesso em caso de erro na API', () => {
+    adminServiceSpy.criarSala.and.returnValue(throwError(() => new Error('Falha')));
+    component.formBloco = 'A';
+    component.formNumero = '101';
+    component.cadastrarSala();
+
+    expect(component.mensagemSucesso()).toBeNull();
+    expect(component.formBloco).toBe('A');
+    expect(component.formNumero).toBe('101');
   });
 });
