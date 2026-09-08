@@ -1,0 +1,63 @@
+"""Dependencias globais da API: extracao de usuario logado e controle RBAC."""
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.models.usuario import Usuario
+from app.models.enums import PerfilUsuario
+from app.core.security import decode_access_token
+
+reusable_oauth2 = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+
+def get_current_user(
+    db: Session = Depends(get_db),
+    token: str = Depends(reusable_oauth2),
+) -> Usuario:
+    """Extrai e valida o usuario ativo a partir do token Bearer JWT."""
+    try:
+        payload = decode_access_token(token)
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token invalido: identificador ausente",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        user_id = int(user_id_str)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciais invalidas ou token expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+    user = db.get(Usuario, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario associado ao token nao encontrado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.ativo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Usuario inativo",
+        )
+    return user
+
+
+def require_role(*roles: PerfilUsuario):
+    """Fabrica de dependencia para controle de acesso baseado em perfil (RBAC)."""
+    def role_checker(current_user: Usuario = Depends(get_current_user)) -> Usuario:
+        if current_user.perfil in roles:
+            return current_user
+        # Coordenador possui privilegios compativeis com administrador
+        if PerfilUsuario.ADMIN in roles and current_user.perfil == PerfilUsuario.COORDENADOR:
+            return current_user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: privilegio insuficiente",
+        )
+    return role_checker
