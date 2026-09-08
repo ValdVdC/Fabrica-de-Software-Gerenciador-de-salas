@@ -60,3 +60,27 @@ def require_role(*roles: PerfilUsuario):
             )
         return current_user
     return role_checker
+
+
+reusable_oauth2_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+
+
+def get_optional_current_user(
+    db: Session = Depends(get_db),
+    token: str | None = Depends(reusable_oauth2_optional),
+) -> Usuario | None:
+    """Extrai o usuario ativo a partir do token se fornecido, sem falhar se omitido."""
+    if not token:
+        return None
+    try:
+        payload = decode_access_token(token)
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
+            return None
+        user = db.get(Usuario, int(user_id_str))
+        if user and user.ativo:
+            return user
+    except Exception:
+        return None
+    return None
+
