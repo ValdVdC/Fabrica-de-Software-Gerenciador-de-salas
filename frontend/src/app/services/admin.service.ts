@@ -1,6 +1,6 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Injectable, inject, signal, computed } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, tap, finalize } from 'rxjs';
 
 export interface Sala {
   id: number;
@@ -49,70 +49,96 @@ export interface SalaEquipamentoCreate {
 export class AdminService {
   private readonly http = inject(HttpClient);
 
-  readonly salas = signal<Sala[]>([]);
-  readonly equipamentos = signal<Equipamento[]>([]);
-  readonly isLoading = signal(false);
-  readonly errorMessage = signal<string | null>(null);
+  private readonly _salas = signal<Sala[]>([]);
+  readonly salas = this._salas.asReadonly();
+
+  private readonly _equipamentos = signal<Equipamento[]>([]);
+  readonly equipamentos = this._equipamentos.asReadonly();
+
+  private readonly _activeRequests = signal<number>(0);
+  readonly isLoading = computed(() => this._activeRequests() > 0);
+
+  private readonly _errorMessage = signal<string | null>(null);
+  readonly errorMessage = this._errorMessage.asReadonly();
 
   listarSalas(campusId?: number): Observable<Sala[]> {
-    this.iniciar();
-    const url = campusId ? `/api/v1/salas?campus_id=${campusId}` : '/api/v1/salas';
-    return this.http.get<Sala[]>(url).pipe(this.tratar((d) => this.salas.set(d)));
+    let params: HttpParams | undefined;
+    if (campusId !== undefined && campusId !== null) {
+      if (!Number.isInteger(campusId) || campusId <= 0) {
+        throw new Error('Identificador de campus invalido');
+      }
+      params = new HttpParams().set('campus_id', campusId.toString());
+    }
+    return this.executar(this.http.get<Sala[]>('/api/v1/salas', { params }), (dados) =>
+      this._salas.set(dados),
+    );
   }
 
   criarSala(payload: SalaCreate): Observable<Sala> {
-    this.iniciar();
-    return this.http
-      .post<Sala>('/api/v1/salas', payload)
-      .pipe(this.tratar((s) => this.salas.update((l) => [...l, s])));
+    return this.executar(this.http.post<Sala>('/api/v1/salas', payload), (nova) =>
+      this._salas.update((lista) => [...lista, nova]),
+    );
   }
 
   listarEquipamentos(): Observable<Equipamento[]> {
-    this.iniciar();
-    return this.http
-      .get<Equipamento[]>('/api/v1/equipamentos')
-      .pipe(this.tratar((d) => this.equipamentos.set(d)));
+    return this.executar(this.http.get<Equipamento[]>('/api/v1/equipamentos'), (dados) =>
+      this._equipamentos.set(dados),
+    );
   }
 
   criarEquipamento(payload: EquipamentoCreate): Observable<Equipamento> {
-    this.iniciar();
-    return this.http
-      .post<Equipamento>('/api/v1/equipamentos', payload)
-      .pipe(this.tratar((e) => this.equipamentos.update((l) => [...l, e])));
+    return this.executar(this.http.post<Equipamento>('/api/v1/equipamentos', payload), (novo) =>
+      this._equipamentos.update((lista) => [...lista, novo]),
+    );
   }
 
   associarEquipamento(salaId: number, payload: SalaEquipamentoCreate): Observable<SalaEquipamento> {
-    this.iniciar();
-    return this.http
-      .post<SalaEquipamento>(`/api/v1/salas/${salaId}/equipamentos`, payload)
-      .pipe(this.tratar(() => {}));
+    if (!Number.isInteger(salaId) || salaId <= 0) {
+      throw new Error('Identificador de sala invalido');
+    }
+    return this.executar(
+      this.http.post<SalaEquipamento>(`/api/v1/salas/${salaId}/equipamentos`, payload),
+      () => {},
+    );
   }
 
-  private iniciar(): void {
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
+  resetState(): void {
+    this._salas.set([]);
+    this._equipamentos.set([]);
+    this._errorMessage.set(null);
+    this._activeRequests.set(0);
   }
 
-  private tratar<T>(fn: (res: T) => void) {
-    return tap<T>({
-      next: (res) => {
-        fn(res);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        this.errorMessage.set(this.extrairErro(err));
-        this.isLoading.set(false);
-      },
-    });
+  private executar<T>(source: Observable<T>, onSucesso: (res: T) => void): Observable<T> {
+    this._activeRequests.update((c) => c + 1);
+    this._errorMessage.set(null);
+    return source.pipe(
+      tap({
+        next: (res) => onSucesso(res),
+        error: (err) => this._errorMessage.set(this.extrairErro(err)),
+      }),
+      finalize(() => this._activeRequests.update((c) => Math.max(0, c - 1))),
+    );
   }
 
   private extrairErro(err: any): string {
-    const detail = err?.error?.detail;
+    if (!err) return 'Erro desconhecido na requisicao';
+    if (err.status === 0) return 'Nao foi possivel conectar ao servidor';
+    if (err.status >= 500) return 'Erro interno no servidor. Tente novamente mais tarde.';
+
+    const detail = err.error?.detail;
     if (detail) {
-      if (Array.isArray(detail))
-        return detail.map((d: any) => d.msg || JSON.stringify(d)).join('; ');
+      if (Array.isArray(detail)) {
+        const msgs = detail
+          .map((d: any) => (d && typeof d === 'object' && d.msg ? String(d.msg) : null))
+          .filter(Boolean);
+        return msgs.length > 0 ? msgs.join('; ') : 'Dados de entrada invalidos';
+      }
+      if (typeof detail === 'object' && detail !== null) {
+        return detail.message || detail.msg || 'Requisicao invalida';
+      }
       return String(detail);
     }
-    return 'Falha na comunicacao com a API administrativa';
+    return err.statusText || 'Falha na comunicacao com a API administrativa';
   }
 }

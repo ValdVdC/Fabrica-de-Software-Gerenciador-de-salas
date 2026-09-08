@@ -19,7 +19,7 @@ describe('AdminService', () => {
     httpMock.verify();
   });
 
-  it('lista salas e equipamentos atualizando signals', () => {
+  it('lista salas com e sem campusId via HttpParams', () => {
     const mockSalas: Sala[] = [
       {
         id: 1,
@@ -32,17 +32,24 @@ describe('AdminService', () => {
         ativo: true,
       },
     ];
-    const mockEquips: Equipamento[] = [
-      { id: 1, nome: 'Projetor HD', descricao: 'Sala aula', created_at: '2026-09-08' },
-    ];
 
     service.listarSalas().subscribe((res) => expect(res.length).toBe(1));
     httpMock.expectOne('/api/v1/salas').flush(mockSalas);
     expect(service.salas().length).toBe(1);
 
-    service.listarEquipamentos().subscribe((res) => expect(res.length).toBe(1));
-    httpMock.expectOne('/api/v1/equipamentos').flush(mockEquips);
-    expect(service.equipamentos().length).toBe(1);
+    service.listarSalas(1).subscribe((res) => expect(res.length).toBe(1));
+    const req = httpMock.expectOne(
+      (r) => r.url === '/api/v1/salas' && r.params.get('campus_id') === '1',
+    );
+    req.flush(mockSalas);
+  });
+
+  it('rejeita campusId e salaId invalidos com excecao', () => {
+    expect(() => service.listarSalas(0)).toThrowError('Identificador de campus invalido');
+    expect(() => service.listarSalas(-5)).toThrowError('Identificador de campus invalido');
+    expect(() => service.associarEquipamento(0, { equipamento_id: 1, quantidade: 1 })).toThrowError(
+      'Identificador de sala invalido',
+    );
   });
 
   it('cria sala e equipamento com sucesso', () => {
@@ -54,10 +61,10 @@ describe('AdminService', () => {
       capacidade: 30,
       turnos_disponiveis: ['vespertino'],
     };
-    const mockSala: Sala = { id: 2, ...payloadSala, tipo: 'laboratorio', ativo: true };
-
     service.criarSala(payloadSala).subscribe((res) => expect(res.id).toBe(2));
-    httpMock.expectOne('/api/v1/salas').flush(mockSala);
+    httpMock
+      .expectOne('/api/v1/salas')
+      .flush({ id: 2, ...payloadSala, tipo: 'laboratorio', ativo: true });
     expect(service.salas().some((s) => s.id === 2)).toBeTrue();
 
     service
@@ -78,18 +85,61 @@ describe('AdminService', () => {
       .flush({ sala_id: 1, equipamento_id: 1, quantidade: 2 });
   });
 
-  it('trata erro HTTP 409 e atualiza errorMessage', () => {
-    service.criarEquipamento({ nome: 'Duplicado' }).subscribe({
+  it('nao vaza informacoes internas de servidor em erros HTTP 500', () => {
+    service.listarSalas().subscribe({
       error: () => {
-        expect(service.errorMessage()).toBe('Ja existe equipamento com este nome');
-        expect(service.isLoading()).toBeFalse();
+        expect(service.errorMessage()).toBe(
+          'Erro interno no servidor. Tente novamente mais tarde.',
+        );
       },
+    });
+    httpMock
+      .expectOne('/api/v1/salas')
+      .flush(
+        { detail: 'psycopg2.OperationalError: stacktrace' },
+        { status: 500, statusText: 'Server Error' },
+      );
+    expect(service.isLoading()).toBeFalse();
+  });
+
+  it('trata erros de validacao 422 e objetos sem vazar metadados brutos', () => {
+    service.criarEquipamento({ nome: 'A' }).subscribe({
+      error: () => expect(service.errorMessage()).toBe('Nome muito curto'),
     });
     httpMock
       .expectOne('/api/v1/equipamentos')
       .flush(
-        { detail: 'Ja existe equipamento com este nome' },
-        { status: 409, statusText: 'Conflict' },
+        { detail: [null, { msg: 'Nome muito curto' }] },
+        { status: 422, statusText: 'Unprocessable' },
       );
+
+    service.criarEquipamento({ nome: 'B' }).subscribe({
+      error: () => expect(service.errorMessage()).toBe('Recurso bloqueado'),
+    });
+    httpMock
+      .expectOne('/api/v1/equipamentos')
+      .flush({ detail: { message: 'Recurso bloqueado' } }, { status: 409, statusText: 'Conflict' });
+  });
+
+  it('gerencia isLoading de forma resiliente contra race conditions em chamadas paralelas', () => {
+    service.listarSalas().subscribe();
+    service.listarEquipamentos().subscribe();
+
+    expect(service.isLoading()).toBeTrue();
+    httpMock.expectOne('/api/v1/salas').flush([]);
+    expect(service.isLoading()).toBeTrue();
+
+    httpMock.expectOne('/api/v1/equipamentos').flush([]);
+    expect(service.isLoading()).toBeFalse();
+  });
+
+  it('expoe signals como somente leitura e reseta estado com resetState', () => {
+    expect((service.salas as any).set).toBeUndefined();
+    expect((service.equipamentos as any).set).toBeUndefined();
+
+    service.resetState();
+    expect(service.salas()).toEqual([]);
+    expect(service.equipamentos()).toEqual([]);
+    expect(service.errorMessage()).toBeNull();
   });
 });
