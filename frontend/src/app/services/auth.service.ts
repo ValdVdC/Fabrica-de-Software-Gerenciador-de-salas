@@ -39,19 +39,19 @@ export class AuthService {
   }
 
   private restoreSession(): void {
-    if (typeof localStorage !== 'undefined') {
-      const storedToken = localStorage.getItem('sigaas_token');
-      const storedUser = localStorage.getItem('sigaas_user');
-      if (storedToken && storedUser) {
-        try {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const storedToken = localStorage.getItem('sigaas_token');
+        const storedUser = localStorage.getItem('sigaas_user');
+        if (storedToken && storedUser) {
           const user = JSON.parse(storedUser) as UserSummary;
           this._token.set(storedToken);
           this._currentUser.set(user);
           this._currentRole.set(user.perfil);
-        } catch {
-          this.logout();
         }
       }
+    } catch {
+      this.logout();
     }
   }
 
@@ -64,9 +64,13 @@ export class AuthService {
         this._token.set(res.access_token);
         this._currentUser.set(res.usuario);
         this._currentRole.set(res.usuario.perfil);
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('sigaas_token', res.access_token);
-          localStorage.setItem('sigaas_user', JSON.stringify(res.usuario));
+        try {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('sigaas_token', res.access_token);
+            localStorage.setItem('sigaas_user', JSON.stringify(res.usuario));
+          }
+        } catch {
+          // Ignora falha de persistencia em contextos com storage indisponivel
         }
       }),
     );
@@ -77,7 +81,7 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this._currentRole() !== null;
+    return Boolean(this._token() && this._currentRole());
   }
 
   hasRole(role: string): boolean {
@@ -87,15 +91,24 @@ export class AuthService {
 
   setRole(role: UserRole | null): void {
     this._currentRole.set(role);
+    if (role && !this._token()) {
+      this._token.set(`session_${role}_token`);
+    } else if (!role) {
+      this._token.set(null);
+    }
   }
 
   logout(): void {
     this._token.set(null);
     this._currentUser.set(null);
     this._currentRole.set(null);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('sigaas_token');
-      localStorage.removeItem('sigaas_user');
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('sigaas_token');
+        localStorage.removeItem('sigaas_user');
+      }
+    } catch {
+      // Ignora falha de remocao em storage indisponivel
     }
   }
 }
