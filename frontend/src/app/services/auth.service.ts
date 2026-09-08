@@ -68,7 +68,7 @@ export class AuthService {
           localStorage.setItem('sigaas_token', res.access_token);
           localStorage.setItem('sigaas_user', JSON.stringify(res.usuario));
         }
-      })
+      }),
     );
   }
 
