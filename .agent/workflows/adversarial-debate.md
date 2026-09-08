@@ -22,7 +22,7 @@ Subagentes autônomos com personas antagônicas analisam simultaneamente o diff 
 flowchart TD
     CodeReady[Fase GREEN Concluída na Branch] --> Advocate[advocate-mapper: Mapeia Diff e Formula Tese de Conformidade]
     
-    Advocate --> ParallelAttacks{Disparo Simultâneo via invoke_subagent}
+    Advocate --> ParallelAttacks{Disparo Simultâneo via invoke_subagent: Rodada 1}
     
     ParallelAttacks --> Breaker[adversary-breaker: Caçador de Falhas de Borda e Concorrência]
     ParallelAttacks --> Security[adversary-security: Pentester Multi-Tenancy e Permissões]
@@ -36,8 +36,10 @@ flowchart TD
     
     Arbiter --> Decision{Consenso Unânime?}
     Decision -- Não (Veto Bloqueante) --> Remediation[Dev corrige código e adiciona testes TDD]
-    Remediation --> CodeReady
-    Decision -- Sim (Aprovado) --> Gate2[Gate 2: Submissão do PR para Revisão Humana]
+    Remediation --> ReReview{Re-Review em Loop: Rodada 2+}
+    ReReview --> ParallelAttacks
+    Decision -- Sim (Zero Vetos) --> PRReady[Abertura do PR + Validação CI]
+    PRReady --> Gate2[Gate 2: Submissão para Aprovação Humana]
 ```
 
 ---
@@ -87,6 +89,7 @@ flowchart TD
 
 ## 4. Instruções Operacionais de Execução via `invoke_subagent`
 
+### 4.1 Rodada 1: Auditoria Inicial
 O agente orquestrador (`sec-reviewer` ou líder de sessão) executa o comitê através de chamadas estruturadas:
 
 ```python
@@ -114,6 +117,16 @@ invoke_subagent(
     ]
 )
 ```
+
+### 4.2 Rodada 2+: Ciclo Fechado de Re-Review (Obrigatório após Remediações)
+Se qualquer subagente da Rodada 1 emitir veto ou apontamento crítico:
+1. **Remediação Local**: O desenvolvedor implementa a correção do código e os respectivos testes TDD para blindar a brecha encontrada.
+2. **Reconvocação Obrigatória (Re-Review)**: É estritamente proibido abrir o PR direto após a correção. O orquestrador dispara imediatamente nova rodada com os subagentes adversariais sobre o diff corrigido (`git diff origin/main...HEAD`).
+3. **Prompt de Re-Review**: Deve instruir os subagentes a verificarem:
+   - Se os apontamentos anteriores foram 100% sanados de forma robusta.
+   - Se a alteração introduziu efeitos colaterais, quebra de contratos ou novas brechas.
+   - Se o volume de código modificado permaneceu dentro do teto de 400 linhas.
+4. **Critério de Saída (Clean State)**: Apenas com parecer formal de **Consenso Unânime (Zero Vetos)** emitido na rodada de Re-Review o PR é aberto e submetido ao Gate 2. Se novas falhas forem apontadas, o ciclo repete-se.
 
 ---
 
