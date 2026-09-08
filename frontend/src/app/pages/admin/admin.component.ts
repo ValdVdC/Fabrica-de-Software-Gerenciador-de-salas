@@ -32,12 +32,7 @@ import { AuthService } from '../../services/auth.service';
           <form (ngSubmit)="cadastrarSala()" class="form-row">
             <input type="text" [(ngModel)]="formBloco" name="bloco" required maxlength="50" placeholder="Bloco (Ex: A)" class="form-input" />
             <input type="text" [(ngModel)]="formNumero" name="numero" required maxlength="50" placeholder="Numero (Ex: 101)" class="form-input" />
-            <select [(ngModel)]="formTipo" name="tipo" class="form-input">
-              <option value="regular">Regular</option>
-              <option value="laboratorio">Laboratorio</option>
-              <option value="auditorio">Auditorio</option>
-              <option value="reuniao">Reuniao</option>
-            </select>
+            <select [(ngModel)]="formTipo" name="tipo" class="form-input"><option value="regular">Regular</option><option value="laboratorio">Laboratorio</option><option value="auditorio">Auditorio</option><option value="reuniao">Reuniao</option></select>
             <input type="number" [(ngModel)]="formCapacidade" name="capacidade" min="1" max="5000" placeholder="Capacidade" class="form-input tabular-nums" />
             <button type="submit" [disabled]="adminService.isLoading() || campusId <= 0" class="btn-primary">Salvar Sala</button>
           </form>
@@ -45,17 +40,10 @@ import { AuthService } from '../../services/auth.service';
 
         <div class="table-card">
           <table class="data-table">
-            <thead>
-              <tr><th>Bloco / Sala</th><th>Tipo</th><th>Capacidade</th><th>Turnos</th></tr>
-            </thead>
+            <thead><tr><th>Bloco / Sala</th><th>Tipo</th><th>Capacidade</th><th>Turnos</th></tr></thead>
             <tbody>
               @for (sala of adminService.salas(); track sala.id) {
-                <tr>
-                  <td class="font-bold">{{ sala.bloco }} - Sala {{ sala.numero }}</td>
-                  <td><span class="badge">{{ sala.tipo }}</span></td>
-                  <td class="tabular-nums">{{ sala.capacidade }} alunos</td>
-                  <td>{{ (sala.turnos_disponiveis || []).join(', ') || 'Nenhum' }}</td>
-                </tr>
+                <tr><td class="font-bold">{{ sala.bloco }} - Sala {{ sala.numero }}</td><td><span class="badge">{{ sala.tipo }}</span></td><td class="tabular-nums">{{ sala.capacidade }} alunos</td><td>{{ (sala.turnos_disponiveis || []).join(', ') || 'Nenhum' }}</td></tr>
               } @empty {
                 <tr><td colspan="4" class="empty-msg">Nenhuma sala cadastrada neste campus.</td></tr>
               }
@@ -76,17 +64,10 @@ import { AuthService } from '../../services/auth.service';
 
         <div class="table-card">
           <table class="data-table">
-            <thead>
-              <tr><th>ID</th><th>Equipamento</th><th>Descricao</th><th>Data</th></tr>
-            </thead>
+            <thead><tr><th>ID</th><th>Equipamento</th><th>Descricao</th><th>Data</th></tr></thead>
             <tbody>
               @for (eq of adminService.equipamentos(); track eq.id) {
-                <tr>
-                  <td class="tabular-nums">#{{ eq.id }}</td>
-                  <td class="font-bold">{{ eq.nome }}</td>
-                  <td>{{ eq.descricao || 'Sem descricao' }}</td>
-                  <td class="tabular-nums">{{ eq.created_at | date:'shortDate' }}</td>
-                </tr>
+                <tr><td class="tabular-nums">#{{ eq.id }}</td><td class="font-bold">{{ eq.nome }}</td><td>{{ eq.descricao || 'Sem descricao' }}</td><td class="tabular-nums">{{ eq.created_at | date:'shortDate' }}</td></tr>
               } @empty {
                 <tr><td colspan="4" class="empty-msg">Nenhum equipamento cadastrado.</td></tr>
               }
@@ -97,21 +78,9 @@ import { AuthService } from '../../services/auth.service';
 
       @if (abaAtiva() === 'resumo') {
         <div class="stats-grid">
-          <div class="stat-card">
-            <span class="stat-label">Total de Salas</span>
-            <span class="stat-value tabular-nums">{{ totalSalas() }}</span>
-            <small>Espacos fisicos ativos</small>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Capacidade Instalada</span>
-            <span class="stat-value tabular-nums">{{ capacidadeTotal() }}</span>
-            <small>Postos academicos</small>
-          </div>
-          <div class="stat-card">
-            <span class="stat-label">Itens no Catalogo</span>
-            <span class="stat-value tabular-nums">{{ totalEquipamentos() }}</span>
-            <small>Equipamentos cadastrados</small>
-          </div>
+          <div class="stat-card"><span class="stat-label">Total de Salas</span><span class="stat-value tabular-nums">{{ totalSalas() }}</span><small>Espacos fisicos ativos</small></div>
+          <div class="stat-card"><span class="stat-label">Capacidade Instalada</span><span class="stat-value tabular-nums">{{ capacidadeTotal() }}</span><small>Postos academicos</small></div>
+          <div class="stat-card"><span class="stat-label">Itens no Catalogo</span><span class="stat-value tabular-nums">{{ totalEquipamentos() }}</span><small>Equipamentos cadastrados</small></div>
         </div>
       }
     </div>
@@ -127,24 +96,26 @@ import { AuthService } from '../../services/auth.service';
     .alert { padding: 0.75rem; border-radius: 4px; font-size: 0.8125rem; }
     .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
     .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
-    .panel-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; }
+    .panel-card, .table-card, .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; }
+    .panel-card { padding: 1rem; }
     .panel-card h3 { margin: 0 0 0.75rem; font-size: 0.9375rem; font-weight: 600; color: #0f172a; }
     .form-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .form-input { padding: 0.4rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8125rem; flex: 1; min-width: 110px; }
     .flex-2 { flex: 2; }
     .btn-primary { background: #0f172a; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-    .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
+    .table-card { overflow: hidden; }
     .data-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; text-align: left; }
-    .data-table th { background: #f8fafc; padding: 0.6rem 0.75rem; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600; }
-    .data-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .data-table th, .data-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #e2e8f0; }
+    .data-table th { background: #f8fafc; color: #475569; font-weight: 600; }
+    .data-table td { color: #334155; border-bottom-color: #f1f5f9; }
     .data-table tr:hover { background: #f8fafc; }
     .font-bold { font-weight: 600; color: #0f172a; }
     .badge { background: #f1f5f9; color: #334155; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem; text-transform: capitalize; }
     .empty-msg { text-align: center; color: #94a3b8; padding: 1.5rem; }
     .tabular-nums { font-variant-numeric: tabular-nums; }
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-    .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; display: flex; flex-direction: column; }
+    .stat-card { padding: 1rem; display: flex; flex-direction: column; }
     .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600; }
     .stat-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin: 0.25rem 0; }
     .stat-card small { font-size: 0.75rem; color: #94a3b8; }

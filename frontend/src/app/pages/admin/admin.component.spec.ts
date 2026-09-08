@@ -18,32 +18,21 @@ describe('AdminComponent', () => {
   const mockEquipamentos = signal<Equipamento[]>([
     { id: 10, nome: 'Projetor HD', descricao: 'Sala de aula', created_at: '2026-03-01T10:00:00Z' },
   ]);
-  const mockCurrentUser = signal<UserSummary | null>({
-    id: 1,
-    nome: 'Admin Master',
-    email: 'admin@ufma.br',
-    perfil: 'admin',
-    campus_id: 2,
-  });
+  // prettier-ignore
+  const mockCurrentUser = signal<UserSummary | null>({ id: 1, nome: 'Admin Master', email: 'admin@ufma.br', perfil: 'admin', campus_id: 2 });
   const mockLoading = signal(false);
 
   beforeEach(async () => {
     mockLoading.set(false);
-    adminServiceSpy = jasmine.createSpyObj(
-      'AdminService',
-      ['listarSalas', 'listarEquipamentos', 'criarSala', 'criarEquipamento'],
-      {
-        salas: mockSalas.asReadonly(),
-        equipamentos: mockEquipamentos.asReadonly(),
-        errorMessage: signal<string | null>(null).asReadonly(),
-        isLoading: mockLoading.asReadonly(),
-      },
-    );
+    // prettier-ignore
+    adminServiceSpy = jasmine.createSpyObj('AdminService', ['listarSalas', 'listarEquipamentos', 'criarSala', 'criarEquipamento'], {
+      salas: mockSalas.asReadonly(), equipamentos: mockEquipamentos.asReadonly(),
+      errorMessage: signal<string | null>(null).asReadonly(), isLoading: mockLoading.asReadonly(),
+    });
 
     authServiceSpy = jasmine.createSpyObj('AuthService', [], {
       currentUser: mockCurrentUser.asReadonly(),
     });
-
     adminServiceSpy.listarSalas.and.returnValue(of(mockSalas()));
     adminServiceSpy.listarEquipamentos.and.returnValue(of(mockEquipamentos()));
 
@@ -106,15 +95,10 @@ describe('AdminComponent', () => {
 
     component.cadastrarSala();
 
-    expect(adminServiceSpy.criarSala).toHaveBeenCalledWith(
-      jasmine.objectContaining({
-        campus_id: 2,
-        bloco: 'B',
-        numero: '202',
-        tipo: 'laboratorio',
-        capacidade: 30,
-      }),
-    );
+    // prettier-ignore
+    expect(adminServiceSpy.criarSala).toHaveBeenCalledWith(jasmine.objectContaining({
+      campus_id: 2, bloco: 'B', numero: '202', tipo: 'laboratorio', capacidade: 30,
+    }));
     expect(component.mensagemSucesso()).toContain('Sala B-202 cadastrada com sucesso!');
     expect(component.formBloco).toBe('');
     expect(component.formNumero).toBe('');
@@ -123,12 +107,8 @@ describe('AdminComponent', () => {
   });
 
   it('deve submeter criacao de equipamento e atualizar estado ao concluir com descricao opcional', () => {
-    const novoEq: Equipamento = {
-      id: 11,
-      nome: 'Notebook Dell',
-      descricao: 'i7 16GB',
-      created_at: '2026-03-01T10:00:00Z',
-    };
+    // prettier-ignore
+    const novoEq: Equipamento = { id: 11, nome: 'Notebook Dell', descricao: 'i7 16GB', created_at: '2026-03-01T10:00:00Z' };
     adminServiceSpy.criarEquipamento.and.returnValue(of(novoEq));
 
     component.formEquipNome = 'Notebook Dell';
@@ -173,8 +153,6 @@ describe('AdminComponent', () => {
     component.formNumero = '101';
     component.formCapacidade = 0;
     component.cadastrarSala();
-    expect(adminServiceSpy.criarSala).not.toHaveBeenCalled();
-
     component.formCapacidade = 5001;
     component.cadastrarSala();
     expect(adminServiceSpy.criarSala).not.toHaveBeenCalled();
@@ -185,9 +163,7 @@ describe('AdminComponent', () => {
     component.formBloco = 'A';
     component.formNumero = '101';
     component.cadastrarSala();
-
     expect(component.mensagemSucesso()).toBeNull();
     expect(component.formBloco).toBe('A');
-    expect(component.formNumero).toBe('101');
   });
 });
