@@ -22,12 +22,13 @@ from app.models import (  # noqa: E402
     Curso, Disciplina, Turma, Matricula, Horario, LogAlocacao,
     PerfilUsuario, TipoSala, Turno, TipoEventoLog
 )
-
-SENHA_HASH_PADRAO = "$2b$12$e8Y6lqD3EwVqV3V5dI4yO.uA9N3X2B1C4D5E6F7G8H9I0J1K2L3M4"
+from app.core.security import get_password_hash  # noqa: E402
 
 
 def seed_database(session: Session) -> dict[str, int]:
     """Popula o banco de forma idempotente e retorna a contagem de registros."""
+    senha_hash_padrao = get_password_hash("sigaas123")
+
     # 1. Campi
     c1 = session.scalar(select(Campus).where(Campus.nome == "Campus Central"))
     if not c1:
@@ -44,8 +45,10 @@ def seed_database(session: Session) -> dict[str, int]:
         ("Admin Central", "admin@sigaas.edu", PerfilUsuario.ADMIN, c1.id),
         ("Coord. Computacao", "coord.cc@sigaas.edu", PerfilUsuario.COORDENADOR, c1.id),
         ("Prof. Alan Turing", "alan.turing@sigaas.edu", PerfilUsuario.PROFESSOR, c1.id),
+        ("Professor Padrao", "professor@sigaas.edu", PerfilUsuario.PROFESSOR, c1.id),
         ("Prof. Ada Lovelace", "ada.lovelace@sigaas.edu", PerfilUsuario.PROFESSOR, c1.id),
         ("Aluno Joao Silva", "joao.silva@sigaas.edu", PerfilUsuario.ALUNO, c1.id),
+        ("Aluno Padrao", "aluno@sigaas.edu", PerfilUsuario.ALUNO, c1.id),
         ("Aluna Maria Souza", "maria.souza@sigaas.edu", PerfilUsuario.ALUNO, c1.id),
         ("Secretaria Academica", "secretaria@sigaas.edu", PerfilUsuario.SECRETARIA, c1.id),
     ]
@@ -53,7 +56,7 @@ def seed_database(session: Session) -> dict[str, int]:
     for nome, email, perfil, campus_id in users_data:
         u = session.scalar(select(Usuario).where(Usuario.email == email))
         if not u:
-            u = Usuario(campus_id=campus_id, nome=nome, email=email, senha_hash=SENHA_HASH_PADRAO, perfil=perfil)
+            u = Usuario(campus_id=campus_id, nome=nome, email=email, senha_hash=senha_hash_padrao, perfil=perfil)
             session.add(u)
             session.flush()
         usuarios[email] = u
