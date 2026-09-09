@@ -59,13 +59,14 @@ def criar_turma(
 
     if payload.professor_id:
         prof = db.get(Usuario, payload.professor_id)
-        if not prof or prof.perfil != PerfilUsuario.PROFESSOR or not prof.ativo:
-            status_code = status.HTTP_404_NOT_FOUND if current_user.perfil != PerfilUsuario.ADMIN else status.HTTP_400_BAD_REQUEST
-            raise HTTPException(status_code=status_code, detail="Professor invalido, inativo ou inexistente")
-        if current_user.perfil != PerfilUsuario.ADMIN and prof.campus_id != current_user.campus_id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professor nao encontrado no campus")
-        if current_user.perfil == PerfilUsuario.ADMIN and prof.campus_id != disciplina.curso.campus_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Professor pertence a campus diferente da disciplina")
+        if current_user.perfil != PerfilUsuario.ADMIN:
+            if not prof or prof.perfil != PerfilUsuario.PROFESSOR or not prof.ativo or prof.campus_id != current_user.campus_id:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professor invalido, inativo ou inexistente")
+        else:
+            if not prof or prof.perfil != PerfilUsuario.PROFESSOR or not prof.ativo:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Professor invalido, inativo ou inexistente")
+            if prof.campus_id != disciplina.curso.campus_id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Professor pertence a campus diferente da disciplina")
 
     turma = Turma(
         disciplina_id=payload.disciplina_id,
