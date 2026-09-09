@@ -30,7 +30,7 @@ def listar_turmas(
         stmt = stmt.where(Curso.campus_id == campus_id)
     if disciplina_id:
         stmt = stmt.where(Turma.disciplina_id == disciplina_id)
-    return db.scalars(stmt.offset(skip).limit(limit)).all()
+    return db.scalars(stmt.order_by(Turma.id.asc()).offset(skip).limit(limit)).all()
 
 
 @router.get("/{turma_id}", response_model=TurmaRead)
@@ -59,8 +59,9 @@ def criar_turma(
 
     if payload.professor_id:
         prof = db.get(Usuario, payload.professor_id)
-        if not prof or prof.perfil != PerfilUsuario.PROFESSOR:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Professor invalido ou inexistente")
+        if not prof or prof.perfil != PerfilUsuario.PROFESSOR or not prof.ativo:
+            status_code = status.HTTP_404_NOT_FOUND if current_user.perfil != PerfilUsuario.ADMIN else status.HTTP_400_BAD_REQUEST
+            raise HTTPException(status_code=status_code, detail="Professor invalido, inativo ou inexistente")
         if current_user.perfil != PerfilUsuario.ADMIN and prof.campus_id != current_user.campus_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professor nao encontrado no campus")
         if current_user.perfil == PerfilUsuario.ADMIN and prof.campus_id != disciplina.curso.campus_id:

@@ -1,6 +1,6 @@
 """Endpoints para gestao de Matriculas com RBAC, contagem atomica e isolamento por campus."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -23,11 +23,15 @@ def listar_matriculas(
     current_user: Usuario = Depends(get_current_user),
 ):
     stmt = select(Matricula).join(Turma).join(Disciplina).join(Curso)
-    if current_user.perfil != PerfilUsuario.ADMIN:
+    if current_user.perfil == PerfilUsuario.ALUNO:
+        stmt = stmt.where(Matricula.aluno_id == current_user.id)
+    elif current_user.perfil == PerfilUsuario.PROFESSOR:
+        stmt = stmt.where(Turma.professor_id == current_user.id)
+    elif current_user.perfil != PerfilUsuario.ADMIN:
         stmt = stmt.where(Curso.campus_id == current_user.campus_id)
     if turma_id:
         stmt = stmt.where(Matricula.turma_id == turma_id)
-    return db.scalars(stmt.offset(skip).limit(limit)).all()
+    return db.scalars(stmt.order_by(Matricula.id.asc()).offset(skip).limit(limit)).all()
 
 
 @router.post("", response_model=MatriculaRead, status_code=status.HTTP_201_CREATED)
@@ -36,27 +40,46 @@ def matricular_aluno(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR, PerfilUsuario.SECRETARIA)),
 ):
-    aluno = db.get(Usuario, payload.aluno_id)
-    if not aluno or aluno.perfil != PerfilUsuario.ALUNO:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aluno invalido ou inexistente")
-
-    turma = db.get(Turma, payload.turma_id)
-    if not turma:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma nao encontrada")
-
     if current_user.perfil != PerfilUsuario.ADMIN:
-        if aluno.campus_id != current_user.campus_id or turma.disciplina.curso.campus_id != current_user.campus_id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recurso nao encontrado no campus")
-    elif aluno.campus_id != turma.disciplina.curso.campus_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aluno e turma pertencem a campi diferentes")
+        aluno = db.scalars(
+            select(Usuario).where(
+                Usuario.id == payload.aluno_id,
+                Usuario.campus_id == current_user.campus_id,
+                Usuario.perfil == PerfilUsuario.ALUNO,
+                Usuario.ativo.is_(True),
+            )
+        ).first()
+        if not aluno:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aluno nao encontrado no campus")
+        turma = db.scalars(
+            select(Turma).join(Disciplina).join(Curso).where(
+                Turma.id == payload.turma_id,
+                Curso.campus_id == current_user.campus_id,
+            )
+        ).first()
+        if not turma:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma nao encontrada no campus")
+    else:
+        aluno = db.get(Usuario, payload.aluno_id)
+        if not aluno or aluno.perfil != PerfilUsuario.ALUNO or not aluno.ativo:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aluno invalido, inativo ou inexistente")
+        turma = db.get(Turma, payload.turma_id)
+        if not turma:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma nao encontrada")
+        if aluno.campus_id != turma.disciplina.curso.campus_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Aluno e turma pertencem a campi diferentes")
 
     stmt = select(Matricula).where(Matricula.aluno_id == payload.aluno_id, Matricula.turma_id == payload.turma_id)
     if db.scalars(stmt).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Aluno ja matriculado nesta turma")
 
-    turma.num_matriculados += 1
     matricula = Matricula(aluno_id=payload.aluno_id, turma_id=payload.turma_id, status="ativa")
     db.add(matricula)
+    db.execute(
+        update(Turma)
+        .where(Turma.id == payload.turma_id)
+        .values(num_matriculados=Turma.num_matriculados + 1)
+    )
     try:
         db.commit()
         db.refresh(matricula)
@@ -64,3 +87,4 @@ def matricular_aluno(
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Conflito ao efetuar matricula")
     return matricula
+
