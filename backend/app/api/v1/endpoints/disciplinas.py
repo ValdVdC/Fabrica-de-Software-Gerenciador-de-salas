@@ -1,7 +1,7 @@
 """Endpoints para gestao de Disciplinas com RBAC e isolamento por campus."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
@@ -16,16 +16,22 @@ router = APIRouter()
 
 @router.get("", response_model=list[DisciplinaRead])
 def listar_disciplinas(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=100),
     curso_id: int | None = Query(default=None, gt=0),
+    campus_id: int | None = Query(default=None, gt=0),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    """Lista disciplinas respeitando o campus do usuario logado."""
+    """Lista disciplinas com paginacao e isolamento por campus."""
     stmt = select(Disciplina).join(Curso)
     if current_user.perfil != PerfilUsuario.ADMIN:
         stmt = stmt.where(Curso.campus_id == current_user.campus_id)
+    elif campus_id is not None:
+        stmt = stmt.where(Curso.campus_id == campus_id)
     if curso_id:
         stmt = stmt.where(Disciplina.curso_id == curso_id)
+    stmt = stmt.offset(skip).limit(limit)
     return db.scalars(stmt).all()
 
 
@@ -40,7 +46,7 @@ def criar_disciplina(
     if not curso or (current_user.perfil != PerfilUsuario.ADMIN and curso.campus_id != current_user.campus_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Curso nao encontrado")
 
-    stmt = select(Disciplina).where(Disciplina.curso_id == payload.curso_id, Disciplina.codigo == payload.codigo)
+    stmt = select(Disciplina).where(Disciplina.curso_id == payload.curso_id, func.upper(Disciplina.codigo) == payload.codigo)
     if db.scalars(stmt).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Disciplina com este codigo ja existe no curso")
 

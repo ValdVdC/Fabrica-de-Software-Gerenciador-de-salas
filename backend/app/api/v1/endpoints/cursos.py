@@ -1,7 +1,7 @@
 """Endpoints para gestao de Cursos com RBAC e isolamento multi-campus."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
@@ -17,15 +17,18 @@ router = APIRouter()
 
 @router.get("", response_model=list[CursoRead])
 def listar_cursos(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=100),
     campus_id: int | None = Query(default=None, gt=0),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    """Lista cursos filtrados pelo campus do usuario nao-admin."""
+    """Lista cursos com paginacao e isolamento por campus."""
     filtro_campus = current_user.campus_id if current_user.perfil != PerfilUsuario.ADMIN else campus_id
     stmt = select(Curso)
     if filtro_campus:
         stmt = stmt.where(Curso.campus_id == filtro_campus)
+    stmt = stmt.offset(skip).limit(limit)
     return db.scalars(stmt).all()
 
 
@@ -42,7 +45,7 @@ def criar_curso(
     if not db.get(Campus, payload.campus_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campus nao encontrado")
 
-    stmt = select(Curso).where(Curso.campus_id == payload.campus_id, Curso.codigo == payload.codigo)
+    stmt = select(Curso).where(Curso.campus_id == payload.campus_id, func.upper(Curso.codigo) == payload.codigo)
     if db.scalars(stmt).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Curso com este codigo ja existe neste campus")
 

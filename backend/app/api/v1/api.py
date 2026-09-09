@@ -4,18 +4,7 @@ Roteador central da API versao 1 (v1).
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import (
-    auth,
-    campi,
-    cursos,
-    disciplinas,
-    equipamentos,
-    horarios,
-    motor,
-    salas,
-    turmas,
-    usuarios,
-)
+from app.api.v1.endpoints import auth, campi, cursos, disciplinas, equipamentos, horarios, motor, salas, turmas, usuarios
 
 api_router = APIRouter()
 

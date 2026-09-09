@@ -61,35 +61,28 @@ def test_criar_e_listar_curso_secretaria(client, setup_cenario):
     campus_id = setup_cenario["campus_a"].id
     payload = {"campus_id": campus_id, "nome": "Engenharia de Software", "codigo": "ES01"}
     resp = client.post("/api/v1/cursos", json=payload, headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 201
-    dados = resp.json()
-    assert dados["codigo"] == "ES01"
-    assert dados["campus_id"] == campus_id
+    assert resp.status_code == 201 and resp.json()["codigo"] == "ES01"
 
-    list_resp = client.get("/api/v1/cursos", headers={"Authorization": f"Bearer {token}"})
-    assert list_resp.status_code == 200
-    cursos = list_resp.json()
-    assert len(cursos) == 1
-    assert cursos[0]["nome"] == "Engenharia de Software"
+    list_resp = client.get("/api/v1/cursos?skip=0&limit=10", headers={"Authorization": f"Bearer {token}"})
+    assert list_resp.status_code == 200 and len(list_resp.json()) == 1
+    assert client.get("/api/v1/cursos?skip=1&limit=10", headers={"Authorization": f"Bearer {token}"}).json() == []
+
+    adm_token = setup_cenario["token_admin"]
+    assert len(client.get(f"/api/v1/cursos?campus_id={campus_id}", headers={"Authorization": f"Bearer {adm_token}"}).json()) == 1
 
 
 def test_criar_curso_campus_alheio_rejeitado_secretaria(client, setup_cenario):
     token = setup_cenario["token_sec_a"]
-    campus_b_id = setup_cenario["campus_b"].id
-    payload = {"campus_id": campus_b_id, "nome": "Medicina", "codigo": "MED01"}
-    resp = client.post("/api/v1/cursos", json=payload, headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 403
+    payload = {"campus_id": setup_cenario["campus_b"].id, "nome": "Medicina", "codigo": "MED01"}
+    assert client.post("/api/v1/cursos", json=payload, headers={"Authorization": f"Bearer {token}"}).status_code == 403
 
 
 def test_criar_curso_codigo_duplicado_conflito(client, setup_cenario):
     token = setup_cenario["token_sec_a"]
     campus_id = setup_cenario["campus_a"].id
     payload = {"campus_id": campus_id, "nome": "Ciencia da Computacao", "codigo": "CC01"}
-    resp1 = client.post("/api/v1/cursos", json=payload, headers={"Authorization": f"Bearer {token}"})
-    assert resp1.status_code == 201
-
-    resp2 = client.post("/api/v1/cursos", json=payload, headers={"Authorization": f"Bearer {token}"})
-    assert resp2.status_code == 409
+    assert client.post("/api/v1/cursos", json=payload, headers={"Authorization": f"Bearer {token}"}).status_code == 201
+    assert client.post("/api/v1/cursos", json={**payload, "codigo": "cc01"}, headers={"Authorization": f"Bearer {token}"}).status_code == 409
 
 
 def test_criar_disciplina_sucesso_e_validacoes(client, setup_cenario):
@@ -100,19 +93,24 @@ def test_criar_disciplina_sucesso_e_validacoes(client, setup_cenario):
 
     d_payload = {"curso_id": curso_id, "nome": "Algoritmos e Estruturas", "codigo": "AED01", "carga_horaria": 60}
     d_resp = client.post("/api/v1/disciplinas", json=d_payload, headers={"Authorization": f"Bearer {token}"})
-    assert d_resp.status_code == 201
-    assert d_resp.json()["carga_horaria"] == 60
+    assert d_resp.status_code == 201 and d_resp.json()["carga_horaria"] == 60
 
-    invalida = {"curso_id": curso_id, "nome": "Invalida", "codigo": "INV", "carga_horaria": 0}
-    err_resp = client.post("/api/v1/disciplinas", json=invalida, headers={"Authorization": f"Bearer {token}"})
-    assert err_resp.status_code == 422
+    for ch in [0, -10, 1001]:
+        assert client.post("/api/v1/disciplinas", json={**d_payload, "carga_horaria": ch}, headers={"Authorization": f"Bearer {token}"}).status_code == 422
+
+    list_resp = client.get(f"/api/v1/disciplinas?skip=0&limit=10&curso_id={curso_id}", headers={"Authorization": f"Bearer {token}"})
+    assert list_resp.status_code == 200 and len(list_resp.json()) == 1
+    adm_token = setup_cenario["token_admin"]
+    assert len(client.get(f"/api/v1/disciplinas?campus_id={campus_id}", headers={"Authorization": f"Bearer {adm_token}"}).json()) == 1
 
 
 def test_criar_disciplina_curso_inexistente(client, setup_cenario):
     token = setup_cenario["token_sec_a"]
     d_payload = {"curso_id": 9999, "nome": "Invalida", "codigo": "INV", "carga_horaria": 60}
-    resp = client.post("/api/v1/disciplinas", json=d_payload, headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 404
+    assert client.post("/api/v1/disciplinas", json=d_payload, headers={"Authorization": f"Bearer {token}"}).status_code == 404
+
+    c_b = client.post("/api/v1/cursos", json={"campus_id": setup_cenario["campus_b"].id, "nome": "Direito", "codigo": "DIR"}, headers={"Authorization": f"Bearer {setup_cenario['token_admin']}"}).json()["id"]
+    assert client.post("/api/v1/disciplinas", json={**d_payload, "curso_id": c_b}, headers={"Authorization": f"Bearer {token}"}).status_code == 404
 
 
 def test_criar_disciplina_codigo_duplicado_mesmo_curso(client, setup_cenario):
@@ -122,29 +120,39 @@ def test_criar_disciplina_codigo_duplicado_mesmo_curso(client, setup_cenario):
     curso_id = c_resp.json()["id"]
 
     d_payload = {"curso_id": curso_id, "nome": "Genetica", "codigo": "GEN01", "carga_horaria": 60}
-    resp1 = client.post("/api/v1/disciplinas", json=d_payload, headers={"Authorization": f"Bearer {token}"})
-    assert resp1.status_code == 201
-
-    resp2 = client.post("/api/v1/disciplinas", json=d_payload, headers={"Authorization": f"Bearer {token}"})
-    assert resp2.status_code == 409
+    assert client.post("/api/v1/disciplinas", json=d_payload, headers={"Authorization": f"Bearer {token}"}).status_code == 201
+    assert client.post("/api/v1/disciplinas", json={**d_payload, "codigo": "gen01"}, headers={"Authorization": f"Bearer {token}"}).status_code == 409
 
 
 def test_rbac_aluno_e_professor_bloqueados_em_cursos_e_disciplinas(client, setup_cenario):
     aluno_token = setup_cenario["token_aluno_a"]
     prof_token = setup_cenario["token_prof_a"]
     curso_payload = {"campus_id": setup_cenario["campus_a"].id, "nome": "Tentativa", "codigo": "TNT"}
+    d_payload = {"curso_id": 1, "nome": "Tent", "codigo": "TNT01", "carga_horaria": 30}
 
     assert client.post("/api/v1/cursos", json=curso_payload, headers={"Authorization": f"Bearer {aluno_token}"}).status_code == 403
     assert client.post("/api/v1/cursos", json=curso_payload, headers={"Authorization": f"Bearer {prof_token}"}).status_code == 403
-    assert client.post("/api/v1/disciplinas", json={"curso_id": 1, "nome": "T", "codigo": "T", "carga_horaria": 30}, headers={"Authorization": f"Bearer {aluno_token}"}).status_code == 403
+    assert client.post("/api/v1/disciplinas", json=d_payload, headers={"Authorization": f"Bearer {aluno_token}"}).status_code == 403
+    assert client.post("/api/v1/disciplinas", json=d_payload, headers={"Authorization": f"Bearer {prof_token}"}).status_code == 403
 
 
 def test_validacao_defensiva_strings_em_branco(client, setup_cenario):
     token = setup_cenario["token_sec_a"]
     campus_id = setup_cenario["campus_a"].id
 
-    resp = client.post("/api/v1/cursos", json={"campus_id": campus_id, "nome": "   ", "codigo": "OK"}, headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 422
+    for payload in [
+        {"campus_id": campus_id, "nome": "   ", "codigo": "OK"},
+        {"campus_id": campus_id, "nome": "Valido", "codigo": "   "},
+        {"campus_id": campus_id, "nome": " A ", "codigo": "OK"},
+        {"campus_id": campus_id, "nome": "Valido", "codigo": " B "},
+        {"campus_id": campus_id, "nome": "Valido", "codigo": "OK", "campo_extra": "proibido"},
+    ]:
+        assert client.post("/api/v1/cursos", json=payload, headers={"Authorization": f"Bearer {token}"}).status_code == 422
 
-    resp2 = client.post("/api/v1/cursos", json={"campus_id": campus_id, "nome": "Valido", "codigo": "   "}, headers={"Authorization": f"Bearer {token}"})
-    assert resp2.status_code == 422
+    for d_payload in [
+        {"curso_id": 1, "nome": "   ", "codigo": "OK", "carga_horaria": 30},
+        {"curso_id": 1, "nome": "OK", "codigo": "   ", "carga_horaria": 30},
+        {"curso_id": 1, "nome": " A ", "codigo": "OK", "carga_horaria": 30},
+        {"curso_id": 1, "nome": "OK", "codigo": " B ", "carga_horaria": 30},
+    ]:
+        assert client.post("/api/v1/disciplinas", json=d_payload, headers={"Authorization": f"Bearer {token}"}).status_code == 422
