@@ -148,132 +148,98 @@ export class SecretariaComponent implements OnInit {
   private readonly authService = inject(AuthService);
 
   campusId = 0;
-  /* prettier-ignore */
+  // prettier-ignore
   readonly abaAtiva = signal<'cursos' | 'disciplinas' | 'turmas' | 'matriculas' | 'resumo'>('cursos');
   readonly mensagemSucesso = signal<string | null>(null);
 
-  /* prettier-ignore */
+  // prettier-ignore
   formCursoNome = '';
   formCursoCodigo = '';
   formDiscCursoId: number | null = null;
   formDiscNome = '';
   formDiscCodigo = '';
-  /* prettier-ignore */
+  // prettier-ignore
   formDiscCarga: number | null = 60;
   formTurmaDiscId: number | null = null;
   formTurmaProfId: number | null = null;
-  /* prettier-ignore */
+  // prettier-ignore
   formTurmaPeriodo = '2026.1';
   formTurmaTurno: TurnoType = 'matutino';
   formMatTurmaId: number | null = null;
   formMatAlunoId: number | null = null;
 
-  /* prettier-ignore */
+  // prettier-ignore
   readonly totalCursos = computed(() => this.secretariaService.cursos().length);
-  /* prettier-ignore */
+  // prettier-ignore
   readonly totalDisciplinas = computed(() => this.secretariaService.disciplinas().length);
-  /* prettier-ignore */
+  // prettier-ignore
   readonly totalTurmas = computed(() => this.secretariaService.turmas().length);
-  /* prettier-ignore */
+  // prettier-ignore
   readonly totalMatriculas = computed(() => this.secretariaService.matriculas().length);
 
+  // prettier-ignore
   ngOnInit(): void {
     this.campusId = this.authService.currentUser()?.campus_id ?? 0;
     if (this.campusId > 0) {
       this.secretariaService.listarCursos(this.campusId).subscribe({ error: () => {} });
-      this.secretariaService
-        .listarDisciplinas(undefined, this.campusId)
-        .subscribe({ error: () => {} });
+      this.secretariaService.listarDisciplinas(undefined, this.campusId).subscribe({ error: () => {} });
       this.secretariaService.listarTurmas(undefined, this.campusId).subscribe({ error: () => {} });
       this.secretariaService.listarMatriculas().subscribe({ error: () => {} });
     }
   }
 
+  // prettier-ignore
   selecionarAba(aba: 'cursos' | 'disciplinas' | 'turmas' | 'matriculas' | 'resumo'): void {
-    this.abaAtiva.set(aba);
-    this.mensagemSucesso.set(null);
-    this.secretariaService.limparErro();
+    this.abaAtiva.set(aba); this.mensagemSucesso.set(null); this.secretariaService.limparErro();
   }
 
+  // prettier-ignore
   cadastrarCurso(): void {
     if (this.campusId <= 0 || !this.formCursoNome.trim() || !this.formCursoCodigo.trim()) return;
-    this.secretariaService.limparErro();
-    this.mensagemSucesso.set(null);
-    /* prettier-ignore */
+    this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     const payload: CursoCreate = { campus_id: this.campusId, nome: this.formCursoNome.trim(), codigo: this.formCursoCodigo.trim().toUpperCase() };
     this.secretariaService.criarCurso(payload).subscribe({
-      next: () => {
-        this.mensagemSucesso.set(`Curso ${payload.nome} cadastrado com sucesso.`);
-        this.formCursoNome = '';
-        this.formCursoCodigo = '';
-      },
+      next: () => { this.mensagemSucesso.set(`Curso ${payload.nome} cadastrado com sucesso.`); this.formCursoNome = ''; this.formCursoCodigo = ''; },
       error: () => {},
     });
   }
 
+  // prettier-ignore
   cadastrarDisciplina(): void {
-    if (
-      this.campusId <= 0 ||
-      !this.formDiscCursoId ||
-      !this.formDiscNome.trim() ||
-      !this.formDiscCodigo.trim()
-    )
-      return;
+    if (this.campusId <= 0 || !this.formDiscCursoId || !this.formDiscNome.trim() || !this.formDiscCodigo.trim()) return;
     const carga = Number(this.formDiscCarga);
-    this.secretariaService.limparErro();
-    this.mensagemSucesso.set(null);
-    /* prettier-ignore */
+    this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     const payload: DisciplinaCreate = { curso_id: this.formDiscCursoId, nome: this.formDiscNome.trim(), codigo: this.formDiscCodigo.trim().toUpperCase(), carga_horaria: Number.isInteger(carga) && carga > 0 ? carga : 60 };
     this.secretariaService.criarDisciplina(payload).subscribe({
-      next: () => {
-        this.mensagemSucesso.set(`Disciplina ${payload.nome} cadastrada com sucesso.`);
-        this.formDiscNome = '';
-        this.formDiscCodigo = '';
-        this.formDiscCarga = 60;
-      },
+      next: () => { this.mensagemSucesso.set(`Disciplina ${payload.nome} cadastrada com sucesso.`); this.formDiscNome = ''; this.formDiscCodigo = ''; this.formDiscCarga = 60; },
       error: () => {},
     });
   }
 
+  // prettier-ignore
   cadastrarTurma(): void {
     if (this.campusId <= 0 || !this.formTurmaDiscId || !this.formTurmaPeriodo.trim()) return;
     let profId: number | null = null;
-    if (
-      this.formTurmaProfId !== null &&
-      this.formTurmaProfId !== undefined &&
-      String(this.formTurmaProfId).trim() !== ''
-    ) {
-      const p = Number(this.formTurmaProfId);
-      if (!Number.isInteger(p) || p <= 0) return;
-      profId = p;
+    if (this.formTurmaProfId !== null && this.formTurmaProfId !== undefined && String(this.formTurmaProfId).trim() !== '') {
+      const p = Number(this.formTurmaProfId); if (!Number.isInteger(p) || p <= 0) return; profId = p;
     }
-    this.secretariaService.limparErro();
-    this.mensagemSucesso.set(null);
-    /* prettier-ignore */
+    this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     const payload: TurmaCreate = { disciplina_id: this.formTurmaDiscId, professor_id: profId, periodo_letivo: this.formTurmaPeriodo.trim(), turno_preferido: this.formTurmaTurno };
     this.secretariaService.criarTurma(payload).subscribe({
-      next: (t) => {
-        this.mensagemSucesso.set(`Turma #${t.id} criada com sucesso.`);
-        this.formTurmaDiscId = null;
-        this.formTurmaProfId = null;
-      },
+      next: (t) => { this.mensagemSucesso.set(`Turma #${t.id} criada com sucesso.`); this.formTurmaDiscId = null; this.formTurmaProfId = null; },
       error: () => {},
     });
   }
 
+  // prettier-ignore
   matricularAluno(): void {
     if (this.campusId <= 0 || !this.formMatTurmaId) return;
     const alunoId = Number(this.formMatAlunoId);
     if (!Number.isInteger(alunoId) || alunoId <= 0) return;
-    this.secretariaService.limparErro();
-    this.mensagemSucesso.set(null);
-    /* prettier-ignore */
+    this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     const payload: MatriculaCreate = { aluno_id: alunoId, turma_id: this.formMatTurmaId };
     this.secretariaService.matricularAluno(payload).subscribe({
-      next: () => {
-        this.mensagemSucesso.set(`Matricula do aluno #${payload.aluno_id} confirmada.`);
-        this.formMatAlunoId = null;
-      },
+      next: () => { this.mensagemSucesso.set(`Matricula do aluno #${payload.aluno_id} confirmada.`); this.formMatAlunoId = null; },
       error: () => {},
     });
   }

@@ -17,23 +17,22 @@ describe('SecretariaComponent', () => {
   let secretariaServiceSpy: jasmine.SpyObj<SecretariaService>;
   let authServiceSpy: jasmine.SpyObj<AuthService>;
 
-  /* prettier-ignore */
+  // prettier-ignore
   const mockCursos = signal<Curso[]>([{ id: 1, campus_id: 2, nome: 'Ciencia da Computacao', codigo: 'CC' }]);
-  /* prettier-ignore */
+  // prettier-ignore
   const mockDisciplinas = signal<Disciplina[]>([{ id: 10, curso_id: 1, nome: 'Algoritmos', codigo: 'ALG1', carga_horaria: 60 }]);
-  /* prettier-ignore */
+  // prettier-ignore
   const mockTurmas = signal<Turma[]>([{ id: 100, disciplina_id: 10, professor_id: null, periodo_letivo: '2026.1', turno_preferido: 'matutino', num_matriculados: 1 }]);
-  /* prettier-ignore */
+  // prettier-ignore
   const mockMatriculas = signal<Matricula[]>([{ id: 50, aluno_id: 5, turma_id: 100, data_matricula: '2026-09-09', status: 'ativa' }]);
-  /* prettier-ignore */
+  // prettier-ignore
   const mockCurrentUser = signal<UserSummary | null>({ id: 1, nome: 'Secretaria Geral', email: 'sec@ufma.br', perfil: 'secretaria', campus_id: 2 });
-  /* prettier-ignore */
+  // prettier-ignore
   const mockLoading = signal(false), mockError = signal<string | null>(null);
 
+  // prettier-ignore
   beforeEach(async () => {
-    mockLoading.set(false);
-    mockError.set(null);
-    /* prettier-ignore */
+    mockLoading.set(false); mockError.set(null);
     secretariaServiceSpy = jasmine.createSpyObj('SecretariaService', [
       'listarCursos', 'criarCurso', 'listarDisciplinas', 'criarDisciplina',
       'listarTurmas', 'criarTurma', 'listarMatriculas', 'matricularAluno', 'limparErro',
@@ -42,9 +41,7 @@ describe('SecretariaComponent', () => {
       turmas: mockTurmas.asReadonly(), matriculas: mockMatriculas.asReadonly(),
       errorMessage: mockError.asReadonly(), isLoading: mockLoading.asReadonly(),
     });
-    authServiceSpy = jasmine.createSpyObj('AuthService', [], {
-      currentUser: mockCurrentUser.asReadonly(),
-    });
+    authServiceSpy = jasmine.createSpyObj('AuthService', [], { currentUser: mockCurrentUser.asReadonly() });
     secretariaServiceSpy.listarCursos.and.returnValue(of(mockCursos()));
     secretariaServiceSpy.listarDisciplinas.and.returnValue(of(mockDisciplinas()));
     secretariaServiceSpy.listarTurmas.and.returnValue(of(mockTurmas()));
@@ -62,7 +59,7 @@ describe('SecretariaComponent', () => {
     fixture.detectChanges();
   });
 
-  /* prettier-ignore */
+  // prettier-ignore
   it('deve inicializar com dados carregados e campus do usuario autenticado', () => {
     expect(component).toBeTruthy();
     expect(component.campusId).toBe(2);
@@ -74,7 +71,7 @@ describe('SecretariaComponent', () => {
     expect(component.totalCursos() && component.totalDisciplinas() && component.totalTurmas() && component.totalMatriculas()).toBe(1);
   });
 
-  /* prettier-ignore */
+  // prettier-ignore
   it('nao deve carregar dados se usuario nao possuir campus valido', () => {
     const semCampus = jasmine.createSpyObj('AuthService', [], { currentUser: signal<UserSummary | null>(null).asReadonly() });
     const loc = TestBed.createComponent(SecretariaComponent);
@@ -85,7 +82,7 @@ describe('SecretariaComponent', () => {
     expect(secretariaServiceSpy.listarCursos).not.toHaveBeenCalled();
   });
 
-  /* prettier-ignore */
+  // prettier-ignore
   it('deve alternar abas e limpar mensagem de sucesso e erro do servico', () => {
     component.mensagemSucesso.set('Sucesso anterior');
     component.selecionarAba('disciplinas');
@@ -94,7 +91,7 @@ describe('SecretariaComponent', () => {
     expect(secretariaServiceSpy.limparErro).toHaveBeenCalled();
   });
 
-  /* prettier-ignore */
+  // prettier-ignore
   it('deve submeter criacao de curso e limpar formulario', () => {
     secretariaServiceSpy.criarCurso.and.returnValue(of({ id: 2, campus_id: 2, nome: 'Engenharia', codigo: 'ENG' }));
     component.formCursoNome = 'Engenharia'; component.formCursoCodigo = 'eng';
@@ -104,7 +101,7 @@ describe('SecretariaComponent', () => {
     expect(component.mensagemSucesso()).toContain('Curso');
   });
 
-  /* prettier-ignore */
+  // prettier-ignore
   it('deve submeter criacao de disciplina com carga horaria inteira', () => {
     secretariaServiceSpy.criarDisciplina.and.returnValue(of({ id: 11, curso_id: 1, nome: 'Calculo', codigo: 'MAT1', carga_horaria: 80 }));
     component.formDiscCursoId = 1; component.formDiscNome = 'Calculo'; component.formDiscCodigo = 'mat1'; component.formDiscCarga = 80;
@@ -113,7 +110,7 @@ describe('SecretariaComponent', () => {
     expect(component.mensagemSucesso()).toContain('Disciplina');
   });
 
-  /* prettier-ignore */
+  // prettier-ignore
   it('deve submeter criacao de turma e tratar professor id valido ou nulo', () => {
     secretariaServiceSpy.criarTurma.and.returnValue(of({ id: 101, disciplina_id: 10, professor_id: null, periodo_letivo: '2026.1', turno_preferido: 'noturno', num_matriculados: 0 }));
     component.formTurmaDiscId = 10; component.formTurmaPeriodo = '2026.1'; component.formTurmaTurno = 'noturno';
@@ -122,7 +119,7 @@ describe('SecretariaComponent', () => {
     expect(component.mensagemSucesso()).toContain('Turma');
   });
 
-  /* prettier-ignore */
+  // prettier-ignore
   it('deve submeter matricula de aluno com id inteiro positivo', () => {
     secretariaServiceSpy.matricularAluno.and.returnValue(of({ id: 51, aluno_id: 7, turma_id: 100, data_matricula: '2026-09-09', status: 'ativa' }));
     component.formMatAlunoId = 7; component.formMatTurmaId = 100;
@@ -131,7 +128,7 @@ describe('SecretariaComponent', () => {
     expect(component.mensagemSucesso()).toContain('Matricula');
   });
 
-  /* prettier-ignore */
+  // prettier-ignore
   it('deve ignorar submissoes quando campus invalido, dados nulos ou IDs invalidos', () => {
     secretariaServiceSpy.criarCurso.calls.reset(); secretariaServiceSpy.criarDisciplina.calls.reset();
     secretariaServiceSpy.criarTurma.calls.reset(); secretariaServiceSpy.matricularAluno.calls.reset();
@@ -147,7 +144,7 @@ describe('SecretariaComponent', () => {
     expect(secretariaServiceSpy.matricularAluno).not.toHaveBeenCalled();
   });
 
-  /* prettier-ignore */
+  // prettier-ignore
   it('deve tratar erros de subscricao de forma resiliente', () => {
     secretariaServiceSpy.criarCurso.and.returnValue(throwError(() => new Error('Falha')));
     component.formCursoNome = 'Engenharia'; component.formCursoCodigo = 'ENG';
