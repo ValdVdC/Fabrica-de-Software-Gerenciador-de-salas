@@ -213,4 +213,36 @@ describe('HorarioService', () => {
     expect(service.isLoading()).toBeFalse();
     expect(service.errorMessage()).toBeNull();
   });
+
+  it('ignora respostas pendentes apos resetState via controle de geracao', () => {
+    service.carregarMeusHorarios().subscribe();
+    const req = httpMock.expectOne('/api/v1/horarios/meus');
+
+    service.resetState();
+    req.flush(mockHorarios);
+
+    expect(service.horarios().length).toBe(0);
+    expect(service.isLoading()).toBeFalse();
+  });
+
+  it('limpa erro anterior imediatamente ao iniciar nova requisicao', () => {
+    service.carregarMeusHorarios().subscribe({ error: () => {} });
+    httpMock
+      .expectOne('/api/v1/horarios/meus')
+      .flush({}, { status: 500, statusText: 'Server Error' });
+    expect(service.errorMessage()).not.toBeNull();
+
+    service.carregarMeusHorarios().subscribe();
+    expect(service.errorMessage()).toBeNull();
+    httpMock.expectOne('/api/v1/horarios/meus').flush([]);
+  });
+
+  it('aplica fallback seguro quando detail em 403 nao for string', () => {
+    service.carregarMeusHorarios().subscribe({ error: () => {} });
+    httpMock
+      .expectOne('/api/v1/horarios/meus')
+      .flush({ detail: { codigo: 99 } }, { status: 403, statusText: 'Forbidden' });
+
+    expect(service.errorMessage()).toBe('Permissao insuficiente para realizar esta acao.');
+  });
 });

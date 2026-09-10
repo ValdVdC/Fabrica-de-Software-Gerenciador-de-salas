@@ -52,12 +52,17 @@ export class HorarioService {
     return Array.from(codigos);
   });
 
+  private _geracao = 0;
+
   private extrairErro(err: any): string {
     if (!err || typeof err !== 'object') return 'Erro desconhecido';
     if (err.status === 0) return 'Falha de conexao com o servidor';
     if (err.status === 401) return 'Sessao expirada. Faca login novamente.';
-    if (err.status === 403)
-      return err.error?.detail || 'Permissao insuficiente para realizar esta acao.';
+    if (err.status === 403) {
+      return typeof err.error?.detail === 'string'
+        ? err.error.detail
+        : 'Permissao insuficiente para realizar esta acao.';
+    }
     if (err.status >= 500) return 'Erro interno no servidor. Tente novamente mais tarde.';
     const det = err.error?.detail;
     if (Array.isArray(det)) {
@@ -83,16 +88,28 @@ export class HorarioService {
     }
 
     return defer(() => {
+      const g = this._geracao;
+      this._errorMessage.set(null);
       this._activeRequests.update((n) => n + 1);
       return this.http.get<HorarioMeu[]>('/api/v1/horarios/meus', { params }).pipe(
         tap({
           next: (dados) => {
-            this._horarios.set(dados);
-            this._errorMessage.set(null);
+            if (this._geracao === g) {
+              this._horarios.set(dados);
+              this._errorMessage.set(null);
+            }
           },
-          error: (err) => this._errorMessage.set(this.extrairErro(err)),
+          error: (err) => {
+            if (this._geracao === g) {
+              this._errorMessage.set(this.extrairErro(err));
+            }
+          },
         }),
-        finalize(() => this._activeRequests.update((n) => Math.max(0, n - 1))),
+        finalize(() => {
+          if (this._geracao === g) {
+            this._activeRequests.update((n) => Math.max(0, n - 1));
+          }
+        }),
       );
     });
   }
@@ -103,7 +120,7 @@ export class HorarioService {
     }
     return this._horarios()
       .filter((h) => h.dia_semana === dia)
-      .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+      .sort((a, b) => (a.hora_inicio ?? '').localeCompare(b.hora_inicio ?? ''));
   }
 
   limparErro(): void {
@@ -111,6 +128,7 @@ export class HorarioService {
   }
 
   resetState(): void {
+    this._geracao++;
     this._horarios.set([]);
     this._activeRequests.set(0);
     this._errorMessage.set(null);
