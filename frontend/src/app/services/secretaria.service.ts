@@ -8,13 +8,11 @@ export interface Curso {
   nome: string;
   codigo: string;
 }
-
 export interface CursoCreate {
   campus_id: number;
   nome: string;
   codigo: string;
 }
-
 export interface Disciplina {
   id: number;
   curso_id: number;
@@ -22,16 +20,13 @@ export interface Disciplina {
   codigo: string;
   carga_horaria: number;
 }
-
 export interface DisciplinaCreate {
   curso_id: number;
   nome: string;
   codigo: string;
   carga_horaria: number;
 }
-
 export type TurnoType = 'matutino' | 'vespertino' | 'noturno' | 'integral';
-
 export interface Turma {
   id: number;
   disciplina_id: number;
@@ -40,14 +35,12 @@ export interface Turma {
   turno_preferido: TurnoType;
   num_matriculados: number;
 }
-
 export interface TurmaCreate {
   disciplina_id: number;
   professor_id?: number | null;
   periodo_letivo: string;
   turno_preferido: TurnoType;
 }
-
 export interface Matricula {
   id: number;
   aluno_id: number;
@@ -55,7 +48,6 @@ export interface Matricula {
   data_matricula: string;
   status: string;
 }
-
 export interface MatriculaCreate {
   aluno_id: number;
   turma_id: number;
@@ -83,11 +75,14 @@ export class SecretariaService {
   private readonly _errorMessage = signal<string | null>(null);
   readonly errorMessage = this._errorMessage.asReadonly();
 
+  private validarId(id: unknown, msg: string): void {
+    if (!Number.isInteger(id) || (id as number) <= 0) throw new Error(msg);
+  }
+
   listarCursos(campusId?: number): Observable<Curso[]> {
     let params: HttpParams | undefined;
     if (campusId !== undefined && campusId !== null) {
-      if (!Number.isInteger(campusId) || campusId <= 0)
-        throw new Error('Identificador de campus invalido');
+      this.validarId(campusId, 'Identificador de campus invalido');
       params = new HttpParams().set('campus_id', campusId.toString());
     }
     return this.executar(this.http.get<Curso[]>('/api/v1/cursos', { params }), (d) =>
@@ -96,15 +91,9 @@ export class SecretariaService {
   }
 
   criarCurso(payload: CursoCreate): Observable<Curso> {
-    if (
-      !payload ||
-      !Number.isInteger(payload.campus_id) ||
-      payload.campus_id <= 0 ||
-      !payload.nome?.trim() ||
-      !payload.codigo?.trim()
-    ) {
+    this.validarId(payload?.campus_id, 'Dados de curso invalidos');
+    if (!payload.nome?.trim() || !payload.codigo?.trim())
       throw new Error('Dados de curso invalidos');
-    }
     return this.executar(this.http.post<Curso>('/api/v1/cursos', payload), (n) =>
       this._cursos.update((l) => [...l, n]),
     );
@@ -113,13 +102,11 @@ export class SecretariaService {
   listarDisciplinas(cursoId?: number, campusId?: number): Observable<Disciplina[]> {
     let params = new HttpParams();
     if (cursoId !== undefined && cursoId !== null) {
-      if (!Number.isInteger(cursoId) || cursoId <= 0)
-        throw new Error('Identificador de curso invalido');
+      this.validarId(cursoId, 'Identificador de curso invalido');
       params = params.set('curso_id', cursoId.toString());
     }
     if (campusId !== undefined && campusId !== null) {
-      if (!Number.isInteger(campusId) || campusId <= 0)
-        throw new Error('Identificador de campus invalido');
+      this.validarId(campusId, 'Identificador de campus invalido');
       params = params.set('campus_id', campusId.toString());
     }
     return this.executar(
@@ -131,17 +118,10 @@ export class SecretariaService {
   }
 
   criarDisciplina(payload: DisciplinaCreate): Observable<Disciplina> {
-    if (
-      !payload ||
-      !Number.isInteger(payload.curso_id) ||
-      payload.curso_id <= 0 ||
-      !payload.nome?.trim() ||
-      !payload.codigo?.trim() ||
-      !Number.isInteger(payload.carga_horaria) ||
-      payload.carga_horaria <= 0
-    ) {
+    this.validarId(payload?.curso_id, 'Dados de disciplina invalidos');
+    this.validarId(payload?.carga_horaria, 'Dados de disciplina invalidos');
+    if (!payload.nome?.trim() || !payload.codigo?.trim())
       throw new Error('Dados de disciplina invalidos');
-    }
     return this.executar(this.http.post<Disciplina>('/api/v1/disciplinas', payload), (n) =>
       this._disciplinas.update((l) => [...l, n]),
     );
@@ -150,13 +130,11 @@ export class SecretariaService {
   listarTurmas(disciplinaId?: number, campusId?: number): Observable<Turma[]> {
     let params = new HttpParams();
     if (disciplinaId !== undefined && disciplinaId !== null) {
-      if (!Number.isInteger(disciplinaId) || disciplinaId <= 0)
-        throw new Error('Identificador de disciplina invalido');
+      this.validarId(disciplinaId, 'Identificador de disciplina invalido');
       params = params.set('disciplina_id', disciplinaId.toString());
     }
     if (campusId !== undefined && campusId !== null) {
-      if (!Number.isInteger(campusId) || campusId <= 0)
-        throw new Error('Identificador de campus invalido');
+      this.validarId(campusId, 'Identificador de campus invalido');
       params = params.set('campus_id', campusId.toString());
     }
     return this.executar(
@@ -168,27 +146,16 @@ export class SecretariaService {
   }
 
   obterTurma(turmaId: number): Observable<Turma> {
-    if (!Number.isInteger(turmaId) || turmaId <= 0)
-      throw new Error('Identificador de turma invalido');
+    this.validarId(turmaId, 'Identificador de turma invalido');
     return this.executar(this.http.get<Turma>(`/api/v1/turmas/${turmaId}`));
   }
 
   criarTurma(payload: TurmaCreate): Observable<Turma> {
-    if (
-      !payload ||
-      !Number.isInteger(payload.disciplina_id) ||
-      payload.disciplina_id <= 0 ||
-      !payload.periodo_letivo?.trim() ||
-      !payload.turno_preferido
-    ) {
+    this.validarId(payload?.disciplina_id, 'Dados de turma invalidos');
+    if (!payload?.periodo_letivo?.trim() || !payload.turno_preferido)
       throw new Error('Dados de turma invalidos');
-    }
-    if (
-      payload.professor_id !== undefined &&
-      payload.professor_id !== null &&
-      (!Number.isInteger(payload.professor_id) || payload.professor_id <= 0)
-    ) {
-      throw new Error('Identificador de professor invalido');
+    if (payload.professor_id !== undefined && payload.professor_id !== null) {
+      this.validarId(payload.professor_id, 'Identificador de professor invalido');
     }
     return this.executar(this.http.post<Turma>('/api/v1/turmas', payload), (n) =>
       this._turmas.update((l) => [...l, n]),
@@ -198,8 +165,7 @@ export class SecretariaService {
   listarMatriculas(turmaId?: number): Observable<Matricula[]> {
     let params: HttpParams | undefined;
     if (turmaId !== undefined && turmaId !== null) {
-      if (!Number.isInteger(turmaId) || turmaId <= 0)
-        throw new Error('Identificador de turma invalido');
+      this.validarId(turmaId, 'Identificador de turma invalido');
       params = new HttpParams().set('turma_id', turmaId.toString());
     }
     return this.executar(this.http.get<Matricula[]>('/api/v1/matriculas', { params }), (d) =>
@@ -208,15 +174,8 @@ export class SecretariaService {
   }
 
   matricularAluno(payload: MatriculaCreate): Observable<Matricula> {
-    if (
-      !payload ||
-      !Number.isInteger(payload.aluno_id) ||
-      payload.aluno_id <= 0 ||
-      !Number.isInteger(payload.turma_id) ||
-      payload.turma_id <= 0
-    ) {
-      throw new Error('Dados de matricula invalidos');
-    }
+    this.validarId(payload?.aluno_id, 'Dados de matricula invalidos');
+    this.validarId(payload?.turma_id, 'Dados de matricula invalidos');
     return this.executar(this.http.post<Matricula>('/api/v1/matriculas', payload), (n) => {
       this._matriculas.update((l) => [...l, n]);
       this._turmas.update((l) =>
@@ -260,17 +219,12 @@ export class SecretariaService {
     if (!err) return 'Erro desconhecido na requisicao';
     if (err.status === 0) return 'Nao foi possivel conectar ao servidor';
     if (err.status >= 500) return 'Erro interno no servidor. Tente novamente mais tarde.';
-    const detail = err.error?.detail;
-    if (detail) {
-      if (Array.isArray(detail)) {
-        const msgs = detail
-          .map((d: any) => (d && typeof d === 'object' && d.msg ? String(d.msg) : null))
-          .filter(Boolean);
-        return msgs.length > 0 ? msgs.join('; ') : 'Dados de entrada invalidos';
-      }
-      if (typeof detail === 'object') return detail.message || detail.msg || 'Requisicao invalida';
-      return String(detail);
+    const d = err.error?.detail;
+    if (Array.isArray(d)) {
+      const m = d.map((x: any) => x?.msg).filter(Boolean);
+      return m.length ? m.join('; ') : 'Dados de entrada invalidos';
     }
-    return err.statusText || 'Erro na requisicao';
+    if (typeof d === 'object' && d !== null) return d.message || d.msg || 'Requisicao invalida';
+    return d ? String(d) : err.statusText || 'Erro na requisicao';
   }
 }
