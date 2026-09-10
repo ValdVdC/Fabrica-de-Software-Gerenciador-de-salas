@@ -79,12 +79,19 @@ export class SecretariaService {
     if (!Number.isInteger(id) || (id as number) <= 0) throw new Error(msg);
   }
 
-  listarCursos(campusId?: number): Observable<Curso[]> {
-    let params: HttpParams | undefined;
-    if (campusId !== undefined && campusId !== null) {
-      this.validarId(campusId, 'Identificador de campus invalido');
-      params = new HttpParams().set('campus_id', campusId.toString());
+  private buildParams(entries: [string, number | undefined, string][]): HttpParams | undefined {
+    let p = new HttpParams();
+    for (const [key, val, label] of entries) {
+      if (val !== undefined && val !== null) {
+        this.validarId(val, `Identificador de ${label} invalido`);
+        p = p.set(key, val.toString());
+      }
     }
+    return p.keys().length ? p : undefined;
+  }
+
+  listarCursos(campusId?: number): Observable<Curso[]> {
+    const params = this.buildParams([['campus_id', campusId, 'campus']]);
     return this.executar(this.http.get<Curso[]>('/api/v1/cursos', { params }), (d) =>
       this._cursos.set(d),
     );
@@ -100,20 +107,12 @@ export class SecretariaService {
   }
 
   listarDisciplinas(cursoId?: number, campusId?: number): Observable<Disciplina[]> {
-    let params = new HttpParams();
-    if (cursoId !== undefined && cursoId !== null) {
-      this.validarId(cursoId, 'Identificador de curso invalido');
-      params = params.set('curso_id', cursoId.toString());
-    }
-    if (campusId !== undefined && campusId !== null) {
-      this.validarId(campusId, 'Identificador de campus invalido');
-      params = params.set('campus_id', campusId.toString());
-    }
-    return this.executar(
-      this.http.get<Disciplina[]>('/api/v1/disciplinas', {
-        params: params.keys().length > 0 ? params : undefined,
-      }),
-      (d) => this._disciplinas.set(d),
+    const params = this.buildParams([
+      ['curso_id', cursoId, 'curso'],
+      ['campus_id', campusId, 'campus'],
+    ]);
+    return this.executar(this.http.get<Disciplina[]>('/api/v1/disciplinas', { params }), (d) =>
+      this._disciplinas.set(d),
     );
   }
 
@@ -128,20 +127,12 @@ export class SecretariaService {
   }
 
   listarTurmas(disciplinaId?: number, campusId?: number): Observable<Turma[]> {
-    let params = new HttpParams();
-    if (disciplinaId !== undefined && disciplinaId !== null) {
-      this.validarId(disciplinaId, 'Identificador de disciplina invalido');
-      params = params.set('disciplina_id', disciplinaId.toString());
-    }
-    if (campusId !== undefined && campusId !== null) {
-      this.validarId(campusId, 'Identificador de campus invalido');
-      params = params.set('campus_id', campusId.toString());
-    }
-    return this.executar(
-      this.http.get<Turma[]>('/api/v1/turmas', {
-        params: params.keys().length > 0 ? params : undefined,
-      }),
-      (d) => this._turmas.set(d),
+    const params = this.buildParams([
+      ['disciplina_id', disciplinaId, 'disciplina'],
+      ['campus_id', campusId, 'campus'],
+    ]);
+    return this.executar(this.http.get<Turma[]>('/api/v1/turmas', { params }), (d) =>
+      this._turmas.set(d),
     );
   }
 
@@ -163,11 +154,7 @@ export class SecretariaService {
   }
 
   listarMatriculas(turmaId?: number): Observable<Matricula[]> {
-    let params: HttpParams | undefined;
-    if (turmaId !== undefined && turmaId !== null) {
-      this.validarId(turmaId, 'Identificador de turma invalido');
-      params = new HttpParams().set('turma_id', turmaId.toString());
-    }
+    const params = this.buildParams([['turma_id', turmaId, 'turma']]);
     return this.executar(this.http.get<Matricula[]>('/api/v1/matriculas', { params }), (d) =>
       this._matriculas.set(d),
     );
