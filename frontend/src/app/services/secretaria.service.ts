@@ -8,11 +8,13 @@ export interface Curso {
   nome: string;
   codigo: string;
 }
+
 export interface CursoCreate {
   campus_id: number;
   nome: string;
   codigo: string;
 }
+
 export interface Disciplina {
   id: number;
   curso_id: number;
@@ -20,13 +22,16 @@ export interface Disciplina {
   codigo: string;
   carga_horaria: number;
 }
+
 export interface DisciplinaCreate {
   curso_id: number;
   nome: string;
   codigo: string;
   carga_horaria: number;
 }
+
 export type TurnoType = 'matutino' | 'vespertino' | 'noturno' | 'integral';
+
 export interface Turma {
   id: number;
   disciplina_id: number;
@@ -35,12 +40,14 @@ export interface Turma {
   turno_preferido: TurnoType;
   num_matriculados: number;
 }
+
 export interface TurmaCreate {
   disciplina_id: number;
   professor_id?: number | null;
   periodo_letivo: string;
   turno_preferido: TurnoType;
 }
+
 export interface Matricula {
   id: number;
   aluno_id: number;
@@ -48,6 +55,7 @@ export interface Matricula {
   data_matricula: string;
   status: string;
 }
+
 export interface MatriculaCreate {
   aluno_id: number;
   turma_id: number;
@@ -90,10 +98,19 @@ export class SecretariaService {
     return p.keys().length ? p : undefined;
   }
 
+  private reqGet<T>(
+    url: string,
+    params: HttpParams | undefined,
+    onSucesso: (d: T) => void,
+  ): Observable<T> {
+    return this.executar(this.http.get<T>(url, { params }), onSucesso);
+  }
+
   listarCursos(campusId?: number): Observable<Curso[]> {
-    const params = this.buildParams([['campus_id', campusId, 'campus']]);
-    return this.executar(this.http.get<Curso[]>('/api/v1/cursos', { params }), (d) =>
-      this._cursos.set(d),
+    return this.reqGet(
+      '/api/v1/cursos',
+      this.buildParams([['campus_id', campusId, 'campus']]),
+      (d) => this._cursos.set(d),
     );
   }
 
@@ -111,9 +128,7 @@ export class SecretariaService {
       ['curso_id', cursoId, 'curso'],
       ['campus_id', campusId, 'campus'],
     ]);
-    return this.executar(this.http.get<Disciplina[]>('/api/v1/disciplinas', { params }), (d) =>
-      this._disciplinas.set(d),
-    );
+    return this.reqGet('/api/v1/disciplinas', params, (d) => this._disciplinas.set(d));
   }
 
   criarDisciplina(payload: DisciplinaCreate): Observable<Disciplina> {
@@ -131,9 +146,7 @@ export class SecretariaService {
       ['disciplina_id', disciplinaId, 'disciplina'],
       ['campus_id', campusId, 'campus'],
     ]);
-    return this.executar(this.http.get<Turma[]>('/api/v1/turmas', { params }), (d) =>
-      this._turmas.set(d),
-    );
+    return this.reqGet('/api/v1/turmas', params, (d) => this._turmas.set(d));
   }
 
   obterTurma(turmaId: number): Observable<Turma> {
@@ -154,9 +167,10 @@ export class SecretariaService {
   }
 
   listarMatriculas(turmaId?: number): Observable<Matricula[]> {
-    const params = this.buildParams([['turma_id', turmaId, 'turma']]);
-    return this.executar(this.http.get<Matricula[]>('/api/v1/matriculas', { params }), (d) =>
-      this._matriculas.set(d),
+    return this.reqGet(
+      '/api/v1/matriculas',
+      this.buildParams([['turma_id', turmaId, 'turma']]),
+      (d) => this._matriculas.set(d),
     );
   }
 

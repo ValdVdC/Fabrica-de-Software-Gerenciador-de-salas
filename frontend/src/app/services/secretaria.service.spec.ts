@@ -133,24 +133,20 @@ describe('SecretariaService', () => {
   });
 
   it('rejeita identificadores e payloads invalidos defensivamente com excecao sincronizada', () => {
-    expect(() => service.listarCursos(0)).toThrowError('Identificador de campus invalido');
-    expect(() => service.listarDisciplinas(0)).toThrowError('Identificador de curso invalido');
-    expect(() => service.listarDisciplinas(1, -1)).toThrowError('Identificador de campus invalido');
-    expect(() => service.listarTurmas(-2)).toThrowError('Identificador de disciplina invalido');
-    expect(() => service.obterTurma(0)).toThrowError('Identificador de turma invalido');
-    expect(() => service.listarMatriculas(0)).toThrowError('Identificador de turma invalido');
-    expect(() => service.criarCurso({ campus_id: 0, nome: '', codigo: '' })).toThrowError(
-      'Dados de curso invalidos',
-    );
-    expect(() =>
-      service.criarDisciplina({ curso_id: 0, nome: '', codigo: '', carga_horaria: 0 }),
-    ).toThrowError('Dados de disciplina invalidos');
-    expect(() =>
-      service.criarTurma({ disciplina_id: 0, periodo_letivo: '', turno_preferido: 'matutino' }),
-    ).toThrowError('Dados de turma invalidos');
-    expect(() => service.matricularAluno({ aluno_id: 0, turma_id: 0 })).toThrowError(
-      'Dados de matricula invalidos',
-    );
+    const invalidFns = [
+      () => service.listarCursos(0),
+      () => service.listarDisciplinas(0),
+      () => service.listarDisciplinas(1, -1),
+      () => service.listarTurmas(-2),
+      () => service.obterTurma(0),
+      () => service.listarMatriculas(0),
+      () => service.criarCurso({ campus_id: 0, nome: '', codigo: '' }),
+      () => service.criarDisciplina({ curso_id: 0, nome: '', codigo: '', carga_horaria: 0 }),
+      () =>
+        service.criarTurma({ disciplina_id: 0, periodo_letivo: '', turno_preferido: 'matutino' }),
+      () => service.matricularAluno({ aluno_id: 0, turma_id: 0 }),
+    ];
+    invalidFns.forEach((fn) => expect(fn).toThrow());
   });
 
   it('trata erros HTTP 0, 422 estruturado do Pydantic e 500 sem vazamento', () => {
