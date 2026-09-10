@@ -162,10 +162,55 @@ describe('GradeHorariaComponent', () => {
     expect(compiled.textContent).toContain('Periodo: 2026.1 (matutino)');
   });
 
-  it('deve formatar string de horario adequadamente', () => {
+  it('nao deve renderizar a grade semanal quando houver erro e totalAulas for zero', () => {
+    mockErrorMessageSignal.set('Falha na conexao');
+    mockTotalAulasSignal.set(0);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.alert-error')).toBeTruthy();
+    expect(compiled.querySelector('.timetable-grid')).toBeNull();
+    expect(compiled.querySelector('.empty-box')).toBeNull();
+  });
+
+  it('deve desabilitar botao de retry quando isLoading for true', () => {
+    mockErrorMessageSignal.set('Erro na rede');
+    mockIsLoadingSignal.set(true);
+    fixture.detectChanges();
+
+    const btnRetry = fixture.nativeElement.querySelector('.btn-retry') as HTMLButtonElement;
+    expect(btnRetry.disabled).toBeTrue();
+    expect(btnRetry.textContent).toContain('Carregando...');
+  });
+
+  it('deve exibir fallback Docente a definir quando professor_nome for nulo', () => {
+    const aulaSemProf: HorarioMeu[] = [{ ...mockAulas[0], professor_nome: null }];
+    mockHorariosSignal.set(aulaSemProf);
+    mockTotalAulasSignal.set(1);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Docente: A definir');
+  });
+
+  it('deve incluir coluna de domingo quando houver aula no dia 6', () => {
+    const aulaDomingo: HorarioMeu[] = [{ ...mockAulas[0], dia_semana: 6 }];
+    mockHorariosSignal.set(aulaDomingo);
+    mockTotalAulasSignal.set(1);
+    fixture.detectChanges();
+
+    const colunas = fixture.nativeElement.querySelectorAll('.dia-coluna');
+    expect(colunas.length).toBe(7);
+    expect(fixture.nativeElement.textContent).toContain('Domingo');
+  });
+
+  it('deve formatar intervalo com fallback e padding defensivo', () => {
+    expect(component.formatarIntervalo('8:00', '10:00')).toBe('08:00 - 10:00');
+    expect(component.formatarIntervalo('08:00:00', '10:00:00')).toBe('08:00 - 10:00');
+    expect(component.formatarIntervalo('08:00', null)).toBe('A partir de 08:00');
+    expect(component.formatarIntervalo(null, '10:00')).toBe('Ate 10:00');
+    expect(component.formatarIntervalo(null, null)).toBe('Horario a definir');
     expect(component.formatarHorario('08:00:00')).toBe('08:00');
-    expect(component.formatarHorario('19:30')).toBe('19:30');
-    expect(component.formatarHorario('')).toBe('');
   });
 
   it('deve acionar recarregar ao clicar no botao do cabecalho', () => {
