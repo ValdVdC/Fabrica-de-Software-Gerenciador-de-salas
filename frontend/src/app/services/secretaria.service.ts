@@ -27,19 +27,14 @@ export class SecretariaService {
 
   private readonly _cursos = signal<Curso[]>([]);
   readonly cursos = this._cursos.asReadonly();
-
   private readonly _disciplinas = signal<Disciplina[]>([]);
   readonly disciplinas = this._disciplinas.asReadonly();
-
   private readonly _turmas = signal<Turma[]>([]);
   readonly turmas = this._turmas.asReadonly();
-
   private readonly _matriculas = signal<Matricula[]>([]);
   readonly matriculas = this._matriculas.asReadonly();
-
   private readonly _activeRequests = signal<number>(0);
   readonly isLoading = computed(() => this._activeRequests() > 0);
-
   private readonly _errorMessage = signal<string | null>(null);
   readonly errorMessage = this._errorMessage.asReadonly();
 
@@ -84,11 +79,11 @@ export class SecretariaService {
   }
 
   listarDisciplinas(cursoId?: number, campusId?: number): Observable<Disciplina[]> {
-    const params = this.buildParams([
+    const p = this.buildParams([
       ['curso_id', cursoId, 'curso'],
       ['campus_id', campusId, 'campus'],
     ]);
-    return this.reqGet('/api/v1/disciplinas', params, (d) => this._disciplinas.set(d));
+    return this.reqGet('/api/v1/disciplinas', p, (d) => this._disciplinas.set(d));
   }
 
   criarDisciplina(payload: DisciplinaCreate): Observable<Disciplina> {
@@ -102,11 +97,11 @@ export class SecretariaService {
   }
 
   listarTurmas(disciplinaId?: number, campusId?: number): Observable<Turma[]> {
-    const params = this.buildParams([
+    const p = this.buildParams([
       ['disciplina_id', disciplinaId, 'disciplina'],
       ['campus_id', campusId, 'campus'],
     ]);
-    return this.reqGet('/api/v1/turmas', params, (d) => this._turmas.set(d));
+    return this.reqGet('/api/v1/turmas', p, (d) => this._turmas.set(d));
   }
 
   obterTurma(turmaId: number): Observable<Turma> {
@@ -151,7 +146,10 @@ export class SecretariaService {
     this._errorMessage.set(null);
   }
 
+  private _geracao = 0;
+
   resetState(): void {
+    this._geracao++;
     this._cursos.set([]);
     this._disciplinas.set([]);
     this._turmas.set([]);
@@ -162,16 +160,23 @@ export class SecretariaService {
 
   private executar<T>(source: Observable<T>, onSucesso?: (data: T) => void): Observable<T> {
     return defer(() => {
+      const g = this._geracao;
       this._activeRequests.update((c) => c + 1);
       this._errorMessage.set(null);
       return source.pipe(
         tap({
           next: (res) => {
-            if (onSucesso) onSucesso(res);
+            if (this._geracao === g && onSucesso) onSucesso(res);
           },
-          error: (err) => this._errorMessage.set(this.extrairErro(err)),
+          error: (err) => {
+            if (this._geracao === g) this._errorMessage.set(this.extrairErro(err));
+          },
         }),
-        finalize(() => this._activeRequests.update((c) => Math.max(0, c - 1))),
+        finalize(() => {
+          if (this._geracao === g) {
+            this._activeRequests.update((c) => Math.max(0, c - 1));
+          }
+        }),
       );
     });
   }
