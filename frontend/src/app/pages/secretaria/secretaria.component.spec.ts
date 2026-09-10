@@ -31,7 +31,8 @@ describe('SecretariaComponent', () => {
   const mockLoading = signal(false), mockError = signal<string | null>(null);
 
   beforeEach(async () => {
-    mockLoading.set(false); mockError.set(null);
+    mockLoading.set(false);
+    mockError.set(null);
     /* prettier-ignore */
     secretariaServiceSpy = jasmine.createSpyObj('SecretariaService', [
       'listarCursos', 'criarCurso', 'listarDisciplinas', 'criarDisciplina',
@@ -41,7 +42,9 @@ describe('SecretariaComponent', () => {
       turmas: mockTurmas.asReadonly(), matriculas: mockMatriculas.asReadonly(),
       errorMessage: mockError.asReadonly(), isLoading: mockLoading.asReadonly(),
     });
-    authServiceSpy = jasmine.createSpyObj('AuthService', [], { currentUser: mockCurrentUser.asReadonly() });
+    authServiceSpy = jasmine.createSpyObj('AuthService', [], {
+      currentUser: mockCurrentUser.asReadonly(),
+    });
     secretariaServiceSpy.listarCursos.and.returnValue(of(mockCursos()));
     secretariaServiceSpy.listarDisciplinas.and.returnValue(of(mockDisciplinas()));
     secretariaServiceSpy.listarTurmas.and.returnValue(of(mockTurmas()));
