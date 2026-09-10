@@ -130,28 +130,16 @@ import { AuthService } from '../../services/auth.service';
   // prettier-ignore
   styles: [`
     .sec-container { display: flex; flex-direction: column; gap: 1.25rem; }
-    .sec-header h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: #0f172a; }
-    .sec-header p { margin: 0.25rem 0 0; font-size: 0.875rem; color: #64748b; }
-    .tabs-nav { display: flex; gap: 0.5rem; border-bottom: 1px solid #e2e8f0; }
-    .tabs-nav button { background: none; border: none; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
-    .tabs-nav button.active { color: #0f172a; font-weight: 700; border-bottom-color: #0f172a; }
-    .alert { padding: 0.75rem; border-radius: 4px; font-size: 0.8125rem; }
-    .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
-    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
-    .panel-card, .table-card, .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; }
-    .panel-card h3 { margin: 0 0 0.75rem; font-size: 1rem; color: #0f172a; font-weight: 600; }
-    .form-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
-    .form-input { padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.875rem; color: #1e293b; background: #fff; }
-    .form-input.flex-2 { flex: 2; min-width: 180px; }
-    .btn-primary { background: #0f172a; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: left; }
-    .data-table th, .data-table td { padding: 0.75rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
-    .data-table th { background: #f8fafc; border-bottom-color: #e2e8f0; color: #475569; font-weight: 600; }
+    .sec-header h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: #0f172a; } .sec-header p { margin: 0.25rem 0 0; font-size: 0.875rem; color: #64748b; }
+    .tabs-nav { display: flex; gap: 0.5rem; border-bottom: 1px solid #e2e8f0; } .tabs-nav button { background: none; border: none; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; } .tabs-nav button.active { color: #0f172a; font-weight: 700; border-bottom-color: #0f172a; }
+    .alert { padding: 0.75rem; border-radius: 4px; font-size: 0.8125rem; } .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; } .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+    .panel-card, .table-card, .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; } .panel-card h3 { margin: 0 0 0.75rem; font-size: 1rem; color: #0f172a; font-weight: 600; }
+    .form-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; } .form-input { padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.875rem; color: #1e293b; background: #fff; } .form-input.flex-2 { flex: 2; min-width: 180px; }
+    .btn-primary { background: #0f172a; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem; font-weight: 500; cursor: pointer; } .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: left; } .data-table th, .data-table td { padding: 0.75rem; border-bottom: 1px solid #f1f5f9; color: #334155; } .data-table th { background: #f8fafc; border-bottom-color: #e2e8f0; color: #475569; font-weight: 600; }
     .font-bold { font-weight: 600; color: #0f172a; } .badge { display: inline-block; padding: 0.125rem 0.375rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #f1f5f9; color: #334155; text-transform: uppercase; }
     .empty-msg { text-align: center; color: #94a3b8; padding: 2rem 1rem; } .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-    .stat-card { display: flex; flex-direction: column; gap: 0.25rem; } .stat-label { font-size: 0.8125rem; color: #64748b; font-weight: 500; }
-    .stat-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; } .stat-card small { font-size: 0.75rem; color: #94a3b8; }
+    .stat-card { display: flex; flex-direction: column; gap: 0.25rem; } .stat-label { font-size: 0.8125rem; color: #64748b; font-weight: 500; } .stat-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; } .stat-card small { font-size: 0.75rem; color: #94a3b8; }
     .tabular-nums { font-variant-numeric: tabular-nums; }
   `],
 })
@@ -165,29 +153,11 @@ export class SecretariaComponent implements OnInit {
   readonly mensagemSucesso = signal<string | null>(null);
 
   /* prettier-ignore */
-  formCursoNome = '';
+  formCursoNome = ''; formCursoCodigo = ''; formDiscCursoId: number | null = null; formDiscNome = ''; formDiscCodigo = '';
   /* prettier-ignore */
-  formCursoCodigo = '';
+  formDiscCarga: number | null = 60; formTurmaDiscId: number | null = null; formTurmaProfId: number | null = null;
   /* prettier-ignore */
-  formDiscCursoId: number | null = null;
-  /* prettier-ignore */
-  formDiscNome = '';
-  /* prettier-ignore */
-  formDiscCodigo = '';
-  /* prettier-ignore */
-  formDiscCarga: number | null = 60;
-  /* prettier-ignore */
-  formTurmaDiscId: number | null = null;
-  /* prettier-ignore */
-  formTurmaProfId: number | null = null;
-  /* prettier-ignore */
-  formTurmaPeriodo = '2026.1';
-  /* prettier-ignore */
-  formTurmaTurno: TurnoType = 'matutino';
-  /* prettier-ignore */
-  formMatTurmaId: number | null = null;
-  /* prettier-ignore */
-  formMatAlunoId: number | null = null;
+  formTurmaPeriodo = '2026.1'; formTurmaTurno: TurnoType = 'matutino'; formMatTurmaId: number | null = null; formMatAlunoId: number | null = null;
 
   /* prettier-ignore */
   readonly totalCursos = computed(() => this.secretariaService.cursos().length);
@@ -215,58 +185,41 @@ export class SecretariaComponent implements OnInit {
   }
 
   cadastrarCurso(): void {
-    if (this.campusId <= 0 || !this.formCursoNome?.trim() || !this.formCursoCodigo?.trim()) return;
-    this.secretariaService.limparErro();
-    this.mensagemSucesso.set(null);
+    if (this.campusId <= 0 || !this.formCursoNome.trim() || !this.formCursoCodigo.trim()) return;
+    this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     /* prettier-ignore */
     const payload: CursoCreate = { campus_id: this.campusId, nome: this.formCursoNome.trim(), codigo: this.formCursoCodigo.trim().toUpperCase() };
     this.secretariaService.criarCurso(payload).subscribe({
-      next: () => {
-        this.mensagemSucesso.set(`Curso ${payload.nome} cadastrado com sucesso.`);
-        this.formCursoNome = '';
-        this.formCursoCodigo = '';
-      },
+      next: () => { this.mensagemSucesso.set(`Curso ${payload.nome} cadastrado com sucesso.`); this.formCursoNome = ''; this.formCursoCodigo = ''; },
       error: () => {},
     });
   }
 
   cadastrarDisciplina(): void {
-    if (this.campusId <= 0 || !this.formDiscCursoId || !this.formDiscNome?.trim() || !this.formDiscCodigo?.trim()) return;
+    if (this.campusId <= 0 || !this.formDiscCursoId || !this.formDiscNome.trim() || !this.formDiscCodigo.trim()) return;
     const carga = Number(this.formDiscCarga);
-    const cargaValida = Number.isInteger(carga) && carga > 0 ? carga : 60;
-    this.secretariaService.limparErro();
-    this.mensagemSucesso.set(null);
+    this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     /* prettier-ignore */
-    const payload: DisciplinaCreate = { curso_id: this.formDiscCursoId, nome: this.formDiscNome.trim(), codigo: this.formDiscCodigo.trim().toUpperCase(), carga_horaria: cargaValida };
+    const payload: DisciplinaCreate = { curso_id: this.formDiscCursoId, nome: this.formDiscNome.trim(), codigo: this.formDiscCodigo.trim().toUpperCase(), carga_horaria: Number.isInteger(carga) && carga > 0 ? carga : 60 };
     this.secretariaService.criarDisciplina(payload).subscribe({
-      next: () => {
-        this.mensagemSucesso.set(`Disciplina ${payload.nome} cadastrada com sucesso.`);
-        this.formDiscNome = '';
-        this.formDiscCodigo = '';
-        this.formDiscCarga = 60;
-      },
+      next: () => { this.mensagemSucesso.set(`Disciplina ${payload.nome} cadastrada com sucesso.`); this.formDiscNome = ''; this.formDiscCodigo = ''; this.formDiscCarga = 60; },
       error: () => {},
     });
   }
 
   cadastrarTurma(): void {
-    if (this.campusId <= 0 || !this.formTurmaDiscId || !this.formTurmaPeriodo?.trim()) return;
+    if (this.campusId <= 0 || !this.formTurmaDiscId || !this.formTurmaPeriodo.trim()) return;
     let profId: number | null = null;
     if (this.formTurmaProfId !== null && this.formTurmaProfId !== undefined && String(this.formTurmaProfId).trim() !== '') {
       const p = Number(this.formTurmaProfId);
       if (!Number.isInteger(p) || p <= 0) return;
       profId = p;
     }
-    this.secretariaService.limparErro();
-    this.mensagemSucesso.set(null);
+    this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     /* prettier-ignore */
     const payload: TurmaCreate = { disciplina_id: this.formTurmaDiscId, professor_id: profId, periodo_letivo: this.formTurmaPeriodo.trim(), turno_preferido: this.formTurmaTurno };
     this.secretariaService.criarTurma(payload).subscribe({
-      next: (turma) => {
-        this.mensagemSucesso.set(`Turma #${turma.id} criada com sucesso.`);
-        this.formTurmaDiscId = null;
-        this.formTurmaProfId = null;
-      },
+      next: (t) => { this.mensagemSucesso.set(`Turma #${t.id} criada com sucesso.`); this.formTurmaDiscId = null; this.formTurmaProfId = null; },
       error: () => {},
     });
   }
@@ -275,15 +228,11 @@ export class SecretariaComponent implements OnInit {
     if (this.campusId <= 0 || !this.formMatTurmaId) return;
     const alunoId = Number(this.formMatAlunoId);
     if (!Number.isInteger(alunoId) || alunoId <= 0) return;
-    this.secretariaService.limparErro();
-    this.mensagemSucesso.set(null);
+    this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     /* prettier-ignore */
     const payload: MatriculaCreate = { aluno_id: alunoId, turma_id: this.formMatTurmaId };
     this.secretariaService.matricularAluno(payload).subscribe({
-      next: () => {
-        this.mensagemSucesso.set(`Matricula do aluno #${payload.aluno_id} confirmada.`);
-        this.formMatAlunoId = null;
-      },
+      next: () => { this.mensagemSucesso.set(`Matricula do aluno #${payload.aluno_id} confirmada.`); this.formMatAlunoId = null; },
       error: () => {},
     });
   }

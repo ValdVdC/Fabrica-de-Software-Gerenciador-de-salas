@@ -31,8 +31,7 @@ describe('SecretariaComponent', () => {
   const mockLoading = signal(false), mockError = signal<string | null>(null);
 
   beforeEach(async () => {
-    mockLoading.set(false);
-    mockError.set(null);
+    mockLoading.set(false); mockError.set(null);
     /* prettier-ignore */
     secretariaServiceSpy = jasmine.createSpyObj('SecretariaService', [
       'listarCursos', 'criarCurso', 'listarDisciplinas', 'criarDisciplina',
@@ -42,10 +41,7 @@ describe('SecretariaComponent', () => {
       turmas: mockTurmas.asReadonly(), matriculas: mockMatriculas.asReadonly(),
       errorMessage: mockError.asReadonly(), isLoading: mockLoading.asReadonly(),
     });
-
-    authServiceSpy = jasmine.createSpyObj('AuthService', [], {
-      currentUser: mockCurrentUser.asReadonly(),
-    });
+    authServiceSpy = jasmine.createSpyObj('AuthService', [], { currentUser: mockCurrentUser.asReadonly() });
     secretariaServiceSpy.listarCursos.and.returnValue(of(mockCursos()));
     secretariaServiceSpy.listarDisciplinas.and.returnValue(of(mockDisciplinas()));
     secretariaServiceSpy.listarTurmas.and.returnValue(of(mockTurmas()));
@@ -58,7 +54,6 @@ describe('SecretariaComponent', () => {
         { provide: AuthService, useValue: authServiceSpy },
       ],
     }).compileComponents();
-
     fixture = TestBed.createComponent(SecretariaComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -76,10 +71,9 @@ describe('SecretariaComponent', () => {
     expect(component.totalCursos() && component.totalDisciplinas() && component.totalTurmas() && component.totalMatriculas()).toBe(1);
   });
 
+  /* prettier-ignore */
   it('nao deve carregar dados se usuario nao possuir campus valido', () => {
-    const semCampus = jasmine.createSpyObj('AuthService', [], {
-      currentUser: signal<UserSummary | null>(null).asReadonly(),
-    });
+    const semCampus = jasmine.createSpyObj('AuthService', [], { currentUser: signal<UserSummary | null>(null).asReadonly() });
     const loc = TestBed.createComponent(SecretariaComponent);
     (loc.componentInstance as any).authService = semCampus;
     secretariaServiceSpy.listarCursos.calls.reset();
@@ -88,6 +82,7 @@ describe('SecretariaComponent', () => {
     expect(secretariaServiceSpy.listarCursos).not.toHaveBeenCalled();
   });
 
+  /* prettier-ignore */
   it('deve alternar abas e limpar mensagem de sucesso e erro do servico', () => {
     component.mensagemSucesso.set('Sucesso anterior');
     component.selecionarAba('disciplinas');
@@ -135,24 +130,15 @@ describe('SecretariaComponent', () => {
 
   /* prettier-ignore */
   it('deve ignorar submissoes quando campus invalido, dados nulos ou IDs invalidos', () => {
-    secretariaServiceSpy.criarCurso.calls.reset();
-    secretariaServiceSpy.criarDisciplina.calls.reset();
-    secretariaServiceSpy.criarTurma.calls.reset();
-    secretariaServiceSpy.matricularAluno.calls.reset();
-
-    component.campusId = 0;
-    component.formCursoNome = 'Teste'; component.formCursoCodigo = 'TST';
-    component.cadastrarCurso();
+    secretariaServiceSpy.criarCurso.calls.reset(); secretariaServiceSpy.criarDisciplina.calls.reset();
+    secretariaServiceSpy.criarTurma.calls.reset(); secretariaServiceSpy.matricularAluno.calls.reset();
+    component.campusId = 0; component.formCursoNome = 'Teste'; component.formCursoCodigo = 'TST'; component.cadastrarCurso();
     expect(secretariaServiceSpy.criarCurso).not.toHaveBeenCalled();
-
-    component.campusId = 2;
-    component.formDiscCursoId = null; component.cadastrarDisciplina();
+    component.campusId = 2; component.formDiscCursoId = null; component.cadastrarDisciplina();
     expect(secretariaServiceSpy.criarDisciplina).not.toHaveBeenCalled();
-
     component.formTurmaDiscId = 10; component.formTurmaPeriodo = '   '; component.cadastrarTurma();
     component.formTurmaPeriodo = '2026.1'; component.formTurmaProfId = -1; component.cadastrarTurma();
     expect(secretariaServiceSpy.criarTurma).not.toHaveBeenCalled();
-
     component.formMatTurmaId = 100; component.formMatAlunoId = -5; component.matricularAluno();
     component.formMatAlunoId = 2.5; component.matricularAluno();
     expect(secretariaServiceSpy.matricularAluno).not.toHaveBeenCalled();
