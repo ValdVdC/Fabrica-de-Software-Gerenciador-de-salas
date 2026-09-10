@@ -2,64 +2,24 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, defer, tap, finalize } from 'rxjs';
 
-export interface Curso {
-  id: number;
-  campus_id: number;
-  nome: string;
-  codigo: string;
-}
-
-export interface CursoCreate {
-  campus_id: number;
-  nome: string;
-  codigo: string;
-}
-
-export interface Disciplina {
-  id: number;
-  curso_id: number;
-  nome: string;
-  codigo: string;
-  carga_horaria: number;
-}
-
-export interface DisciplinaCreate {
-  curso_id: number;
-  nome: string;
-  codigo: string;
-  carga_horaria: number;
-}
-
+/* prettier-ignore */
+export interface Curso { id: number; campus_id: number; nome: string; codigo: string; }
+/* prettier-ignore */
+export interface CursoCreate { campus_id: number; nome: string; codigo: string; }
+/* prettier-ignore */
+export interface Disciplina { id: number; curso_id: number; nome: string; codigo: string; carga_horaria: number; }
+/* prettier-ignore */
+export interface DisciplinaCreate { curso_id: number; nome: string; codigo: string; carga_horaria: number; }
+/* prettier-ignore */
 export type TurnoType = 'matutino' | 'vespertino' | 'noturno' | 'integral';
-
-export interface Turma {
-  id: number;
-  disciplina_id: number;
-  professor_id: number | null;
-  periodo_letivo: string;
-  turno_preferido: TurnoType;
-  num_matriculados: number;
-}
-
-export interface TurmaCreate {
-  disciplina_id: number;
-  professor_id?: number | null;
-  periodo_letivo: string;
-  turno_preferido: TurnoType;
-}
-
-export interface Matricula {
-  id: number;
-  aluno_id: number;
-  turma_id: number;
-  data_matricula: string;
-  status: string;
-}
-
-export interface MatriculaCreate {
-  aluno_id: number;
-  turma_id: number;
-}
+/* prettier-ignore */
+export interface Turma { id: number; disciplina_id: number; professor_id: number | null; periodo_letivo: string; turno_preferido: TurnoType; num_matriculados: number; }
+/* prettier-ignore */
+export interface TurmaCreate { disciplina_id: number; professor_id?: number | null; periodo_letivo: string; turno_preferido: TurnoType; }
+/* prettier-ignore */
+export interface Matricula { id: number; aluno_id: number; turma_id: number; data_matricula: string; status: string; }
+/* prettier-ignore */
+export interface MatriculaCreate { aluno_id: number; turma_id: number; }
 
 @Injectable({ providedIn: 'root' })
 export class SecretariaService {

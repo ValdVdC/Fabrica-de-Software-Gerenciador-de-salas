@@ -85,33 +85,29 @@ describe('SecretariaService', () => {
     service
       .criarTurma({ disciplina_id: 1, periodo_letivo: '2026.1', turno_preferido: 'noturno' })
       .subscribe((r) => expect(r.id).toBe(11));
-    httpMock
-      .expectOne('/api/v1/turmas')
-      .flush({
-        id: 11,
-        disciplina_id: 1,
-        professor_id: null,
-        periodo_letivo: '2026.1',
-        turno_preferido: 'noturno',
-        num_matriculados: 0,
-      });
+    httpMock.expectOne('/api/v1/turmas').flush({
+      id: 11,
+      disciplina_id: 1,
+      professor_id: null,
+      periodo_letivo: '2026.1',
+      turno_preferido: 'noturno',
+      num_matriculados: 0,
+    });
     expect(service.turmas().some((t) => t.id === 11)).toBeTrue();
   });
 
   it('sincroniza matricula e incrementa num_matriculados na turma reativamente', () => {
     service.listarTurmas().subscribe();
-    httpMock
-      .expectOne('/api/v1/turmas')
-      .flush([
-        {
-          id: 10,
-          disciplina_id: 1,
-          professor_id: null,
-          periodo_letivo: '2026.1',
-          turno_preferido: 'matutino',
-          num_matriculados: 0,
-        },
-      ]);
+    httpMock.expectOne('/api/v1/turmas').flush([
+      {
+        id: 10,
+        disciplina_id: 1,
+        professor_id: null,
+        periodo_letivo: '2026.1',
+        turno_preferido: 'matutino',
+        num_matriculados: 0,
+      },
+    ]);
 
     service.listarMatriculas(10).subscribe();
     httpMock
@@ -150,11 +146,9 @@ describe('SecretariaService', () => {
   });
 
   it('trata erros HTTP 0, 422 estruturado do Pydantic e 500 sem vazamento', () => {
-    service
-      .listarCursos()
-      .subscribe({
-        error: () => expect(service.errorMessage()).toBe('Nao foi possivel conectar ao servidor'),
-      });
+    service.listarCursos().subscribe({
+      error: () => expect(service.errorMessage()).toBe('Nao foi possivel conectar ao servidor'),
+    });
     httpMock.expectOne('/api/v1/cursos').flush({}, { status: 0, statusText: 'Unknown Error' });
 
     service.criarCurso({ campus_id: 1, nome: 'A', codigo: 'B' }).subscribe({
@@ -168,14 +162,12 @@ describe('SecretariaService', () => {
         { status: 422, statusText: 'Unprocessable Entity' },
       );
 
-    service
-      .listarCursos()
-      .subscribe({
-        error: () =>
-          expect(service.errorMessage()).toBe(
-            'Erro interno no servidor. Tente novamente mais tarde.',
-          ),
-      });
+    service.listarCursos().subscribe({
+      error: () =>
+        expect(service.errorMessage()).toBe(
+          'Erro interno no servidor. Tente novamente mais tarde.',
+        ),
+    });
     httpMock
       .expectOne('/api/v1/cursos')
       .flush({ detail: 'traceback' }, { status: 500, statusText: 'Server Error' });
