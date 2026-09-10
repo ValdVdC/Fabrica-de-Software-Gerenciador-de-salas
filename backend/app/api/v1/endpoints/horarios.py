@@ -39,8 +39,11 @@ def listar_meus_horarios(
         )
     elif current_user.perfil in [PerfilUsuario.SECRETARIA, PerfilUsuario.COORDENADOR]:
         stmt = stmt.where(Horario.campus_id == current_user.campus_id)
-    elif current_user.perfil == PerfilUsuario.ADMIN and current_user.campus_id:
-        stmt = stmt.where(Horario.campus_id == current_user.campus_id)
+    elif current_user.perfil == PerfilUsuario.ADMIN:
+        if current_user.campus_id:
+            stmt = stmt.where(Horario.campus_id == current_user.campus_id)
+    else:
+        return []
 
     stmt = stmt.order_by(Horario.dia_semana.asc(), Horario.hora_inicio.asc(), Horario.id.asc()).offset(skip).limit(limit)
     rows = db.execute(stmt).all()

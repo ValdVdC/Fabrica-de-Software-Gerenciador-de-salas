@@ -163,3 +163,21 @@ def test_horarios_meus_paginacao_skip_limit(client, cenario_horarios):
     dados = res.json()
     assert len(dados) == 1
     assert dados[0]["dia_semana"] == 1
+
+
+def test_horarios_meus_usuario_sem_horarios_retorna_lista_vazia(client, cenario_horarios):
+    headers = {"Authorization": f"Bearer {cenario_horarios['token_admin']}"}
+    res = client.get("/api/v1/horarios/meus", headers=headers)
+    assert res.status_code == 200
+    assert isinstance(res.json(), list)
+
+
+def test_horarios_meus_paginacao_invalida_retorna_422(client, cenario_horarios):
+    headers = {"Authorization": f"Bearer {cenario_horarios['token_aluno_a']}"}
+    res1 = client.get("/api/v1/horarios/meus?skip=-1", headers=headers)
+    assert res1.status_code == 422
+    res2 = client.get("/api/v1/horarios/meus?limit=0", headers=headers)
+    assert res2.status_code == 422
+    res3 = client.get("/api/v1/horarios/meus?limit=201", headers=headers)
+    assert res3.status_code == 422
+
