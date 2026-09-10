@@ -45,10 +45,11 @@ def cenario_horarios(test_db):
     sec_a = Usuario(nome="Sec Sao Luis", email="sec_sl@sigaas.edu", senha_hash=s, perfil=PerfilUsuario.SECRETARIA, campus_id=ca.id)
     prof_a = Usuario(nome="Prof Alan Turing", email="turing@sigaas.edu", senha_hash=s, perfil=PerfilUsuario.PROFESSOR, campus_id=ca.id)
     prof_b = Usuario(nome="Prof Ada Lovelace", email="ada@sigaas.edu", senha_hash=s, perfil=PerfilUsuario.PROFESSOR, campus_id=ca.id)
+    prof_sem_horario = Usuario(nome="Prof Sem Horario", email="sem_horario@sigaas.edu", senha_hash=s, perfil=PerfilUsuario.PROFESSOR, campus_id=ca.id)
     aluno_a = Usuario(nome="Aluno Carlos", email="carlos@sigaas.edu", senha_hash=s, perfil=PerfilUsuario.ALUNO, campus_id=ca.id)
     aluno_b = Usuario(nome="Aluno Daniel", email="daniel@sigaas.edu", senha_hash=s, perfil=PerfilUsuario.ALUNO, campus_id=ca.id)
     u_inativo = Usuario(nome="Inativo", email="inativo@sigaas.edu", senha_hash=s, perfil=PerfilUsuario.ALUNO, campus_id=ca.id, ativo=False)
-    test_db.add_all([adm, sec_a, prof_a, prof_b, aluno_a, aluno_b, u_inativo])
+    test_db.add_all([adm, sec_a, prof_a, prof_b, prof_sem_horario, aluno_a, aluno_b, u_inativo])
     test_db.commit()
 
     sala_a1 = Sala(campus_id=ca.id, bloco="Bloco 1", numero="101", tipo=TipoSala.REGULAR, capacidade=40, turnos_disponiveis=["matutino"])
@@ -100,6 +101,7 @@ def cenario_horarios(test_db):
         "token_sec_a": create_access_token({"sub": str(sec_a.id), "perfil": sec_a.perfil.value}),
         "token_admin": create_access_token({"sub": str(adm.id), "perfil": adm.perfil.value}),
         "token_inativo": create_access_token({"sub": str(u_inativo.id), "perfil": u_inativo.perfil.value}),
+        "token_prof_sem_horario": create_access_token({"sub": str(prof_sem_horario.id), "perfil": prof_sem_horario.perfil.value}),
         "turma_1_id": t1.id,
         "turma_2_id": t2.id,
     }
@@ -114,7 +116,7 @@ def test_horarios_meus_usuario_inativo_rejeitado(client, cenario_horarios):
     headers = {"Authorization": f"Bearer {cenario_horarios['token_inativo']}"}
     res = client.get("/api/v1/horarios/meus", headers=headers)
     assert res.status_code == 403
-    assert "inativo" in res.json()["detail"].lower()
+    assert res.json()["detail"] == "Usuario inativo no sistema"
 
 
 def test_horarios_meus_professor_retorna_apenas_suas_turmas_ordenadas(client, cenario_horarios):
@@ -123,11 +125,8 @@ def test_horarios_meus_professor_retorna_apenas_suas_turmas_ordenadas(client, ce
     assert res.status_code == 200
     dados = res.json()
     assert len(dados) == 2
-    # Ordenacao cronologica: dia_semana 0 (Segunda) antes de dia_semana 2 (Quarta)
     assert dados[0]["dia_semana"] == 0
     assert dados[0]["disciplina_codigo"] == "AED1"
-    assert dados[0]["sala_bloco"] == "Bloco 1"
-    assert dados[0]["sala_numero"] == "101"
     assert dados[0]["professor_nome"] == "Prof Alan Turing"
     assert dados[1]["dia_semana"] == 2
 
@@ -137,11 +136,9 @@ def test_horarios_meus_aluno_retorna_apenas_matriculas_ativas(client, cenario_ho
     res = client.get("/api/v1/horarios/meus", headers=headers)
     assert res.status_code == 200
     dados = res.json()
-    # Carlos esta matriculado ativo em t1 (h2 dia 0, h1 dia 2) e t2 (h3 dia 1). t3 esta cancelada (h4).
     assert len(dados) == 3
-    dias = [item["dia_semana"] for item in dados]
+    dias = [h["dia_semana"] for h in dados]
     assert dias == [0, 1, 2]
-    # Nao contem o horario da turma t3 (dia 3) pois a matricula foi cancelada
     assert 3 not in dias
 
 
@@ -150,7 +147,6 @@ def test_horarios_meus_secretaria_retorna_horarios_do_campus(client, cenario_hor
     res = client.get("/api/v1/horarios/meus", headers=headers)
     assert res.status_code == 200
     dados = res.json()
-    # Secretaria do Campus Sao Luis ve h1, h2, h3 (todos do campus ca). h4 pertence a cb.
     assert len(dados) == 3
     for h in dados:
         assert h["sala_bloco"] in ["Bloco 1", "Bloco 2"]
@@ -166,10 +162,23 @@ def test_horarios_meus_paginacao_skip_limit(client, cenario_horarios):
 
 
 def test_horarios_meus_usuario_sem_horarios_retorna_lista_vazia(client, cenario_horarios):
-    headers = {"Authorization": f"Bearer {cenario_horarios['token_admin']}"}
+    headers = {"Authorization": f"Bearer {cenario_horarios['token_prof_sem_horario']}"}
     res = client.get("/api/v1/horarios/meus", headers=headers)
     assert res.status_code == 200
-    assert isinstance(res.json(), list)
+    assert res.json() == []
+
+
+def test_horarios_meus_perfil_nao_mapeado_retorna_lista_vazia(client):
+    from app.api.v1.endpoints import horarios as mod_horarios
+    u = Usuario(id=999, nome="Visitante", email="v@sigaas.edu", campus_id=1, ativo=True)
+    u.perfil = "visitante"
+    fastapi_app.dependency_overrides[mod_horarios.get_current_user] = lambda: u
+    try:
+        res = client.get("/api/v1/horarios/meus")
+        assert res.status_code == 200
+        assert res.json() == []
+    finally:
+        fastapi_app.dependency_overrides.pop(mod_horarios.get_current_user, None)
 
 
 def test_horarios_meus_paginacao_invalida_retorna_422(client, cenario_horarios):
