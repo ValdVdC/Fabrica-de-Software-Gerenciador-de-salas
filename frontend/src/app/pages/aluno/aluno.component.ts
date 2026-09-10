@@ -1,12 +1,16 @@
 import { Component } from '@angular/core';
+import { GradeHorariaComponent } from '../grade-horaria/grade-horaria.component';
 
 @Component({
   selector: 'app-aluno',
   standalone: true,
-  template: `<div class="panel-card">
-    <h2>Painel do Discente</h2>
-    <p class="desc">Consulta de grade horaria individual e salas no campus.</p>
-    <span class="badge">Ativo</span>
-  </div>`,
+  imports: [GradeHorariaComponent],
+  template: `
+    <app-grade-horaria
+      titulo="Painel do Discente"
+      subtitulo="Grade horaria semanal individual e localizacao de salas"
+      perfil="aluno"
+    />
+  `,
 })
 export class AlunoComponent {}
