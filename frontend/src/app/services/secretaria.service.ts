@@ -117,7 +117,9 @@ export class SecretariaService {
       params = params.set('campus_id', campusId.toString());
     }
     return this.executar(
-      this.http.get<Disciplina[]>('/api/v1/disciplinas', { params: params.keys().length > 0 ? params : undefined }),
+      this.http.get<Disciplina[]>('/api/v1/disciplinas', {
+        params: params.keys().length > 0 ? params : undefined,
+      }),
       (dados) => this._disciplinas.set(dados),
     );
   }
@@ -143,7 +145,9 @@ export class SecretariaService {
       params = params.set('campus_id', campusId.toString());
     }
     return this.executar(
-      this.http.get<Turma[]>('/api/v1/turmas', { params: params.keys().length > 0 ? params : undefined }),
+      this.http.get<Turma[]>('/api/v1/turmas', {
+        params: params.keys().length > 0 ? params : undefined,
+      }),
       (dados) => this._turmas.set(dados),
     );
   }
