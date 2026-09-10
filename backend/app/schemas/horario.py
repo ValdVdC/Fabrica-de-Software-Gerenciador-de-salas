@@ -1,8 +1,6 @@
-"""
-Schemas Pydantic v2 para a entidade Horario.
-"""
-
+"""Schemas Pydantic v2 para a entidade Horario e grade semanal."""
 from datetime import time
+from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
@@ -27,5 +25,25 @@ class HorarioCreate(HorarioBase):
 
 class HorarioRead(HorarioBase):
     id: int
-    ativo: bool
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HorarioMeuRead(BaseModel):
+    id: int
+    campus_id: int
+    turma_id: int
+    disciplina_nome: str
+    disciplina_codigo: str
+    periodo_letivo: str
+    turno: str
+    dia_semana: int
+    hora_inicio: time
+    hora_fim: time
+    sala_id: int
+    sala_bloco: str
+    sala_numero: str
+    sala_tipo: str
+    professor_id: Optional[int] = None
+    professor_nome: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)
