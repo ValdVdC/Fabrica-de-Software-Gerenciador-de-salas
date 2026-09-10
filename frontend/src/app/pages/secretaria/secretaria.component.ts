@@ -35,7 +35,7 @@ import { AuthService } from '../../services/auth.service';
           <form (ngSubmit)="cadastrarCurso()" class="form-row">
             <input type="text" [(ngModel)]="formCursoNome" name="cursoNome" required maxlength="100" placeholder="Nome do Curso (Ex: Engenharia)" class="form-input flex-2" />
             <input type="text" [(ngModel)]="formCursoCodigo" name="cursoCodigo" required maxlength="20" placeholder="Codigo (Ex: ENG)" class="form-input" />
-            <button type="submit" [disabled]="secretariaService.isLoading() || campusId <= 0" class="btn-primary">Salvar Curso</button>
+            <button type="submit" [disabled]="secretariaService.isLoading() || campusId <= 0 || !formCursoNome.trim() || !formCursoCodigo.trim()" class="btn-primary">Salvar Curso</button>
           </form>
         </div>
         <div class="table-card"><table class="data-table">
@@ -58,7 +58,7 @@ import { AuthService } from '../../services/auth.service';
             <input type="text" [(ngModel)]="formDiscNome" name="discNome" required maxlength="100" placeholder="Nome (Ex: Algoritmos)" class="form-input flex-2" />
             <input type="text" [(ngModel)]="formDiscCodigo" name="discCodigo" required maxlength="20" placeholder="Codigo (Ex: ALG1)" class="form-input" />
             <input type="number" [(ngModel)]="formDiscCarga" name="discCarga" min="1" max="1000" placeholder="Carga Horaria (h)" class="form-input tabular-nums" />
-            <button type="submit" [disabled]="secretariaService.isLoading() || !formDiscCursoId" class="btn-primary">Salvar Disciplina</button>
+            <button type="submit" [disabled]="secretariaService.isLoading() || campusId <= 0 || !formDiscCursoId || !formDiscNome.trim() || !formDiscCodigo.trim()" class="btn-primary">Salvar Disciplina</button>
           </form>
         </div>
         <div class="table-card"><table class="data-table">
@@ -83,7 +83,7 @@ import { AuthService } from '../../services/auth.service';
               <option value="matutino">Matutino</option><option value="vespertino">Vespertino</option><option value="noturno">Noturno</option><option value="integral">Integral</option>
             </select>
             <input type="number" [(ngModel)]="formTurmaProfId" name="turmaProf" placeholder="ID Professor (opcional)" class="form-input tabular-nums" />
-            <button type="submit" [disabled]="secretariaService.isLoading() || !formTurmaDiscId" class="btn-primary">Criar Turma</button>
+            <button type="submit" [disabled]="secretariaService.isLoading() || campusId <= 0 || !formTurmaDiscId || !formTurmaPeriodo.trim()" class="btn-primary">Criar Turma</button>
           </form>
         </div>
         <div class="table-card"><table class="data-table">
@@ -104,7 +104,7 @@ import { AuthService } from '../../services/auth.service';
               @for (t of secretariaService.turmas(); track t.id) { <option [ngValue]="t.id">Turma #{{ t.id }} ({{ t.periodo_letivo }} - {{ t.turno_preferido }})</option> }
             </select>
             <input type="number" [(ngModel)]="formMatAlunoId" name="matAluno" required min="1" placeholder="ID do Aluno (Ex: 5)" class="form-input tabular-nums" />
-            <button type="submit" [disabled]="secretariaService.isLoading() || !formMatTurmaId || !formMatAlunoId" class="btn-primary">Confirmar Matricula</button>
+            <button type="submit" [disabled]="secretariaService.isLoading() || campusId <= 0 || !formMatTurmaId || !formMatAlunoId" class="btn-primary">Confirmar Matricula</button>
           </form>
         </div>
         <div class="table-card"><table class="data-table">
@@ -160,26 +160,33 @@ export class SecretariaComponent implements OnInit {
   private readonly authService = inject(AuthService);
 
   campusId = 0;
-  readonly abaAtiva = signal<'cursos' | 'disciplinas' | 'turmas' | 'matriculas' | 'resumo'>(
-    'cursos',
-  );
+  /* prettier-ignore */
+  readonly abaAtiva = signal<'cursos' | 'disciplinas' | 'turmas' | 'matriculas' | 'resumo'>('cursos');
   readonly mensagemSucesso = signal<string | null>(null);
 
   /* prettier-ignore */
   formCursoNome = '';
+  /* prettier-ignore */
   formCursoCodigo = '';
   /* prettier-ignore */
   formDiscCursoId: number | null = null;
+  /* prettier-ignore */
   formDiscNome = '';
+  /* prettier-ignore */
   formDiscCodigo = '';
+  /* prettier-ignore */
   formDiscCarga: number | null = 60;
   /* prettier-ignore */
   formTurmaDiscId: number | null = null;
+  /* prettier-ignore */
   formTurmaProfId: number | null = null;
+  /* prettier-ignore */
   formTurmaPeriodo = '2026.1';
+  /* prettier-ignore */
   formTurmaTurno: TurnoType = 'matutino';
   /* prettier-ignore */
   formMatTurmaId: number | null = null;
+  /* prettier-ignore */
   formMatAlunoId: number | null = null;
 
   /* prettier-ignore */
@@ -194,59 +201,90 @@ export class SecretariaComponent implements OnInit {
   ngOnInit(): void {
     this.campusId = this.authService.currentUser()?.campus_id ?? 0;
     if (this.campusId > 0) {
-      this.secretariaService.listarCursos(this.campusId).subscribe();
-      this.secretariaService.listarDisciplinas(undefined, this.campusId).subscribe();
-      this.secretariaService.listarTurmas(undefined, this.campusId).subscribe();
-      this.secretariaService.listarMatriculas().subscribe();
+      this.secretariaService.listarCursos(this.campusId).subscribe({ error: () => {} });
+      this.secretariaService.listarDisciplinas(undefined, this.campusId).subscribe({ error: () => {} });
+      this.secretariaService.listarTurmas(undefined, this.campusId).subscribe({ error: () => {} });
+      this.secretariaService.listarMatriculas().subscribe({ error: () => {} });
     }
   }
 
   selecionarAba(aba: 'cursos' | 'disciplinas' | 'turmas' | 'matriculas' | 'resumo'): void {
     this.abaAtiva.set(aba);
     this.mensagemSucesso.set(null);
+    this.secretariaService.limparErro();
   }
 
   cadastrarCurso(): void {
-    if (this.campusId <= 0 || !this.formCursoNome.trim() || !this.formCursoCodigo.trim()) return;
+    if (this.campusId <= 0 || !this.formCursoNome?.trim() || !this.formCursoCodigo?.trim()) return;
+    this.secretariaService.limparErro();
+    this.mensagemSucesso.set(null);
     /* prettier-ignore */
     const payload: CursoCreate = { campus_id: this.campusId, nome: this.formCursoNome.trim(), codigo: this.formCursoCodigo.trim().toUpperCase() };
-    this.secretariaService.criarCurso(payload).subscribe(() => {
-      this.mensagemSucesso.set(`Curso ${payload.nome} cadastrado com sucesso.`);
-      this.formCursoNome = '';
-      this.formCursoCodigo = '';
+    this.secretariaService.criarCurso(payload).subscribe({
+      next: () => {
+        this.mensagemSucesso.set(`Curso ${payload.nome} cadastrado com sucesso.`);
+        this.formCursoNome = '';
+        this.formCursoCodigo = '';
+      },
+      error: () => {},
     });
   }
 
   cadastrarDisciplina(): void {
-    if (!this.formDiscCursoId || !this.formDiscNome.trim() || !this.formDiscCodigo.trim()) return;
+    if (this.campusId <= 0 || !this.formDiscCursoId || !this.formDiscNome?.trim() || !this.formDiscCodigo?.trim()) return;
+    const carga = Number(this.formDiscCarga);
+    const cargaValida = Number.isInteger(carga) && carga > 0 ? carga : 60;
+    this.secretariaService.limparErro();
+    this.mensagemSucesso.set(null);
     /* prettier-ignore */
-    const payload: DisciplinaCreate = { curso_id: this.formDiscCursoId, nome: this.formDiscNome.trim(), codigo: this.formDiscCodigo.trim().toUpperCase(), carga_horaria: Math.floor(Number(this.formDiscCarga) || 60) };
-    this.secretariaService.criarDisciplina(payload).subscribe(() => {
-      this.mensagemSucesso.set(`Disciplina ${payload.nome} cadastrada com sucesso.`);
-      this.formDiscNome = '';
-      this.formDiscCodigo = '';
-      this.formDiscCarga = 60;
+    const payload: DisciplinaCreate = { curso_id: this.formDiscCursoId, nome: this.formDiscNome.trim(), codigo: this.formDiscCodigo.trim().toUpperCase(), carga_horaria: cargaValida };
+    this.secretariaService.criarDisciplina(payload).subscribe({
+      next: () => {
+        this.mensagemSucesso.set(`Disciplina ${payload.nome} cadastrada com sucesso.`);
+        this.formDiscNome = '';
+        this.formDiscCodigo = '';
+        this.formDiscCarga = 60;
+      },
+      error: () => {},
     });
   }
 
   cadastrarTurma(): void {
-    if (!this.formTurmaDiscId || !this.formTurmaPeriodo.trim()) return;
+    if (this.campusId <= 0 || !this.formTurmaDiscId || !this.formTurmaPeriodo?.trim()) return;
+    let profId: number | null = null;
+    if (this.formTurmaProfId !== null && this.formTurmaProfId !== undefined && String(this.formTurmaProfId).trim() !== '') {
+      const p = Number(this.formTurmaProfId);
+      if (!Number.isInteger(p) || p <= 0) return;
+      profId = p;
+    }
+    this.secretariaService.limparErro();
+    this.mensagemSucesso.set(null);
     /* prettier-ignore */
-    const payload: TurmaCreate = { disciplina_id: this.formTurmaDiscId, professor_id: this.formTurmaProfId ? Math.floor(Number(this.formTurmaProfId)) : null, periodo_letivo: this.formTurmaPeriodo.trim(), turno_preferido: this.formTurmaTurno };
-    this.secretariaService.criarTurma(payload).subscribe((turma) => {
-      this.mensagemSucesso.set(`Turma #${turma.id} criada com sucesso.`);
-      this.formTurmaDiscId = null;
-      this.formTurmaProfId = null;
+    const payload: TurmaCreate = { disciplina_id: this.formTurmaDiscId, professor_id: profId, periodo_letivo: this.formTurmaPeriodo.trim(), turno_preferido: this.formTurmaTurno };
+    this.secretariaService.criarTurma(payload).subscribe({
+      next: (turma) => {
+        this.mensagemSucesso.set(`Turma #${turma.id} criada com sucesso.`);
+        this.formTurmaDiscId = null;
+        this.formTurmaProfId = null;
+      },
+      error: () => {},
     });
   }
 
   matricularAluno(): void {
-    if (!this.formMatTurmaId || !this.formMatAlunoId) return;
+    if (this.campusId <= 0 || !this.formMatTurmaId) return;
+    const alunoId = Number(this.formMatAlunoId);
+    if (!Number.isInteger(alunoId) || alunoId <= 0) return;
+    this.secretariaService.limparErro();
+    this.mensagemSucesso.set(null);
     /* prettier-ignore */
-    const payload: MatriculaCreate = { aluno_id: Math.floor(Number(this.formMatAlunoId)), turma_id: this.formMatTurmaId };
-    this.secretariaService.matricularAluno(payload).subscribe(() => {
-      this.mensagemSucesso.set(`Matricula do aluno #${payload.aluno_id} confirmada.`);
-      this.formMatAlunoId = null;
+    const payload: MatriculaCreate = { aluno_id: alunoId, turma_id: this.formMatTurmaId };
+    this.secretariaService.matricularAluno(payload).subscribe({
+      next: () => {
+        this.mensagemSucesso.set(`Matricula do aluno #${payload.aluno_id} confirmada.`);
+        this.formMatAlunoId = null;
+      },
+      error: () => {},
     });
   }
 }

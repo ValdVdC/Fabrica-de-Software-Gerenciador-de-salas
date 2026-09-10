@@ -8,7 +8,7 @@ import {
   Matricula,
 } from '../../services/secretaria.service';
 import { AuthService, UserSummary } from '../../services/auth.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 
 describe('SecretariaComponent', () => {
@@ -27,8 +27,8 @@ describe('SecretariaComponent', () => {
   const mockMatriculas = signal<Matricula[]>([{ id: 50, aluno_id: 5, turma_id: 100, data_matricula: '2026-09-09', status: 'ativa' }]);
   /* prettier-ignore */
   const mockCurrentUser = signal<UserSummary | null>({ id: 1, nome: 'Secretaria Geral', email: 'sec@ufma.br', perfil: 'secretaria', campus_id: 2 });
-  const mockLoading = signal(false),
-    mockError = signal<string | null>(null);
+  /* prettier-ignore */
+  const mockLoading = signal(false), mockError = signal<string | null>(null);
 
   beforeEach(async () => {
     mockLoading.set(false);
@@ -36,7 +36,7 @@ describe('SecretariaComponent', () => {
     /* prettier-ignore */
     secretariaServiceSpy = jasmine.createSpyObj('SecretariaService', [
       'listarCursos', 'criarCurso', 'listarDisciplinas', 'criarDisciplina',
-      'listarTurmas', 'criarTurma', 'listarMatriculas', 'matricularAluno',
+      'listarTurmas', 'criarTurma', 'listarMatriculas', 'matricularAluno', 'limparErro',
     ], {
       cursos: mockCursos.asReadonly(), disciplinas: mockDisciplinas.asReadonly(),
       turmas: mockTurmas.asReadonly(), matriculas: mockMatriculas.asReadonly(),
@@ -88,11 +88,12 @@ describe('SecretariaComponent', () => {
     expect(secretariaServiceSpy.listarCursos).not.toHaveBeenCalled();
   });
 
-  it('deve alternar abas e limpar mensagem de sucesso', () => {
+  it('deve alternar abas e limpar mensagem de sucesso e erro do servico', () => {
     component.mensagemSucesso.set('Sucesso anterior');
     component.selecionarAba('disciplinas');
     expect(component.abaAtiva()).toBe('disciplinas');
     expect(component.mensagemSucesso()).toBeNull();
+    expect(secretariaServiceSpy.limparErro).toHaveBeenCalled();
   });
 
   /* prettier-ignore */
@@ -108,14 +109,14 @@ describe('SecretariaComponent', () => {
   /* prettier-ignore */
   it('deve submeter criacao de disciplina com carga horaria inteira', () => {
     secretariaServiceSpy.criarDisciplina.and.returnValue(of({ id: 11, curso_id: 1, nome: 'Calculo', codigo: 'MAT1', carga_horaria: 80 }));
-    component.formDiscCursoId = 1; component.formDiscNome = 'Calculo'; component.formDiscCodigo = 'mat1'; component.formDiscCarga = 80.5;
+    component.formDiscCursoId = 1; component.formDiscNome = 'Calculo'; component.formDiscCodigo = 'mat1'; component.formDiscCarga = 80;
     component.cadastrarDisciplina();
     expect(secretariaServiceSpy.criarDisciplina).toHaveBeenCalledWith({ curso_id: 1, nome: 'Calculo', codigo: 'MAT1', carga_horaria: 80 });
     expect(component.mensagemSucesso()).toContain('Disciplina');
   });
 
   /* prettier-ignore */
-  it('deve submeter criacao de turma', () => {
+  it('deve submeter criacao de turma e tratar professor id valido ou nulo', () => {
     secretariaServiceSpy.criarTurma.and.returnValue(of({ id: 101, disciplina_id: 10, professor_id: null, periodo_letivo: '2026.1', turno_preferido: 'noturno', num_matriculados: 0 }));
     component.formTurmaDiscId = 10; component.formTurmaPeriodo = '2026.1'; component.formTurmaTurno = 'noturno';
     component.cadastrarTurma();
@@ -124,7 +125,7 @@ describe('SecretariaComponent', () => {
   });
 
   /* prettier-ignore */
-  it('deve submeter matricula de aluno', () => {
+  it('deve submeter matricula de aluno com id inteiro positivo', () => {
     secretariaServiceSpy.matricularAluno.and.returnValue(of({ id: 51, aluno_id: 7, turma_id: 100, data_matricula: '2026-09-09', status: 'ativa' }));
     component.formMatAlunoId = 7; component.formMatTurmaId = 100;
     component.matricularAluno();
@@ -132,11 +133,36 @@ describe('SecretariaComponent', () => {
     expect(component.mensagemSucesso()).toContain('Matricula');
   });
 
-  it('deve ignorar submissoes quando campus invalido ou campos vazios', () => {
+  /* prettier-ignore */
+  it('deve ignorar submissoes quando campus invalido, dados nulos ou IDs invalidos', () => {
     secretariaServiceSpy.criarCurso.calls.reset();
+    secretariaServiceSpy.criarDisciplina.calls.reset();
+    secretariaServiceSpy.criarTurma.calls.reset();
+    secretariaServiceSpy.matricularAluno.calls.reset();
+
     component.campusId = 0;
-    component.formCursoNome = '';
+    component.formCursoNome = 'Teste'; component.formCursoCodigo = 'TST';
     component.cadastrarCurso();
     expect(secretariaServiceSpy.criarCurso).not.toHaveBeenCalled();
+
+    component.campusId = 2;
+    component.formDiscCursoId = null; component.cadastrarDisciplina();
+    expect(secretariaServiceSpy.criarDisciplina).not.toHaveBeenCalled();
+
+    component.formTurmaDiscId = 10; component.formTurmaPeriodo = '   '; component.cadastrarTurma();
+    component.formTurmaPeriodo = '2026.1'; component.formTurmaProfId = -1; component.cadastrarTurma();
+    expect(secretariaServiceSpy.criarTurma).not.toHaveBeenCalled();
+
+    component.formMatTurmaId = 100; component.formMatAlunoId = -5; component.matricularAluno();
+    component.formMatAlunoId = 2.5; component.matricularAluno();
+    expect(secretariaServiceSpy.matricularAluno).not.toHaveBeenCalled();
+  });
+
+  /* prettier-ignore */
+  it('deve tratar erros de subscricao de forma resiliente', () => {
+    secretariaServiceSpy.criarCurso.and.returnValue(throwError(() => new Error('Falha')));
+    component.formCursoNome = 'Engenharia'; component.formCursoCodigo = 'ENG';
+    component.cadastrarCurso();
+    expect(component.mensagemSucesso()).toBeNull();
   });
 });
