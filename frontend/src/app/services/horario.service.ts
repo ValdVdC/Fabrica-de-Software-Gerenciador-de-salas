@@ -88,7 +88,7 @@ export class HorarioService {
     }
 
     return defer(() => {
-      const g = this._geracao;
+      const g = ++this._geracao;
       this._errorMessage.set(null);
       this._activeRequests.update((n) => n + 1);
       return this.http.get<HorarioMeu[]>('/api/v1/horarios/meus', { params }).pipe(
@@ -106,9 +106,7 @@ export class HorarioService {
           },
         }),
         finalize(() => {
-          if (this._geracao === g) {
-            this._activeRequests.update((n) => Math.max(0, n - 1));
-          }
+          this._activeRequests.update((n) => Math.max(0, n - 1));
         }),
       );
     });
