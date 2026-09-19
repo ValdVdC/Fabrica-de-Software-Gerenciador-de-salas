@@ -70,46 +70,53 @@ Para não introduzir infraestrutura desnecessária (fila de mensagens, orquestra
 
 ---
 
-## 4. Backlog inicial por Sprint
+## 4. Cronograma Oficial e Backlog por Sprint
 
-### Sprint 1 — Formação da equipe, tema, requisitos *(já concluída com este documento)*
-- ✅ Papéis definidos (SM, PO, Dev Back, Dev Front, Responsável BD/Documentação)
-- ✅ Tema escolhido e validado contra os requisitos da disciplina
-- ✅ Requisitos levantados (este documento)
+O cronograma a seguir foi consolidado a partir das orientações e prazos oficiais da disciplina de Fábrica de Software (com integração a Tópicos Avançados):
 
-### Sprint 2 — Casos de uso, banco, protótipo
-- Como **PO**, quero documentar os casos de uso principais (matricular aluno, cadastrar sala, gerar horário, aprovar remanejamento) para orientar o desenvolvimento.
-- Como **Responsável de BD**, quero criar o schema PostgreSQL a partir do modelo de dados acima, com as migrations iniciais.
-- Como **Dev Frontend**, quero um protótipo navegável (wireframe) das telas por perfil (Admin, Professor, Aluno, Secretaria).
-- Como **Scrum Master**, quero o board do projeto (GitHub Projects ou Trello) configurado com este backlog.
+| Sprint | Data-Limite | Marco Avaliativo | Escopo Principal no SIGAAS |
+| :--- | :---: | :--- | :--- |
+| **Sprint 01** | Concluída | Planejamento Inicial | Tema, requisitos funcionais, formação de equipe e repositório GitHub. |
+| **Sprint 02** | 19/09 | Arquitetura e Modelagem | Arquitetura do sistema, Diagrama de Classes, MER conceitual, Modelo Relacional, protótipo navegável e schema do banco criado via Alembic. |
+| **Sprint 03** | 19/09 | Estrutura Inicial Funcional | Conexão com PostgreSQL, login com autenticação, cadastro de usuários, controle de perfis (RBAC), CRUD principal e deploy local via Docker. |
+| **Sprint 04** | 26/09 | Primeiro Módulo Completo | Módulo operacional de ponta a ponta: gestão de salas/espaços, cursos, turmas, matrículas com contagem atômica e grade horária semanal integrada aos painéis. |
+| **Sprint 05** | 03/10 | Segundo Módulo Funcional | Implementação do algoritmo de alocação de salas/horários em C com paralelismo OpenMP, medições de Speedup e integração via `ctypes`. |
+| **Sprint 06** | 17/10 | Aprimoramento e IA | Ajustes da Pré-Banca, modelo preditivo de absenteísmo com scikit-learn (`SugestaoRemanejamento`), integração de módulos e refinamento de interface. |
+| **Sprint 07** | 24/10 | Sistema Quase Completo | Dashboard de indicadores em tempo real, relatórios gerenciais, filtros avançados, pesquisas e trilha de auditoria (`LogAlocacao`). |
+| **Sprint 08** | 31/10 | Sistema Praticamente Concluído | Todas as funcionalidades concluídas, revisão geral do controle de permissões (RBAC) e regras de negócio multi-campus consolidadas. |
+| **Sprint 09** | 07/11 | Testes Completos | Testes funcionais, testes de validação/navegação, cobertura de código >= 85%, correção de bugs e atualização da documentação técnica. |
+| **Sprint 10** | 14/11 | Release Candidate | Sistema estabilizado, interface final, schema final do PostgreSQL, documentação interativa de APIs (OpenAPI/Swagger) e README técnico completo. |
+| **Sprint 11** | 21/11 | Preparação para Entrega | Manual do Usuário, Manual Técnico da solução, revisão geral de código e saneamento de repositório. |
+| **Sprint 12** | 28/11 | Versão Final e Vídeos | Congelamento de código (Code Freeze), ensaio geral da apresentação e produção dos dois vídeos (horizontal 16:9 para YouTube e vertical 9:16 para Instagram marcando @pryscillabgoncalves e @antenorparnaiba). |
+| **Entrega Final** | 05/12 | Envio Definitivo no Teams | Submissão do PDF único com links funcionais (GitHub, YouTube e Instagram), sem possibilidade de prorrogação. |
 
-### Sprint 3 — Arquitetura, GitHub, ambiente
-- Como **Dev Backend**, quero o projeto FastAPI inicial com routers separados (usuarios, campi, salas, turmas, horarios).
-- Como **Dev Backend**, quero um "hello world" do módulo C compilado como `.so` e chamado via `ctypes` a partir do FastAPI, provando a integração antes de implementar a lógica real.
-- Como **Dev Frontend**, quero o projeto Angular inicial com roteamento por perfil de acesso.
-- Como **Scrum Master**, quero o repositório GitHub estruturado (branches, README, `.gitignore`) e atualizado semanalmente.
+---
 
-### Sprint 4 — Login, banco funcionando
-- Como **usuário**, quero fazer login e ser redirecionado à interface do meu perfil (Admin/Professor/Aluno/Secretaria).
-- Como **Admin**, quero cadastrar campi, salas e equipamentos.
-- Como **Secretaria**, quero cadastrar cursos, disciplinas, turmas e matricular alunos.
-- Como **Professor**, quero ver minhas turmas e horários atribuídos.
+### 4.1 Métricas Científicas de Benchmark: Sequencial vs. OpenMP
 
-### Sprint 5 — Motor de otimização (C) e alocação
-- Como **Dev Backend**, quero implementar o algoritmo de alocação em C: dado um conjunto de turmas e salas, encontrar uma alocação válida respeitando capacidade, tipo de sala, equipamentos e ausência de conflito de horário.
-- Como **Dev Backend**, quero paralelizar a busca com OpenMP e medir o tempo de execução sequencial vs. paralelo (para o vídeo final).
-- Como **Admin**, quero rodar a alocação automática e revisar o resultado antes de publicar os horários.
+Para atender ao critério de rigor científico da disciplina de Tópicos Avançados (solicitado na devolutiva da Sprint 01), o motor de alocação em C será avaliado experimentalmente pelas seguintes métricas formais:
 
-### Sprint 6 — IA de previsão de falta + remanejamento
-- Como **Responsável de BD/Dev Backend**, quero gerar uma base de treino (dados reais coletados + dataset público + dados sintéticos complementares) para o modelo de previsão de falta.
-- Como **Dev Backend**, quero treinar e servir um modelo scikit-learn que estima a probabilidade de baixa frequência por turma/horário.
-- Como **sistema**, quero gerar uma `SugestaoRemanejamento` quando a previsão de ausência for alta o suficiente para justificar liberar uma sala maior.
-- Como **Admin/Coordenação**, quero aprovar ou rejeitar cada sugestão de remanejamento, com o motivo registrado no log.
+1. **Tempo de Execução ($T$)**:
+   - $T_s$: Tempo de execução da versão sequencial pura (execução em thread única, sem overhead de sincronização).
+   - $T_p(k)$: Tempo de execução da versão paralela utilizando $k$ threads OpenMP, com $k \in \{1, 2, 4, 8\}$.
+   - Medição através de `omp_get_wtime()` com precisão de microsegundos, calculando a média e desvio padrão sobre 10 repetições independentes por cenário.
 
-### Sprint Final — Testes, documentação, vídeos
-- Como **equipe**, queremos testes cobrindo o motor de alocação, o modelo de IA e os fluxos de aprovação.
-- Como **equipe**, queremos a documentação técnica finalizada (arquitetura, instruções de execução, decisões de design).
-- Como **equipe**, queremos gravar o vídeo horizontal (problema → solução → arquitetura → tecnologias → demonstração → IA/paralelismo → resultados/speedup → considerações finais) e o vídeo vertical para Instagram, marcando @pryscillabgoncalves e @antenorparnaiba.
+2. **Speedup Experimental ($S_k$)**:
+   $$S_k = \frac{T_s}{T_p(k)}$$
+   Indica o fator de aceleração computacional obtido pelo paralelismo em relação à linha de base sequencial.
+
+3. **Eficiência Paralela ($E_k$)**:
+   $$E_k = \frac{S_k}{k} \times 100\%$$
+   Avalia a fração do poder computacional dos $k$ núcleos que foi efetivamente convertida em ganho de desempenho, quantificando o impacto de sincronizações, escalonamento e falsas dependências de cache.
+
+4. **Fração Paralelizável e Limite Teórico (Lei de Amdahl)**:
+   $$S_{\max} = \frac{1}{(1 - f) + \frac{f}{k}}$$
+   Onde $f$ representa a fração do algoritmo de busca de alocação que é paralelizada entre as threads. A modelagem teórica permitirá comparar o speedup medido contra o teto assintótico da máquina.
+
+5. **Cenários de Carga para Benchmarking**:
+   - **Cenário Sintético 1 (Pequeno)**: 20 turmas $\times$ 10 salas (validação de corretude e casos de borda).
+   - **Cenário Sintético 2 (Médio - Típico de Campus)**: 100 turmas $\times$ 40 salas, com restrições mistas de laboratórios e equipamentos.
+   - **Cenário Sintético 3 (Stress / Escala)**: 500 turmas $\times$ 150 salas, com alta densidade de conflitos horários, projetado para evidenciar a escalabilidade do OpenMP.
 
 ---
 
