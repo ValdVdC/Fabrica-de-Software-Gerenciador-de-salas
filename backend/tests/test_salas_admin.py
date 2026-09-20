@@ -154,3 +154,64 @@ def test_obter_sala_e_associar_equipamento_isolamento_tenant_404(client, setup_c
     assert client.post(f"/api/v1/salas/{sala_b.id}/equipamentos", json={"equipamento_id": equip.id, "quantidade": 1}, headers=h_coord).status_code == 404
     h_admin = {"Authorization": f"Bearer {setup_cenario['token_admin']}"}
     assert client.get(f"/api/v1/salas/{sala_b.id}", headers=h_admin).status_code == 200
+
+
+def test_atualizar_sala_sucesso(client, setup_cenario, test_db):
+    token = setup_cenario["token_admin"]
+    sala = Sala(campus_id=setup_cenario["campus_a"].id, bloco="C", numero="301", tipo=TipoSala.REGULAR, capacidade=40, turnos_disponiveis=["matutino"])
+    test_db.add(sala)
+    test_db.commit()
+
+    payload = {"capacidade": 60, "numero": "301-B"}
+    resp = client.put(f"/api/v1/salas/{sala.id}", json=payload, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["capacidade"] == 60
+    assert data["numero"] == "301-B"
+
+
+def test_atualizar_sala_conflito_duplicidade(client, setup_cenario, test_db):
+    token = setup_cenario["token_admin"]
+    campus_id = setup_cenario["campus_a"].id
+    sala1 = Sala(campus_id=campus_id, bloco="D", numero="101", tipo=TipoSala.REGULAR, capacidade=30, turnos_disponiveis=["matutino"])
+    sala2 = Sala(campus_id=campus_id, bloco="D", numero="102", tipo=TipoSala.REGULAR, capacidade=30, turnos_disponiveis=["matutino"])
+    test_db.add_all([sala1, sala2])
+    test_db.commit()
+
+    resp = client.put(f"/api/v1/salas/{sala2.id}", json={"numero": "101"}, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 409
+
+
+def test_excluir_sala_sucesso(client, setup_cenario, test_db):
+    token = setup_cenario["token_admin"]
+    sala = Sala(campus_id=setup_cenario["campus_a"].id, bloco="E", numero="501", tipo=TipoSala.REGULAR, capacidade=25, turnos_disponiveis=["vespertino"])
+    test_db.add(sala)
+    test_db.commit()
+
+    resp = client.delete(f"/api/v1/salas/{sala.id}", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 204
+    assert client.get(f"/api/v1/salas/{sala.id}", headers={"Authorization": f"Bearer {token}"}).status_code == 404
+
+
+def test_criar_usuario_sucesso_e_duplicidade(client, setup_cenario):
+    token = setup_cenario["token_admin"]
+    campus_id = setup_cenario["campus_a"].id
+    payload = {
+        "campus_id": campus_id,
+        "nome": "Professor Novo",
+        "email": "prof.novo@sigaas.edu",
+        "perfil": "professor",
+        "senha": "senhaSegura123",
+    }
+    resp = client.post("/api/v1/usuarios", json=payload, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["email"] == "prof.novo@sigaas.edu"
+    assert data["perfil"] == "professor"
+    assert data["ativo"] is True
+    assert "senha" not in data
+
+    # Conflito de duplicidade de email
+    resp_dup = client.post("/api/v1/usuarios", json=payload, headers={"Authorization": f"Bearer {token}"})
+    assert resp_dup.status_code == 409
+

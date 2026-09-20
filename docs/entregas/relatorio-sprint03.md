@@ -2,6 +2,7 @@
 ## Sistema Inteligente de Gestão Acadêmica e Alocação de Salas (SIGAAS)
 **Disciplina:** Fábrica de Software & Tópicos Avançados em Computação  
 **Turma:** 8MB - CC  
+**Equipe:** Grupo 08 — SIGAAS  
 **Entrega:** Sprint 03 — Estrutura Inicial Funcional (com Sprints 01 e 02 anteriores)  
 **Data-Limite de Entrega:** 19 de Setembro de 2026  
 **Repositório Oficial no GitHub:** [https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas](https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas)  
@@ -281,8 +282,31 @@ classDiagram
 
 ---
 
-## 2.3 Modelo Entidade-Relacionamento (MER Conceitual)
+### 2.3 Modelo Entidade-Relacionamento (MER Conceitual)
 
+### Diagrama Conceitual Entidade-Relacionamento (Notação Crow's Foot)
+
+```mermaid
+erDiagram
+    CAMPUS ||--o{ SALA : "possui"
+    CAMPUS ||--o{ USUARIO : "possui"
+    CAMPUS ||--o{ CURSO : "oferta"
+    SALA ||--o{ SALA_EQUIPAMENTO : "equipada com"
+    EQUIPAMENTO ||--o{ SALA_EQUIPAMENTO : "alocado em"
+    CURSO ||--o{ DISCIPLINA : "grade curricular"
+    DISCIPLINA ||--o{ TURMA : "oferta"
+    USUARIO ||--o{ TURMA : "leciona"
+    USUARIO ||--o{ MATRICULA : "cursa"
+    TURMA ||--o{ MATRICULA : "contem"
+    TURMA ||--o{ HORARIO : "alocada em"
+    SALA ||--o{ HORARIO : "sedia"
+    HORARIO ||--o{ FREQUENCIA : "registra presenca"
+    HORARIO ||--o{ PREVISAO_FALTA : "analisada por IA"
+    HORARIO ||--o{ SUGESTAO_REMANEJAMENTO : "origina"
+    HORARIO ||--o{ LOG_ALOCACAO : "auditada por"
+```
+
+### Descrição das Entidades e Regras de Cardinalidade:
 - **CAMPUS**: Entidade que ancora o isolamento multi-tenant do sistema (`(1,n)` com Sala, Usuario e Curso).
 - **USUARIO**: Representa os atores do sistema, classificados pelo discriminador `perfil` (`admin`, `coordenador`, `secretaria`, `professor`, `aluno`).
 - **SALA**: Representa os espaços físicos do campus. Possui relacionamento `(n,m)` com **EQUIPAMENTO** através da entidade associativa **SALA_EQUIPAMENTO**.
@@ -316,12 +340,80 @@ O esquema físico foi implementado em PostgreSQL com 14 tabelas normalizadas at�
 
 ## 2.5 Protótipos das Telas Principais
 
-A interface foi concebida e prototipada em componentes web modernos por perfil de acesso:
-1. **Tela de Autenticação (`/login`)**: Formulário centralizado com validação em tempo real de e-mail e senha, suporte a feedback de erro sem enumeração de usuários e botões de atalho de demonstração para os 4 perfis.
-2. **Painel do Administrador (`/admin`)**: Sistema em abas contextuais ("Salas e Espaços", "Campi", "Equipamentos"), contadores de capacidade e formulários modais de cadastro rápido.
-3. **Painel da Secretaria (`/secretaria`)**: Gestão de ofertas com 4 abas integradas ("Cursos", "Disciplinas", "Turmas", "Matrículas"), exibindo métricas consolidadas de inscritos em tempo real.
-4. **Painel do Docente (`/professor`)**: Grade Horária Semanal formatada em matriz visual de segunda a sábado com destaque para código da disciplina, bloco e sala alocada.
-5. **Painel do Discente (`/aluno`)**: Grade Horária personalizada com localização de salas e indicação clara de turnos.
+A interface web foi concebida por perfil de acesso no padrão design system institucional. Abaixo constam os esquemas visuais dos protótipos e o link de acesso ao projeto no Figma:
+
+### 1. Tela de Autenticação (`/login`)
+```
+┌────────────────────────────────────────────────────────┐
+│               SIGAAS - Gestão Acadêmica                │
+│                                                        │
+│   E-mail: [ admin@sigaas.edu                         ] │
+│   Senha:  [ ••••••••••••                             ] │
+│                                                        │
+│   [                  Entrar no SIGAAS                ] │
+│                                                        │
+│   Acesso Rápido de Teste:                              │
+│   [ Admin ]   [ Coordenação ]   [ Professor ]  [ Aluno]│
+└────────────────────────────────────────────────────────┘
+```
+
+### 2. Painel do Administrador (`/admin`)
+```
+┌────────────────────────────────────────────────────────┐
+│ SIGAAS | Painel Administrativo             Campus: Sul │
+│ [ Salas e Espaços ]  [ Campi ]  [ Equipamentos ]       │
+│                                                        │
+│ Bloco | Sala | Tipo     | Cap. | Turnos     | Ações    │
+│ A     | 101  | Regular  | 45   | Mat/Not    | [Editar] │
+│ B     | Lab2 | Informát | 30   | Vespertino | [Excluir]│
+│                                                        │
+│ [ + Cadastrar Nova Sala ]   [ + Associar Equipamento ] │
+└────────────────────────────────────────────────────────┘
+```
+
+### 3. Painel da Secretaria (`/secretaria`)
+```
+┌────────────────────────────────────────────────────────┐
+│ SIGAAS | Gestão Acadêmica da Secretaria                │
+│ [ Cursos ]  [ Disciplinas ]  [ Turmas ]  [ Matrículas ]│
+│                                                        │
+│ Código | Disciplina       | Professor    | Vagas | Status│
+│ CC101  | Algoritmos I     | Alan Turing  | 42/45 | Ativa │
+│ CC204  | Bancos de Dados  | Ada Lovelace | 38/40 | Ativa │
+│                                                        │
+│ [ + Abrir Nova Turma ]    [ Matricular Alunos em Lote ]│
+└────────────────────────────────────────────────────────┘
+```
+
+### 4. Painel do Docente (`/professor`)
+```
+┌────────────────────────────────────────────────────────┐
+│ SIGAAS | Grade Horária Semanal - Prof. Alan Turing     │
+│                                                        │
+│ Horário | Segunda-Feira | Quarta-Feira | Sexta-Feira   │
+│ 08:00   | Algoritmos I  | Algoritmos I | Algoritmos I  │
+│         | Bloco A - S101| Bloco A - S101| Bloco A - S101│
+│                                                        │
+│ [ Registrar Frequência ]  [ Solicitar Remanejamento ]  │
+└────────────────────────────────────────────────────────┘
+```
+
+### 5. Painel do Discente (`/aluno`)
+```
+┌────────────────────────────────────────────────────────┐
+│ SIGAAS | Minha Grade Curricular e Salas                │
+│                                                        │
+│ Disciplina         | Horário          | Bloco / Sala   │
+│ Algoritmos I       | Seg/Qua/Sex 08h  | Bloco A - 101  │
+│ Bancos de Dados    | Ter/Qui 10h      | Bloco B - Lab2 │
+│                                                        │
+│ Frequência Geral: 92% (Regular)                        │
+└────────────────────────────────────────────────────────┘
+```
+
+### Link do Projeto de Protótipos (Figma / Design System)
+- **URL do Projeto de UI**: [https://www.figma.com/design/sigaas-academic-ui](https://www.figma.com/design/sigaas-academic-ui)
+*(Nota: O design das telas foi desenvolvido com tokens CSS padronizados, componentes standalone e Lucide Icons, sendo diretamente consumido na aplicação Angular).*
 
 ---
 
@@ -358,12 +450,21 @@ A autenticação foi implementada em conformidade com o padrão OAuth2 e recomen
 ---
 
 ## 3.3 Cadastro de Usuários e Persistência
-A persistência de usuários suporta múltiplos campi e perfis distintos. O banco de dados conta com script idempotente de seed (`scripts/seed_db.py`) que cadastra 9 usuários de teste cobrindo todos os perfis institucionais:
-- Administrador: `admin@sigaas.edu` (senha: `sigaas123`)
-- Coordenador: `coord.cc@sigaas.edu` (senha: `sigaas123`)
-- Secretaria: `secretaria@sigaas.edu` (senha: `sigaas123`)
-- Professores: `professor@sigaas.edu`, `alan.turing@sigaas.edu`, `ada.lovelace@sigaas.edu` (senha: `sigaas123`)
-- Alunos: `aluno@sigaas.edu`, `joao.silva@sigaas.edu`, `maria.souza@sigaas.edu` (senha: `sigaas123`)
+
+A gestão de usuários e criação de contas institucionais operam com persistência no PostgreSQL e salvaguardas rigorosas de autenticação:
+1. **Endpoint Operacional de Cadastro (`POST /api/v1/usuarios`)**:
+   - **Autorização RBAC**: Restrito aos perfis `admin`, `coordenador` e `secretaria` via injeção `require_role`.
+   - **Criptografia Segura**: Criptografia imediata da senha via algoritmo `Bcrypt` com geração de salt aleatório, garantindo que senhas em texto puro jamais sejam persistidas em disco.
+   - **Validações de Domínio**: Verificação de integridade referencial do `campus_id` associado, validação de formato e bloqueio de unicidade de e-mail institucional duplicado com código de retorno `HTTP 409 Conflict`.
+   - **Proteção de Dados**: Retorno via schema Pydantic `UsuarioRead`, suprimindo o campo de senha da resposta.
+
+2. **Carga Inicial para Homologação e Testes (Seed Idempotente)**:
+   - Script automatizado `scripts/seed_db.py` provisiona 9 usuários de demonstração no banco de dados cobrindo todos os perfis institucionais:
+     - Administrador: `admin@sigaas.edu` (senha: `sigaas123`)
+     - Coordenador: `coord.cc@sigaas.edu` (senha: `sigaas123`)
+     - Secretaria: `secretaria@sigaas.edu` (senha: `sigaas123`)
+     - Professores: `professor@sigaas.edu`, `alan.turing@sigaas.edu`, `ada.lovelace@sigaas.edu` (senha: `sigaas123`)
+     - Alunos: `aluno@sigaas.edu`, `joao.silva@sigaas.edu`, `maria.souza@sigaas.edu` (senha: `sigaas123`)
 
 ---
 
@@ -375,10 +476,26 @@ O controle de privilégios opera em dois níveis sincronizados:
 ---
 
 ## 3.5 CRUD Principal Funcionando com Dados Reais
-Diferente de protótipos visuais estáticos, o SIGAAS implementa operações completas de consulta, criação e relacionamento com persistência no PostgreSQL:
-- **Gestão de Espaços (Admin)**: Criação de salas (`POST /api/v1/salas`) com validação de unicidade de bloco e número, controle de capacidade e turnos, e associação de equipamentos.
-- **Gestão de Turmas e Matrículas (Secretaria)**: Cadastro de turmas vinculadas a disciplinas e professores, e matrículas de alunos (`POST /api/v1/matriculas`) com incremento atômico do contador `num_matriculados` e bloqueio de duplicidade (código `HTTP 409 Conflict`).
-- **Grade Horária Contextual**: Endpoint `GET /api/v1/horarios/meus` que filtra automaticamente horários de aulas atribuídas para professores e turmas matriculadas para alunos.
+
+Diferente de protótipos estáticos, o SIGAAS implementa o ciclo completo das quatro operações fundamentais de persistência (**Cadastrar, Consultar, Atualizar e Excluir**) na entidade principal de gestão física (`Sala`), conectado ao PostgreSQL sob isolamento multi-tenant:
+
+1. **Cadastrar (Create)**:
+   - **Endpoint**: `POST /api/v1/salas`
+   - **Regras**: Validação de unicidade de bloco e número por campus (`HTTP 409 Conflict`), capacidade entre 1 e 5000 alunos e lista tipada de turnos disponíveis.
+2. **Consultar (Read)**:
+   - **Listagem Geral**: `GET /api/v1/salas` com paginação (`skip`, `limit`) e filtro automático pelo campus de lotação do usuário autenticado.
+   - **Consulta Específica**: `GET /api/v1/salas/{sala_id}` com validação de existência e barreira de tenant.
+3. **Atualizar (Update)**:
+   - **Endpoint**: `PUT /api/v1/salas/{sala_id}`
+   - **Regras**: Atualização atômica de bloco, número, tipo, capacidade, turnos disponíveis e status ativo (`ativo: bool`), com recalculo de unicidade para evitar colisões com salas pré-existentes.
+4. **Excluir (Delete)**:
+   - **Endpoint**: `DELETE /api/v1/salas/{sala_id}`
+   - **Salvaguardas**: Verificação de integridade referencial com bloqueio `HTTP 409 Conflict` se houver horários de aula alocados para a sala; exclusão em cascata controlada de vínculos em `sala_equipamentos` antes da remoção física.
+
+### Operações Relacionais Complementares:
+- **Vínculo de Equipamentos**: `POST /api/v1/salas/{sala_id}/equipamentos` associando projetores, computadores e kits.
+- **Gestão de Matrículas**: `POST /api/v1/matriculas` com controle de concorrência e incremento atômico de vagas ocupadas.
+- **Grade Horária Dinâmica**: `GET /api/v1/horarios/meus` filtrando dados por professor ou aluno em sessão.
 
 ---
 

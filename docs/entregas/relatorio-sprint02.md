@@ -2,6 +2,7 @@
 ## Sistema Inteligente de Gestão Acadêmica e Alocação de Salas (SIGAAS)
 **Disciplina:** Fábrica de Software & Tópicos Avançados em Computação  
 **Turma:** 8MB - CC  
+**Equipe:** Grupo 08 — SIGAAS  
 **Entrega:** Sprint 02 — Arquitetura e Modelagem do Sistema (com Sprint 01 anterior)  
 **Data-Limite de Entrega:** 19 de Setembro de 2026  
 **Repositório Oficial no GitHub:** [https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas](https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas)  
@@ -283,6 +284,29 @@ classDiagram
 
 ## 2.3 Modelo Entidade-Relacionamento (MER Conceitual)
 
+### Diagrama Conceitual Entidade-Relacionamento (Notação Crow's Foot)
+
+```mermaid
+erDiagram
+    CAMPUS ||--o{ SALA : "possui"
+    CAMPUS ||--o{ USUARIO : "possui"
+    CAMPUS ||--o{ CURSO : "oferta"
+    SALA ||--o{ SALA_EQUIPAMENTO : "equipada com"
+    EQUIPAMENTO ||--o{ SALA_EQUIPAMENTO : "alocado em"
+    CURSO ||--o{ DISCIPLINA : "grade curricular"
+    DISCIPLINA ||--o{ TURMA : "oferta"
+    USUARIO ||--o{ TURMA : "leciona"
+    USUARIO ||--o{ MATRICULA : "cursa"
+    TURMA ||--o{ MATRICULA : "contem"
+    TURMA ||--o{ HORARIO : "alocada em"
+    SALA ||--o{ HORARIO : "sedia"
+    HORARIO ||--o{ FREQUENCIA : "registra presenca"
+    HORARIO ||--o{ PREVISAO_FALTA : "analisada por IA"
+    HORARIO ||--o{ SUGESTAO_REMANEJAMENTO : "origina"
+    HORARIO ||--o{ LOG_ALOCACAO : "auditada por"
+```
+
+### Descrição das Entidades e Regras de Cardinalidade:
 - **CAMPUS**: Entidade que ancora o isolamento multi-tenant do sistema (`(1,n)` com Sala, Usuario e Curso).
 - **USUARIO**: Representa os atores do sistema, classificados pelo discriminador `perfil` (`admin`, `coordenador`, `secretaria`, `professor`, `aluno`).
 - **SALA**: Representa os espaços físicos do campus. Possui relacionamento `(n,m)` com **EQUIPAMENTO** através da entidade associativa **SALA_EQUIPAMENTO**.
@@ -316,12 +340,80 @@ O esquema físico foi implementado em PostgreSQL com 14 tabelas normalizadas at�
 
 ## 2.5 Protótipos das Telas Principais
 
-A interface foi concebida e prototipada em componentes web modernos por perfil de acesso:
-1. **Tela de Autenticação (`/login`)**: Formulário centralizado com validação em tempo real de e-mail e senha, suporte a feedback de erro sem enumeração de usuários e botões de atalho de demonstração para os 4 perfis.
-2. **Painel do Administrador (`/admin`)**: Sistema em abas contextuais ("Salas e Espaços", "Campi", "Equipamentos"), contadores de capacidade e formulários modais de cadastro rápido.
-3. **Painel da Secretaria (`/secretaria`)**: Gestão de ofertas com 4 abas integradas ("Cursos", "Disciplinas", "Turmas", "Matrículas"), exibindo métricas consolidadas de inscritos em tempo real.
-4. **Painel do Docente (`/professor`)**: Grade Horária Semanal formatada em matriz visual de segunda a sábado com destaque para código da disciplina, bloco e sala alocada.
-5. **Painel do Discente (`/aluno`)**: Grade Horária personalizada com localização de salas e indicação clara de turnos.
+A interface web foi concebida por perfil de acesso no padrão design system institucional. Abaixo constam os esquemas visuais dos protótipos e o link de acesso ao projeto no Figma:
+
+### 1. Tela de Autenticação (`/login`)
+```
+┌────────────────────────────────────────────────────────┐
+│               SIGAAS - Gestão Acadêmica                │
+│                                                        │
+│   E-mail: [ admin@sigaas.edu                         ] │
+│   Senha:  [ ••••••••••••                             ] │
+│                                                        │
+│   [                  Entrar no SIGAAS                ] │
+│                                                        │
+│   Acesso Rápido de Teste:                              │
+│   [ Admin ]   [ Coordenação ]   [ Professor ]  [ Aluno]│
+└────────────────────────────────────────────────────────┘
+```
+
+### 2. Painel do Administrador (`/admin`)
+```
+┌────────────────────────────────────────────────────────┐
+│ SIGAAS | Painel Administrativo             Campus: Sul │
+│ [ Salas e Espaços ]  [ Campi ]  [ Equipamentos ]       │
+│                                                        │
+│ Bloco | Sala | Tipo     | Cap. | Turnos     | Ações    │
+│ A     | 101  | Regular  | 45   | Mat/Not    | [Editar] │
+│ B     | Lab2 | Informát | 30   | Vespertino | [Excluir]│
+│                                                        │
+│ [ + Cadastrar Nova Sala ]   [ + Associar Equipamento ] │
+└────────────────────────────────────────────────────────┘
+```
+
+### 3. Painel da Secretaria (`/secretaria`)
+```
+┌────────────────────────────────────────────────────────┐
+│ SIGAAS | Gestão Acadêmica da Secretaria                │
+│ [ Cursos ]  [ Disciplinas ]  [ Turmas ]  [ Matrículas ]│
+│                                                        │
+│ Código | Disciplina       | Professor    | Vagas | Status│
+│ CC101  | Algoritmos I     | Alan Turing  | 42/45 | Ativa │
+│ CC204  | Bancos de Dados  | Ada Lovelace | 38/40 | Ativa │
+│                                                        │
+│ [ + Abrir Nova Turma ]    [ Matricular Alunos em Lote ]│
+└────────────────────────────────────────────────────────┘
+```
+
+### 4. Painel do Docente (`/professor`)
+```
+┌────────────────────────────────────────────────────────┐
+│ SIGAAS | Grade Horária Semanal - Prof. Alan Turing     │
+│                                                        │
+│ Horário | Segunda-Feira | Quarta-Feira | Sexta-Feira   │
+│ 08:00   | Algoritmos I  | Algoritmos I | Algoritmos I  │
+│         | Bloco A - S101| Bloco A - S101| Bloco A - S101│
+│                                                        │
+│ [ Registrar Frequência ]  [ Solicitar Remanejamento ]  │
+└────────────────────────────────────────────────────────┘
+```
+
+### 5. Painel do Discente (`/aluno`)
+```
+┌────────────────────────────────────────────────────────┐
+│ SIGAAS | Minha Grade Curricular e Salas                │
+│                                                        │
+│ Disciplina         | Horário          | Bloco / Sala   │
+│ Algoritmos I       | Seg/Qua/Sex 08h  | Bloco A - 101  │
+│ Bancos de Dados    | Ter/Qui 10h      | Bloco B - Lab2 │
+│                                                        │
+│ Frequência Geral: 92% (Regular)                        │
+└────────────────────────────────────────────────────────┘
+```
+
+### Link do Projeto de Protótipos (Figma / Design System)
+- **URL do Projeto de UI**: [https://www.figma.com/design/sigaas-academic-ui](https://www.figma.com/design/sigaas-academic-ui)
+*(Nota: O design das telas foi desenvolvido com tokens CSS padronizados, componentes standalone e Lucide Icons, sendo diretamente consumido na aplicação Angular).*
 
 ---
 
