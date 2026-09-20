@@ -13,7 +13,7 @@ from app.models.campus import Campus
 from app.models.sala import Sala, Equipamento, SalaEquipamento
 from app.models.enums import PerfilUsuario
 from app.models.usuario import Usuario
-from app.schemas.sala import SalaCreate, SalaRead
+from app.schemas.sala import SalaCreate, SalaRead, SalaUpdate
 from app.schemas.equipamento import SalaEquipamentoCreate, SalaEquipamentoRead
 from app.api.deps import get_current_user, require_role
 
@@ -128,3 +128,76 @@ def associar_equipamento(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Conflito ao associar equipamento")
     db.refresh(assoc)
     return assoc
+
+
+@router.put("/{sala_id}", response_model=SalaRead)
+def atualizar_sala(
+    sala_id: int,
+    payload: SalaUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR)),
+):
+    """Atualiza dados de uma sala com validacao de duplicidade e tenant."""
+    sala = db.get(Sala, sala_id)
+    if not sala or (current_user.perfil != PerfilUsuario.ADMIN and sala.campus_id != current_user.campus_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sala nao encontrada")
+
+    novo_bloco = payload.bloco if payload.bloco is not None else sala.bloco
+    novo_numero = payload.numero if payload.numero is not None else sala.numero
+
+    if novo_bloco != sala.bloco or novo_numero != sala.numero:
+        stmt = select(Sala).where(
+            Sala.campus_id == sala.campus_id,
+            Sala.bloco == novo_bloco,
+            Sala.numero == novo_numero,
+            Sala.id != sala_id,
+        )
+        if db.scalar(stmt):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Ja existe sala no bloco '{novo_bloco}' e numero '{novo_numero}' para este campus")
+
+    if payload.bloco is not None:
+        sala.bloco = payload.bloco
+    if payload.numero is not None:
+        sala.numero = payload.numero
+    if payload.tipo is not None:
+        sala.tipo = payload.tipo
+    if payload.capacidade is not None:
+        sala.capacidade = payload.capacidade
+    if payload.turnos_disponiveis is not None:
+        sala.turnos_disponiveis = [t.value if hasattr(t, "value") else str(t) for t in payload.turnos_disponiveis]
+    if payload.ativo is not None:
+        sala.ativo = payload.ativo
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Conflito ao atualizar sala")
+    db.refresh(sala)
+    return sala
+
+
+@router.delete("/{sala_id}", status_code=status.HTTP_204_NO_CONTENT)
+def excluir_sala(
+    sala_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role(PerfilUsuario.ADMIN)),
+):
+    """Exclui uma sala do campus garantindo integridade referencial."""
+    sala = db.get(Sala, sala_id)
+    if not sala:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sala nao encontrada")
+
+    from app.models.alocacao import Horario
+    stmt = select(Horario).where(Horario.sala_id == sala_id)
+    if db.scalar(stmt):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Nao e possivel excluir sala com horarios alocados")
+
+    stmt_eq = select(SalaEquipamento).where(SalaEquipamento.sala_id == sala_id)
+    for eq in db.scalars(stmt_eq).all():
+        db.delete(eq)
+
+    db.delete(sala)
+    db.commit()
+    return None
+

@@ -2,6 +2,7 @@
 Schemas Pydantic v2 para a entidade Sala.
 """
 
+from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from app.models.enums import TipoSala, Turno
 
@@ -26,6 +27,24 @@ class SalaBase(BaseModel):
 
 class SalaCreate(SalaBase):
     pass
+
+
+class SalaUpdate(BaseModel):
+    bloco: Optional[str] = Field(default=None, min_length=1, max_length=50, description="Bloco predial")
+    numero: Optional[str] = Field(default=None, min_length=1, max_length=50, description="Identificador da sala")
+    tipo: Optional[TipoSala] = Field(default=None, description="Tipo da sala")
+    capacidade: Optional[int] = Field(default=None, gt=0, le=5000, description="Capacidade maxima de alunos")
+    turnos_disponiveis: Optional[list[Turno]] = Field(default=None, description="Turnos disponiveis")
+    ativo: Optional[bool] = Field(default=None, description="Status da sala")
+
+    @field_validator("bloco", "numero", mode="before")
+    @classmethod
+    def validar_nao_vazio(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and isinstance(v, str):
+            v = v.strip()
+            if not v:
+                raise ValueError("Campo nao pode ser vazio ou composto apenas por espacos")
+        return v
 
 
 class SalaRead(SalaBase):
