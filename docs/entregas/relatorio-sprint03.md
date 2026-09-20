@@ -13,11 +13,11 @@
 
 | Integrante | Matrícula | Papel no Squad | Responsabilidade Técnica Principal |
 | :--- | :---: | :--- | :--- |
-| **Osvaldo Vasconcelos de Carvalho** | 01614171 | Scrum Master (Líder) | Facilitação ágil, gestão de entregas, governança de branches e submissão no Teams |
-| **Gabriel Porfírio dos Santos** | 01591399 | Product Owner | Levantamento de requisitos, regras de negócio e validação dos critérios de aceite |
-| **Ewerton Thyago Tavares da Silva** | 01573977 | Dev Backend / Sistemas | Arquitetura de API, integração FFI C/OpenMP (`ctypes`) e migrations |
-| **Flávio Vecch de Brito Farias** | 01600988 | Dev Frontend | Interface SPA Angular 20, componentes, estados reativos e interceptors |
-| **Wesclei Batista Da Cruz Júnior** | 01606772 | DBA & Documentação | Modelagem relacional PostgreSQL, scripts de seed, integridade e documentação técnica |
+| **Ewerton Thyago Tavares da Silva** | 01573977 | Scrum Master (Líder) | Facilitação ágil, gestão de entregas, governança de branches e submissão no Teams |
+| **Wesclei Batista Da Cruz Júnior** | 01606772 | Product Owner | Levantamento de requisitos, regras de negócio e validação dos critérios de aceite |
+| **Osvaldo Vasconcelos de Carvalho** | 01614171 | Dev Backend / Sistemas | Arquitetura de API, integração FFI C/OpenMP (`ctypes`), endpoints e migrations |
+| **Gabriel Porfírio dos Santos** | 01591399 | Dev Frontend | Interface SPA Angular 20, componentes, estados reativos e interceptors |
+| **Flávio Vecch de Brito Farias** | 01600988 | DBA & Documentação | Modelagem relacional PostgreSQL, scripts de seed, integridade e documentação técnica |
 
 ---
 
