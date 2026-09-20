@@ -180,6 +180,10 @@ classDiagram
         +string nome
         +string cidade
         +string endereco
+        +bool ativo
+        +cadastrar()
+        +listar_salas()
+        +validar_capacidade()
     }
 
     class Usuario {
@@ -190,6 +194,9 @@ classDiagram
         +string senha_hash
         +PerfilUsuario perfil
         +bool ativo
+        +autenticar(senha: string) bool
+        +gerar_token() string
+        +possui_perfil(p: PerfilUsuario) bool
     }
 
     class Sala {
@@ -200,19 +207,23 @@ classDiagram
         +TipoSala tipo
         +int capacidade
         +List~string~ turnos_disponiveis
+        +bool ativo
+        +verificar_disponibilidade(dia: int, hi: time, hf: time) bool
+        +capacidade_suficiente(qtd: int) bool
     }
 
     class Equipamento {
         +int id
         +string nome
         +string descricao
+        +vincular_sala(sala_id: int, qtd: int)
     }
 
     class SalaEquipamento {
-        +int id
         +int sala_id
         +int equipamento_id
         +int quantidade
+        +atualizar_quantidade(qtd: int)
     }
 
     class Curso {
@@ -220,6 +231,7 @@ classDiagram
         +int campus_id
         +string nome
         +string codigo
+        +adicionar_disciplina(d: Disciplina)
     }
 
     class Disciplina {
@@ -228,6 +240,7 @@ classDiagram
         +string nome
         +string codigo
         +int carga_horaria
+        +criar_turma(periodo: string) Turma
     }
 
     class Turma {
@@ -237,13 +250,18 @@ classDiagram
         +string periodo_letivo
         +int num_matriculados
         +Turno turno_preferido
+        +matricular_aluno(u: Usuario) bool
+        +calcular_ocupacao() float
     }
 
     class Matricula {
         +int id
         +int aluno_id
         +int turma_id
-        +datetime data_matricula
+        +date data_matricula
+        +string status
+        +trancar()
+        +cancelar()
     }
 
     class Horario {
@@ -254,6 +272,42 @@ classDiagram
         +int dia_semana
         +time hora_inicio
         +time hora_fim
+        +detectar_conflito(h: Horario) bool
+        +alocar_sala(s: Sala)
+    }
+
+    class Frequencia {
+        +int id
+        +int matricula_id
+        +int horario_id
+        +date data
+        +bool presente
+        +marcar_presenca()
+        +justificar_falta()
+    }
+
+    class PrevisaoFalta {
+        +int id
+        +int turma_id
+        +int horario_id
+        +date data_prevista
+        +float prob_ausencia
+        +string versao_modelo
+        +calcular_risco() float
+        +exige_remanejamento() bool
+    }
+
+    class SugestaoRemanejamento {
+        +int id
+        +int horario_id
+        +int sala_atual_id
+        +int sala_sugerida_id
+        +string motivo
+        +string justificativa
+        +StatusSugestao status
+        +int aprovado_por
+        +aprovar(coord_id: int)
+        +rejeitar(coord_id: int, just: string)
     }
 
     class LogAlocacao {
@@ -261,8 +315,9 @@ classDiagram
         +int horario_id
         +TipoEventoLog tipo_evento
         +int usuario_responsavel
-        +datetime criado_em
+        +datetime timestamp
         +string detalhes
+        +registrar_evento(tipo: TipoEventoLog, resp_id: int)
     }
 
     Campus "1" --> "*" Usuario : possui
@@ -277,6 +332,9 @@ classDiagram
     Turma "1" --> "*" Matricula : contem
     Turma "1" --> "*" Horario : alocada
     Sala "1" --> "*" Horario : sedia
+    Horario "1" --> "*" Frequencia : registra
+    Horario "1" --> "*" PrevisaoFalta : avaliado por
+    Horario "1" --> "*" SugestaoRemanejamento : remanejado por
     Horario "1" --> "*" LogAlocacao : audita
 ```
 
@@ -284,10 +342,118 @@ classDiagram
 
 ## 2.3 Modelo Entidade-Relacionamento (MER Conceitual)
 
-### Diagrama Conceitual Entidade-Relacionamento (Notação Crow's Foot)
+### Diagrama Conceitual Entidade-Relacionamento (Notação Crow's Foot com Atributos)
 
 ```mermaid
 erDiagram
+    CAMPUS {
+        int id PK
+        string nome
+        string cidade
+        string endereco
+        boolean ativo
+    }
+    USUARIO {
+        int id PK
+        int campus_id FK
+        string nome
+        string email
+        string senha_hash
+        string perfil
+        boolean ativo
+    }
+    EQUIPAMENTO {
+        int id PK
+        string nome
+        string descricao
+    }
+    SALA {
+        int id PK
+        int campus_id FK
+        string bloco
+        string numero
+        string tipo
+        int capacidade
+        json turnos_disponiveis
+        boolean ativo
+    }
+    SALA_EQUIPAMENTO {
+        int sala_id PK_FK
+        int equipamento_id PK_FK
+        int quantidade
+    }
+    CURSO {
+        int id PK
+        int campus_id FK
+        string nome
+        string codigo
+    }
+    DISCIPLINA {
+        int id PK
+        int curso_id FK
+        string nome
+        string codigo
+        int carga_horaria
+    }
+    TURMA {
+        int id PK
+        int disciplina_id FK
+        int professor_id FK
+        string periodo_letivo
+        int num_matriculados
+        string turno_preferido
+    }
+    MATRICULA {
+        int id PK
+        int aluno_id FK
+        int turma_id FK
+        date data_matricula
+        string status
+    }
+    HORARIO {
+        int id PK
+        int campus_id FK
+        int turma_id FK
+        int sala_id FK
+        int dia_semana
+        time hora_inicio
+        time hora_fim
+    }
+    LOG_ALOCACAO {
+        int id PK
+        int horario_id FK
+        json snapshot_evento
+        string tipo_evento
+        int usuario_responsavel FK
+        timestamp timestamp
+        text detalhes
+    }
+    FREQUENCIA {
+        int id PK
+        int matricula_id FK
+        int horario_id FK
+        date data
+        boolean presente
+    }
+    PREVISAO_FALTA {
+        int id PK
+        int turma_id FK
+        int horario_id FK
+        date data_prevista
+        float prob_ausencia
+        string versao_modelo
+    }
+    SUGESTAO_REMANEJAMENTO {
+        int id PK
+        int horario_id FK
+        int sala_atual_id FK
+        int sala_sugerida_id FK
+        text motivo
+        text justificativa
+        string status
+        int aprovado_por FK
+    }
+
     CAMPUS ||--o{ SALA : "possui"
     CAMPUS ||--o{ USUARIO : "possui"
     CAMPUS ||--o{ CURSO : "oferta"
@@ -307,34 +473,37 @@ erDiagram
 ```
 
 ### Descrição das Entidades e Regras de Cardinalidade:
-- **CAMPUS**: Entidade que ancora o isolamento multi-tenant do sistema (`(1,n)` com Sala, Usuario e Curso).
-- **USUARIO**: Representa os atores do sistema, classificados pelo discriminador `perfil` (`admin`, `coordenador`, `secretaria`, `professor`, `aluno`).
-- **SALA**: Representa os espaços físicos do campus. Possui relacionamento `(n,m)` com **EQUIPAMENTO** através da entidade associativa **SALA_EQUIPAMENTO**.
-- **CURSO & DISCIPLINA**: Estruturam a oferta acadêmica institucional.
+- **CAMPUS**: Entidade que ancora o isolamento multi-tenant do sistema (`(1,n)` com Sala, Usuario e Curso), com flag `ativo` de ciclo de vida.
+- **USUARIO**: Representa os atores do sistema, classificados pelo discriminador `perfil` (`admin`, `coordenador`, `secretaria`, `professor`, `aluno`), com unicidade de e-mail e hash criptográfico.
+- **SALA**: Representa os espaços físicos do campus. Possui relacionamento `(n,m)` com **EQUIPAMENTO** através da entidade associativa **SALA_EQUIPAMENTO** com chave primária composta `(sala_id, equipamento_id)`.
+- **CURSO & DISCIPLINA**: Estruturam a oferta acadêmica institucional por campus.
 - **TURMA**: Instância letiva de uma disciplina em um período específico, vinculada a um professor e associada a múltiplos alunos via **MATRICULA**.
 - **HORARIO**: Entidade central de alocação que vincula uma Turma a uma Sala em um dia da semana (`0=Segunda` a `5=Sábado`) e intervalo de horas.
-- **LOG_ALOCACAO**: Trilha de auditoria imutável que registra todas as alterações de sala com carimbo de tempo e usuário responsável.
+- **FREQUENCIA**: Registra os apontamentos diários de presença/falta por matrícula e horário, servindo como base histórica para o modelo preditivo.
+- **PREVISAO_FALTA**: Armazena as probabilidades de ausência calculadas pelo modelo de Machine Learning (`scikit-learn`) para cada horário futuro.
+- **SUGESTAO_REMANEJAMENTO**: Registra recomendações automáticas de troca de sala geradas pelo sistema quando detectada alta probabilidade de ociosidade, pendentes de aprovação humana pela coordenação.
+- **LOG_ALOCACAO**: Trilha de auditoria imutável que registra todas as alterações de sala com carimbo de tempo, snapshot do evento e usuário responsável.
 
 ---
 
 ## 2.4 Modelo Relacional
 
-O esquema físico foi implementado em PostgreSQL com 14 tabelas normalizadas até a Terceira Forma Normal (3FN):
+O esquema físico foi implementado em PostgreSQL com 14 tabelas normalizadas até a Terceira Forma Normal (3FN), com nomenclatura rigorosamente alinhada ao DDL e às migrations do Alembic:
 
-1. `campi` (**id** PK, nome VARCHAR(150), cidade VARCHAR(100), endereco VARCHAR(255), criado_em TIMESTAMP)
-2. `usuarios` (**id** PK, campus_id FK, nome VARCHAR(150), email VARCHAR(255) UNIQUE, senha_hash VARCHAR(255), perfil VARCHAR(20), ativo BOOLEAN, criado_em TIMESTAMP)
-3. `equipamentos` (**id** PK, nome VARCHAR(100) UNIQUE, descricao TEXT, criado_em TIMESTAMP)
-4. `salas` (**id** PK, campus_id FK, bloco VARCHAR(20), numero VARCHAR(20), tipo VARCHAR(30), capacidade INT, turnos_disponiveis JSON, criado_em TIMESTAMP, UNIQUE(campus_id, bloco, numero))
-5. `sala_equipamentos` (**id** PK, sala_id FK, equipamento_id FK, quantidade INT, UNIQUE(sala_id, equipamento_id))
-6. `cursos` (**id** PK, campus_id FK, nome VARCHAR(150), codigo VARCHAR(20), criado_em TIMESTAMP, UNIQUE(campus_id, codigo))
-7. `disciplinas` (**id** PK, curso_id FK, nome VARCHAR(150), codigo VARCHAR(20), carga_horaria INT, criado_em TIMESTAMP, UNIQUE(curso_id, codigo))
-8. `turmas` (**id** PK, disciplina_id FK, professor_id FK, periodo_letivo VARCHAR(10), num_matriculados INT, turno_preferido VARCHAR(20), criado_em TIMESTAMP)
-9. `matriculas` (**id** PK, aluno_id FK, turma_id FK, data_matricula TIMESTAMP, UNIQUE(aluno_id, turma_id))
-10. `horarios` (**id** PK, campus_id FK, turma_id FK, sala_id FK, dia_semana INT, hora_inicio TIME, hora_fim TIME, criado_em TIMESTAMP)
-11. `frequencias` (**id** PK, matricula_id FK, horario_id FK, data DATE, presente BOOLEAN, criado_em TIMESTAMP)
-12. `previsoes_falta` (**id** PK, turma_id FK, horario_id FK, data_prevista DATE, prob_ausencia NUMERIC(4,3), versao_modelo VARCHAR(50), criado_em TIMESTAMP)
-13. `sugestoes_remanejamento` (**id** PK, horario_id FK, sala_atual_id FK, sala_sugerida_id FK, motivo TEXT, status VARCHAR(20), aprovado_por FK, criado_em TIMESTAMP)
-14. `logs_alocacao` (**id** PK, horario_id FK, tipo_evento VARCHAR(30), usuario_responsavel FK, timestamp TIMESTAMP, detalhes TEXT)
+1. `campus` (**id** PK, nome VARCHAR(150), cidade VARCHAR(100), endereco VARCHAR(255), ativo BOOLEAN, created_at TIMESTAMP, updated_at TIMESTAMP)
+2. `usuario` (**id** PK, campus_id FK, nome VARCHAR(150), email VARCHAR(255) UNIQUE, senha_hash VARCHAR(255), perfil VARCHAR(30), ativo BOOLEAN, created_at TIMESTAMP, updated_at TIMESTAMP)
+3. `equipamento` (**id** PK, nome VARCHAR(100) UNIQUE, descricao VARCHAR(255), created_at TIMESTAMP)
+4. `sala` (**id** PK, campus_id FK, bloco VARCHAR(50), numero VARCHAR(50), tipo VARCHAR(30), capacidade INT, turnos_disponiveis JSON, ativo BOOLEAN, created_at TIMESTAMP, updated_at TIMESTAMP, UNIQUE(campus_id, bloco, numero), CHECK(capacidade > 0))
+5. `sala_equipamento` (**sala_id** PK/FK, **equipamento_id** PK/FK, quantidade INT, CHECK(quantidade > 0))
+6. `curso` (**id** PK, campus_id FK, nome VARCHAR(150), codigo VARCHAR(30), created_at TIMESTAMP, updated_at TIMESTAMP, UNIQUE(campus_id, codigo))
+7. `disciplina` (**id** PK, curso_id FK, nome VARCHAR(150), codigo VARCHAR(30), carga_horaria INT, created_at TIMESTAMP, updated_at TIMESTAMP, UNIQUE(curso_id, codigo), CHECK(carga_horaria > 0))
+8. `turma` (**id** PK, disciplina_id FK, professor_id FK, periodo_letivo VARCHAR(20), num_matriculados INT, turno_preferido VARCHAR(20), created_at TIMESTAMP, updated_at TIMESTAMP, CHECK(num_matriculados >= 0))
+9. `matricula` (**id** PK, aluno_id FK, turma_id FK, data_matricula DATE, status VARCHAR(20), created_at TIMESTAMP, UNIQUE(aluno_id, turma_id))
+10. `horario` (**id** PK, campus_id FK, turma_id FK, sala_id FK, dia_semana SMALLINT, hora_inicio TIME, hora_fim TIME, created_at TIMESTAMP, updated_at TIMESTAMP, CHECK(hora_inicio < hora_fim), CHECK(dia_semana >= 0 AND dia_semana <= 6))
+11. `log_alocacao` (**id** PK, horario_id FK, snapshot_evento JSON, tipo_evento VARCHAR(50), usuario_responsavel FK, timestamp TIMESTAMP, detalhes TEXT)
+12. `frequencia` (**id** PK, matricula_id FK, horario_id FK, data DATE, presente BOOLEAN, created_at TIMESTAMP)
+13. `previsao_falta` (**id** PK, turma_id FK, horario_id FK, data_prevista DATE, prob_ausencia FLOAT, versao_modelo VARCHAR(50), criado_em TIMESTAMP)
+14. `sugestao_remanejamento` (**id** PK, horario_id FK, sala_atual_id FK, sala_sugerida_id FK, motivo TEXT, justificativa TEXT, status VARCHAR(20), aprovado_por FK, criado_em TIMESTAMP, atualizado_em TIMESTAMP)
 
 ---
 
@@ -417,7 +586,7 @@ A interface visual foi concebida e desenvolvida através de componentes web stan
 ---
 
 ## 2.6 Banco de Dados Criado
-O banco de dados encontra-se plenamente criado através do script de migração versionada do Alembic (`backend/alembic/versions/001_initial_schema.py`), executado no PostgreSQL 16. O schema conta com criação automatizada de tipos ENUM nativos (`perfil_usuario`, `tipo_sala`, `turno`, `status_sugestao`, `tipo_evento_log`) e integridade referencial com chaves estrangeiras declaradas com `ON DELETE CASCADE` ou `ON DELETE RESTRICT`.
+O banco de dados encontra-se plenamente criado através do script de migração versionada do Alembic (`backend/alembic/versions/001_initial_schema.py`), executado no PostgreSQL 16. O schema conta com tipagem VARCHAR acompanhada de restrições de integridade CHECK (garantindo portabilidade e flexibilidade evolutiva, com validação estrita adicional em schemas Pydantic v2 no FastAPI) e integridade referencial com chaves estrangeiras declaradas com `ON DELETE CASCADE`, `ON DELETE RESTRICT` ou `ON DELETE SET NULL`.
 
 ---
 
@@ -432,9 +601,18 @@ O repositório oficial adota **Trunk-Based Development**, governança de commits
 # PARTE 3 — SPRINT 03: ESTRUTURA INICIAL FUNCIONAL (ATUAL)
 
 ## 3.1 Banco de Dados Conectado
-A integração entre o FastAPI e o PostgreSQL é realizada via SQLAlchemy 2.0 com pool de conexões assíncronas resilientes (`pool_pre_ping=True`), configurado em `backend/app/db/session.py`.
-- **Evidência**: Na inicialização dos containers, o serviço `sigaas_postgres` valida a prontidão através do healthcheck `pg_isready -U gestao_salas -d gestao_salas`.
-- **Verificação HTTP**: O endpoint `GET /health` responde `{"status": "ok", "service": "SIGAAS API", "version": "0.1.0"}` confirmando a comunicação operacional entre as camadas.
+A integração entre o FastAPI e o PostgreSQL é realizada via SQLAlchemy 2.0 com engine síncrona robusta (`create_engine`) e pool de conexões resilientes com validação ativa (`pool_pre_ping=True`), configurado em `backend/app/db/session.py`.
+- **Evidência de Infraestrutura**: Na inicialização dos containers, o serviço `sigaas_postgres` valida a prontidão através do healthcheck `pg_isready -U gestao_salas -d gestao_salas`.
+- **Verificação Ativa via Endpoint HTTP**: O endpoint `GET /health` executa ativamente uma query (`SELECT 1`) na sessão do banco via injeção de dependência `get_db`, retornando o payload JSON:
+  ```json
+  {
+    "status": "ok",
+    "service": "SIGAAS API",
+    "version": "0.1.0",
+    "database": "connected"
+  }
+  ```
+- **Comprovação Fim a Fim**: A conectividade funcional com o banco é comprovada de ponta a ponta pelas operações reais de consulta e escrita executadas no login (`/auth/login`), nos endpoints de CRUD (`/api/v1/salas`, `/api/v1/usuarios`), nas migrações do Alembic e no script de seed.
 
 ---
 
@@ -444,7 +622,7 @@ A autenticação foi implementada em conformidade com o padrão OAuth2 e recomen
 - **Payload**: JSON contendo `{"email": "...", "senha": "..."}`
 - **Segurança**: Criptografia de senhas via hash `Bcrypt` com salt aleatório (nunca gravando texto plano).
 - **Resposta**: Retorno do token `access_token` assinado digitalmente via JWT (`HS256`, validade de 60 minutos) acompanhado dos dados do usuário (`id`, `nome`, `email`, `perfil`, `campus_id`).
-- **Endpoint de Sessão**: `GET /api/v1/auth/me` protegido por `HTTPBearer`, permitindo ao cliente Angular revalidar a sessão ativa.
+- **Endpoint de Sessão e Esquema de Segurança**: `GET /api/v1/auth/me` protegido pelo esquema de autenticação `OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")` com validação de cabeçalho `Authorization: Bearer <token>`, permitindo ao cliente Angular revalidar a sessão ativa.
 
 ---
 
@@ -454,7 +632,7 @@ A gestão de usuários e criação de contas institucionais operam com persistê
 1. **Endpoint Operacional de Cadastro (`POST /api/v1/usuarios`)**:
    - **Autorização RBAC**: Restrito aos perfis `admin`, `coordenador` e `secretaria` via injeção `require_role`.
    - **Criptografia Segura**: Criptografia imediata da senha via algoritmo `Bcrypt` com geração de salt aleatório, garantindo que senhas em texto puro jamais sejam persistidas em disco.
-   - **Validações de Domínio**: Verificação de integridade referencial do `campus_id` associado, validação de formato e bloqueio de unicidade de e-mail institucional duplicado com código de retorno `HTTP 409 Conflict`.
+   - **Validações de Domínio e Formato**: Verificação estrita de formato de e-mail institucional via schema Pydantic v2 `EmailStr` (rejeitando strings inválidas com código `HTTP 422 Unprocessable Entity`), validação de integridade referencial do `campus_id` associado e bloqueio de unicidade de e-mail duplicado com retorno `HTTP 409 Conflict`.
    - **Proteção de Dados**: Retorno via schema Pydantic `UsuarioRead`, suprimindo o campo de senha da resposta.
 
 2. **Carga Inicial para Homologação e Testes (Seed Idempotente)**:
@@ -462,15 +640,15 @@ A gestão de usuários e criação de contas institucionais operam com persistê
      - Administrador: `admin@sigaas.edu` (senha: `sigaas123`)
      - Coordenador: `coord.cc@sigaas.edu` (senha: `sigaas123`)
      - Secretaria: `secretaria@sigaas.edu` (senha: `sigaas123`)
-     - Professores: `professor@sigaas.edu`, `alan.turing@sigaas.edu`, `ada.lovelace@sigaas.edu` (senha: `sigaas123`)
-     - Alunos: `aluno@sigaas.edu`, `joao.silva@sigaas.edu`, `maria.souza@sigaas.edu` (senha: `sigaas123`)
+     - Professores: `alan.turing@sigaas.edu` (*conta vinculada com turmas e horários para teste de grade*), `ada.lovelace@sigaas.edu`, `professor@sigaas.edu` (senha: `sigaas123`)
+     - Alunos: `joao.silva@sigaas.edu` (*aluno matriculado com grade horária ativa para homologação*), `maria.souza@sigaas.edu`, `aluno@sigaas.edu` (senha: `sigaas123`)
 
 ---
 
 ## 3.4 Controle de Perfis de Acesso (RBAC)
 O controle de privilégios opera em dois níveis sincronizados:
-1. **Backend (FastAPI)**: As rotas operacionais utilizam a injeção de dependência `require_role(["admin", "coordenador"])` em `backend/app/api/deps.py`. Qualquer tentativa de acesso por perfil não autorizado resulta em código `HTTP 403 Forbidden`.
-2. **Frontend (Angular)**: O guarda de rotas `RoleGuard` inspeciona o token decodificado e impede a navegação indevida na SPA, redirecionando o usuário para a interface correspondente ao seu perfil.
+1. **Backend (FastAPI)**: As rotas operacionais utilizam a fábrica de dependência `require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR)` em `backend/app/api/deps.py`, que recebe os perfis autorizados como argumentos posicionais e valida o perfil do usuário extraído do token JWT autenticado. Qualquer tentativa de acesso por perfil não autorizado resulta em código `HTTP 403 Forbidden`.
+2. **Frontend (Angular)**: O guarda de rotas `RoleGuard` (`frontend/src/app/guards/role.guard.ts`) utiliza o serviço `AuthService.hasRole()` baseado nos dados do perfil retornados pelo endpoint de login e mantidos na sessão do cliente, redirecionando o usuário para a interface correspondente ao seu perfil. Usuários com perfil `coordenador` utilizam a interface administrativa (`/admin`) para gestão de salas e espaços de seu campus.
 
 ---
 
@@ -480,16 +658,19 @@ Diferente de protótipos estáticos, o SIGAAS implementa o ciclo completo das qu
 
 1. **Cadastrar (Create)**:
    - **Endpoint**: `POST /api/v1/salas`
+   - **Permissões**: Administrador e Coordenador (este último restrito ao seu próprio `campus_id`).
    - **Regras**: Validação de unicidade de bloco e número por campus (`HTTP 409 Conflict`), capacidade entre 1 e 5000 alunos e lista tipada de turnos disponíveis.
 2. **Consultar (Read)**:
    - **Listagem Geral**: `GET /api/v1/salas` com paginação (`skip`, `limit`) e filtro automático pelo campus de lotação do usuário autenticado.
    - **Consulta Específica**: `GET /api/v1/salas/{sala_id}` com validação de existência e barreira de tenant.
 3. **Atualizar (Update)**:
    - **Endpoint**: `PUT /api/v1/salas/{sala_id}`
+   - **Permissões**: Administrador e Coordenador (restrito ao seu campus).
    - **Regras**: Atualização atômica de bloco, número, tipo, capacidade, turnos disponíveis e status ativo (`ativo: bool`), com recalculo de unicidade para evitar colisões com salas pré-existentes.
 4. **Excluir (Delete)**:
    - **Endpoint**: `DELETE /api/v1/salas/{sala_id}`
-   - **Salvaguardas**: Verificação de integridade referencial com bloqueio `HTTP 409 Conflict` se houver horários de aula alocados para a sala; exclusão em cascata controlada de vínculos em `sala_equipamentos` antes da remoção física.
+   - **Permissões**: Restrito exclusivamente ao Administrador (`require_role(PerfilUsuario.ADMIN)`).
+   - **Salvaguardas**: Verificação de integridade referencial com bloqueio `HTTP 409 Conflict` se houver horários de aula alocados para a sala; exclusão em cascata controlada de vínculos em `sala_equipamento` antes da remoção física.
 
 ### Operações Relacionais Complementares:
 - **Vínculo de Equipamentos**: `POST /api/v1/salas/{sala_id}/equipamentos` associando projetores, computadores e kits.
@@ -519,8 +700,11 @@ docker compose up -d --build
 docker compose exec backend alembic upgrade head
 
 # 4. Popular os dados de teste (Seed)
-docker compose exec -w /app backend python /app/../scripts/seed_db.py
-# (Ou executar localmente: python scripts/seed_db.py)
+# Opção A — Execução dentro do container (com volume /scripts montado):
+docker compose exec backend python /scripts/seed_db.py
+
+# Opção B — Execução a partir do host (com banco do Docker ativo):
+python scripts/seed_db.py
 ```
 
 ### 3. URLs de Acesso no Navegador:
@@ -545,6 +729,22 @@ docker compose exec -w /app backend python /app/../scripts/seed_db.py
 ---
 
 ## 3.8 Próximos Passos (Transição para Sprint 04 e 05)
-1. **Consolidação das Validações e Relatórios da Sprint 04**: Refinamento de tratamentos de erro e guardas defensivas nos formulários de cadastro.
-2. **Desenvolvimento do Algoritmo de Alocação em C (Sprint 05)**: Implementação do algoritmo exato/heurístico de busca de salas sem conflitos em `backend/motor_alocacao/motor_alocacao.c`.
+1. **Primeiro Módulo Completo da Sprint 04**: Integração completa dos módulos de cadastro acadêmico e visualização de grade horária (Salas, Cursos, Turmas, Matrículas e Horários).
+2. **Desenvolvimento do Algoritmo de Alocação em C (Sprint 05)**: Implementação do algoritmo exato/heurístico de busca de salas sem conflitos em `backend/motor_alocacao/motor.c`.
 3. **Paralelização OpenMP e Coleta Científica de Speedup**: Medição dos tempos de execução sequencial vs. paralelo com $k \in \{1, 2, 4, 8\}$ threads sob os cenários de carga de 20, 100 e 500 turmas.
+
+---
+
+## 3.9 Registro e Justificativa de Ajustes de Modelagem (Sprint 02 → Sprint 03)
+
+Em atendimento às boas práticas de engenharia de software e aos critérios avaliativos da disciplina, registra-se a evolução técnica entre a modelagem conceitual inicial (Sprint 02) e o modelo físico relacional implementado e versionado via Alembic (Sprint 03):
+
+| Item de Modelagem | Estado Conceitual (Sprint 02) | Estado Físico Refinado (Sprint 03) | Justificativa Técnica da Alteração |
+| :--- | :--- | :--- | :--- |
+| **Nomenclatura de Tabelas** | Plural (`campi`, `usuarios`, `salas`) | Singular (`campus`, `usuario`, `sala`) | Padronização idiomática em PostgreSQL e conformidade direta com os nomes de classes do ORM SQLAlchemy 2.0. |
+| **Auditoria Temporal** | Campo único `criado_em` | Par atômico `created_at` e `updated_at` | Rastreabilidade granular do ciclo de vida das entidades, permitindo identificar quando um registro foi modificado após sua criação. |
+| **Tabela Associativa** | `sala_equipamento` com ID substituto (`id` PK) | Chave primária composta `(sala_id, equipamento_id)` | Eliminação de surrogate key desnecessária; garantia estrutural e física no SGBD contra duplicidade de associação entre sala e equipamento. |
+| **Ciclo de Vida / Soft-Delete** | Não contemplado em `campus` e `sala` | Coluna booleana `ativo` com valor padrão `true` | Preservação de integridade referencial com horários históricos sem exclusão física de registros essenciais. |
+| **Tipagem de Enumerações** | Tipos nativos `CREATE TYPE ... AS ENUM` | Colunas `VARCHAR` com restrições `CHECK` e Pydantic | Portabilidade em migrações, redução de overhead de locking em DDLs no PostgreSQL e validação semântica em nível de aplicação. |
+| **Rastreamento de Matrícula** | Apenas timestamp de matrícula | Adição de coluna `status: VARCHAR(20)` (`ativa`, `trancada`, `cancelada`) | Viabilização do controle acadêmico de evasão discente que alimenta o modelo preditivo de faltas. |
+| **Integridade de Alocação** | Restrições básicas | `CHECK(hora_inicio < hora_fim)` e `CHECK(dia_semana BETWEEN 0 AND 6)` | Salvaguarda física contra corrupção de horários no banco antes mesmo do motor em C processar a grade. |

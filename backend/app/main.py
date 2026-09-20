@@ -2,10 +2,13 @@
 Ponto de entrada do FastAPI para o SIGAAS.
 """
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 from app.config import settings
+from app.db.session import get_db
 from app.api.v1.api import api_router
 
 app = FastAPI(
@@ -37,11 +40,18 @@ def root_redirect():
 
 
 @app.get("/health", tags=["Health"])
-def health_check():
+def health_check(db: Session = Depends(get_db)):
+    db_status = "connected"
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "disconnected"
+
     return {
-        "status": "ok",
+        "status": "ok" if db_status == "connected" else "degraded",
         "service": settings.PROJECT_NAME,
-        "version": settings.VERSION
+        "version": settings.VERSION,
+        "database": db_status,
     }
 
 
