@@ -700,8 +700,8 @@ docker compose up -d --build
 docker compose exec backend alembic upgrade head
 
 # 4. Popular os dados de teste (Seed)
-# Opção A — Execução dentro do container (com volume /scripts montado):
-docker compose exec backend python /scripts/seed_db.py
+# Opção A — Execução dentro do container (com volume /scripts montado e PYTHONPATH=/app):
+docker compose exec -e PYTHONPATH=/app backend python /scripts/seed_db.py
 
 # Opção B — Execução a partir do host (com banco do Docker ativo):
 python scripts/seed_db.py

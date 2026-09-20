@@ -8,11 +8,11 @@ import sys
 from datetime import time
 from pathlib import Path
 
-# Garante acesso aos modulos em backend
+# Garante acesso aos modulos em backend (compativel com host e container Docker)
 root_dir = Path(__file__).resolve().parent.parent
-backend_dir = root_dir / "backend"
-if str(backend_dir) not in sys.path:
-    sys.path.insert(0, str(backend_dir))
+for candidate in [root_dir / "backend", Path("/app")]:
+    if candidate.is_dir() and str(candidate) not in sys.path:
+        sys.path.insert(0, str(candidate))
 
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402

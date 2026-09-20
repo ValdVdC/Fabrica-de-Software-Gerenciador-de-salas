@@ -1,6 +1,7 @@
 FROM python:3.12-slim
 
 WORKDIR /app
+ENV PYTHONPATH=/app
 
 # Instala dependencias de compilacao C (GCC, Make, libc-dev e OpenMP nativo)
 RUN apt-get update && apt-get install -y --no-install-recommends \
