@@ -2,7 +2,7 @@
 ## Sistema Inteligente de Gestão Acadêmica e Alocação de Salas (SIGAAS)
 **Disciplina:** Fábrica de Software & Tópicos Avançados em Computação  
 **Turma:** 8MB - CC  
-**Equipe:** Grupo 08 — SIGAAS  
+**Equipe:** Grupo 31 — SIGAAS  
 **Entrega:** Sprint 02 — Arquitetura e Modelagem do Sistema (com Sprint 01 anterior)  
 **Data-Limite de Entrega:** 19 de Setembro de 2026  
 **Repositório Oficial no GitHub:** [https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas](https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas)  
@@ -411,9 +411,9 @@ A interface web foi concebida por perfil de acesso no padrão design system inst
 └────────────────────────────────────────────────────────┘
 ```
 
-### Link do Projeto de Protótipos (Figma / Design System)
-- **URL do Projeto de UI**: [https://www.figma.com/design/sigaas-academic-ui](https://www.figma.com/design/sigaas-academic-ui)
-*(Nota: O design das telas foi desenvolvido com tokens CSS padronizados, componentes standalone e Lucide Icons, sendo diretamente consumido na aplicação Angular).*
+### Protótipos e Design System
+- **Arquitetura de Telas**: Os protótipos de alta fidelidade foram desenvolvidos diretamente como componentes web standalone no frontend Angular (`frontend/src/app/pages/`) com tokens de design e biblioteca Lucide Icons, seguindo rigorosamente os layouts estruturados acima.
+- **Link do Protótipo no Figma**: *(Caso sua equipe possua arquivo compartilhado no Figma, insira o link aqui antes de exportar para PDF)*
 
 ---
 
