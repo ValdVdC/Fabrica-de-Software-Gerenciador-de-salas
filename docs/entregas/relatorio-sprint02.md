@@ -340,7 +340,7 @@ O esquema físico foi implementado em PostgreSQL com 14 tabelas normalizadas at�
 
 ## 2.5 Protótipos das Telas Principais
 
-A interface web foi concebida por perfil de acesso no padrão design system institucional. Abaixo constam os esquemas visuais dos protótipos e o link de acesso ao projeto no Figma:
+A interface web foi concebida por perfil de acesso no padrão design system institucional. Abaixo constam os esquemas visuais e diagramas de layout das telas principais:
 
 ### 1. Tela de Autenticação (`/login`)
 ```
@@ -411,9 +411,8 @@ A interface web foi concebida por perfil de acesso no padrão design system inst
 └────────────────────────────────────────────────────────┘
 ```
 
-### Protótipos e Design System
-- **Arquitetura de Telas**: Os protótipos de alta fidelidade foram desenvolvidos diretamente como componentes web standalone no frontend Angular (`frontend/src/app/pages/`) com tokens de design e biblioteca Lucide Icons, seguindo rigorosamente os layouts estruturados acima.
-- **Link do Protótipo no Figma**: *(Caso sua equipe possua arquivo compartilhado no Figma, insira o link aqui antes de exportar para PDF)*
+### Implementação dos Protótipos
+A interface visual foi concebida e desenvolvida através de componentes web standalone no frontend Angular (`frontend/src/app/pages/`), utilizando tokens CSS de alta usabilidade e ícones vetoriais da biblioteca Lucide Icons, em conformidade com os esquemas estruturais apresentados.
 
 ---
 
