@@ -1,67 +1,120 @@
 # Relatório Técnico: Sprints 01 e 02
-## Sistema Integrado de Gestão Acadêmica, Alocação de Salas e Escalas com IA (SIGAAS)
+## Sistema Inteligente de Gestão Acadêmica e Alocação de Salas (SIGAAS)
 **Disciplina:** Fábrica de Software & Tópicos Avançados em Computação  
+**Turma:** 8MB - CC  
 **Entrega:** Sprint 02 — Arquitetura e Modelagem do Sistema (com Sprint 01 anterior)  
-**Data-Limite:** 19 de Setembro de 2026  
-**Repositório Oficial:** [https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas](https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas)  
-**Identificação da Equipe:** Grupo de Desenvolvimento SIGAAS  
+**Data-Limite de Entrega:** 19 de Setembro de 2026  
+**Repositório Oficial no GitHub:** [https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas](https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas)  
 
 ---
 
-### Identificação da Equipe e Distribuição de Papéis
+### 1. Identificação da Equipe e Distribuição de Papéis
 
-| Integrante | Papel no Squad | Responsabilidade Técnica Principal |
-| :--- | :--- | :--- |
-| **Líder / Scrum Master** | Scrum Master (SM) | Gestão de entregas, facilitação ágil, governança de branches e submissão no Teams |
-| **Product Owner** | Product Owner (PO) | Levantamento de requisitos, refinamento de regras de negócio e validação de aceites |
-| **Desenvolvedor Backend** | Dev Backend | Arquitetura FastAPI, integração C/OpenMP (`ctypes`), JWT e migrations Alembic |
-| **Desenvolvedor Frontend** | Dev Frontend | Interface SPA Angular 20, componentes visuais, serviços reativos e interceptors |
-| **Responsável BD & Docs** | DBA / Documentador | Modelagem relacional PostgreSQL, scripts de seed, integridade e documentação técnica |
-
----
-
-# PARTE 1 — SPRINT 01: CONCEPÇÃO, ESCOPO E REQUISITOS (ANTERIOR)
-
-## 1.1 Apresentação do Problema e Solução Proposta
-A alocação de salas e o escalonamento de horários em instituições de ensino superior multi-campus constituem problemas clássicos de otimização combinatória (*Timetabling Problem*, NP-Difícil). Frequentemente, esses processos são conduzidos manualmente por secretarias e coordenações, gerando conflitos de horário, ociosidade de salas especializadas (laboratórios e auditórios) e salas superlotadas.
-
-O **SIGAAS** resolve essa dor estrutural através de uma solução que integra três pilares:
-1. **Sistema Web Multi-Perfil**: Gestão acadêmica limpa e distribuída por perfis de acesso (Administrador, Coordenador, Secretaria, Professor e Aluno).
-2. **Motor de Otimização Combinatória em C (OpenMP)**: Resolução de conflitos de alocação de salas e turmas com paralelismo de memória compartilhada para alto rendimento computacional.
-3. **Módulo de Inteligência Artificial Preditiva (scikit-learn)**: Monitoramento de absenteísmo histórico para sugerir remanejamento inteligente de turmas para salas menores, sob aprovação humana estrita (*Human-in-the-Loop*).
-
----
-
-## 1.2 Atendimento à Devolutiva da Sprint 01
-
-### 1.2.1 Cronograma com Datas Oficiais das Sprints
-Em atendimento ao parecer da banca ("*Incluam as datas das sprints*"), o cronograma acadêmico oficial foi integrado:
-
-| Sprint | Prazo Final | Marco Avaliativo da Disciplina | Entrega no SIGAAS |
+| Integrante | Matrícula | Papel no Squad | Responsabilidade Técnica Principal |
 | :--- | :---: | :--- | :--- |
-| **Sprint 01** | Concluída | Planejamento Inicial e Escopo | Escopo, papéis e repositório GitHub estruturado. |
-| **Sprint 02** | 19/09 | Arquitetura e Modelagem | Arquitetura, Classes, MER, Relacional, Protótipo e Banco criado. |
-| **Sprint 03** | 19/09 | Estrutura Inicial Funcional | Banco conectado, Login JWT, Perfis RBAC, CRUD principal e Deploy local. |
+| **Osvaldo Vasconcelos de Carvalho** | 01614171 | Scrum Master (Líder) | Facilitação ágil, gestão de entregas, governança de branches e submissão no Teams |
+| **Gabriel Porfírio dos Santos** | 01591399 | Product Owner | Levantamento de requisitos, regras de negócio e validação dos critérios de aceite |
+| **Ewerton Thyago Tavares da Silva** | 01573977 | Dev Backend / Sistemas | Arquitetura de API, integração FFI C/OpenMP (`ctypes`) e migrations |
+| **Flávio Vecch de Brito Farias** | 01600988 | Dev Frontend | Interface SPA Angular 20, componentes, estados reativos e interceptors |
+| **Wesclei Batista Da Cruz Júnior** | 01606772 | DBA & Documentação | Modelagem relacional PostgreSQL, scripts de seed, integridade e documentação técnica |
+
+---
+
+# PARTE 1 — SPRINT 01: PLANEJAMENTO DO PROJETO (ANTERIOR)
+
+## 1.1 Escolha do Tema
+Desenvolvimento de um sistema multi-campus de gestão acadêmica focado na alocação inteligente de salas e horários, integrando módulos de otimização matemática e inteligência artificial.
+
+## 1.2 Definição do Problema
+A gestão de horários e espaços físicos em instituições de ensino complexas enfrenta desafios que dificultam a operação diária:
+- O controle de alocação muitas vezes é ineficiente, direcionando turmas pequenas para salas grandes ou alocando disciplinas práticas em espaços sem os equipamentos adequados.
+- A montagem da grade horária é um processo matemático complexo, propício a falhas humanas como o choque de horários entre turmas e professores.
+- Existe um desperdício contínuo de espaço físico quando turmas com histórico de alto índice de evasão ou faltas mantêm grandes auditórios ou salas regulares bloqueadas sem real necessidade.
+- O remanejamento de salas de última hora gera confusão e não possui um fluxo sistêmico claro de registro e auditoria.
+- Isso gera atrasos na liberação de semestres letivos, subutilização de infraestrutura e insatisfação no corpo docente e discente.
+
+## 1.3 Objetivos do Sistema
+- **Objetivo Geral**: Desenvolver uma plataforma multi-tenant que centralize a gestão acadêmica, automatizando a alocação de turmas.
+- **Objetivos Específicos**:
+  - Alocar turmas de forma automática respeitando capacidade, turnos, tipo de sala e necessidade de equipamentos.
+  - Garantir matematicamente a ausência de conflitos de horários.
+  - Prever a probabilidade de baixa frequência em aulas específicas utilizando Machine Learning.
+  - Sugerir o remanejamento proativo de salas baseado na predição da IA, submetendo a ação à aprovação humana.
+  - Garantir a divisão clara de acessos e permissões por perfil.
+
+## 1.4 Público-Alvo
+A comunidade acadêmica dividida em quatro perfis de acesso: Admin/Coordenação, Secretaria, Professor e Aluno. O uso engloba desde a coordenação (que gerencia e aprova o fluxo pesado) até o aluno final, que consome o resultado do sistema (sua grade de horários).
+
+## 1.5 Requisitos Funcionais (RF)
+
+| Código | Descrição |
+| :--- | :--- |
+| **RF01** | Cadastrar, editar e listar campi, salas, equipamentos e cursos. |
+| **RF02** | Cadastrar disciplinas, criar turmas e registrar a matrícula de alunos. |
+| **RF03** | Autenticar usuários e redirecionar para interfaces isoladas por perfil de acesso. |
+| **RF04** | Executar o cálculo de alocação (horário × sala × turma) automaticamente via motor de otimização. |
+| **RF05** | Registrar a frequência diária dos alunos para alimentar o modelo de IA. |
+| **RF06** | Gerar sugestões automáticas de remanejamento de sala quando a previsão de faltas for alta. |
+| **RF07** | Permitir que o perfil Admin/Coordenação aprove ou rejeite as sugestões de remanejamento. |
+| **RF08** | Consultar a grade de horários formatada por perfil (Minhas aulas como Professor ou Aluno). |
+| **RF09** | Gerar log e trilha de auditoria para registros de alocação e alterações. |
+
+## 1.6 Requisitos Não Funcionais (RNF)
+
+| Código | Descrição |
+| :--- | :--- |
+| **RNF01** | Interface web responsiva desenvolvida em Angular. |
+| **RNF02** | Backend, regras de negócio e orquestração de APIs desenvolvidos em Python (FastAPI*). |
+| **RNF03** | O motor de alocação deve ser desenvolvido em C, compilado como `.so` e integrado ao Python via `ctypes`. |
+| **RNF04** | O modelo de Inteligência Artificial preditivo deve utilizar Python com scikit-learn. |
+| **RNF05** | O banco de dados para persistência relacional e confiável deve ser o PostgreSQL. |
+| **RNF06** | O controle de versão do código deve ser obrigatoriamente mantido no Git/GitHub. |
+| **RNF07** | A busca de alocação deve rodar em processamento paralelo para redução de tempo, utilizando OpenMP. |
+
+*\*Nota de Refinamento Técnico*: Conforme previsto nas orientações de arquitetura, o framework backend foi evoluído de Django para FastAPI visando execução assíncrona de alto desempenho, documentação OpenAPI interativa nativa (`/docs`) e comunicação de baixa latência em memória via `ctypes` com o motor em C.
+
+## 1.7 Casos de Uso Principais
+- **UC01**: Realizar Login e rotear por perfil institucional
+- **UC02**: Cadastrar Campus, Sala e Curso (Secretaria/Admin)
+- **UC03**: Matricular aluno em Turma (Secretaria)
+- **UC04**: Executar alocação otimizada de horários (Admin)
+- **UC05**: Visualizar grade horária individual (Professor/Aluno)
+- **UC06**: Sugerir remanejamento baseado em predição (Sistema/IA)
+- **UC07**: Aprovar ou Rejeitar sugestão de remanejamento (Admin/Coordenação)
+
+---
+
+## 1.8 Atendimento à Devolutiva da Banca (Sprint 01)
+
+> **Parecer da Banca**: *"Projeto muito bem estruturado e com diferencial técnico claro. Incluam as datas das sprints e definam métricas para comparar o desempenho sequencial × OpenMP. Coerência: Adequado, proposta muito bem alinhada, com IA, otimização matemática e paralelismo em OpenMP integrados ao problema. Critérios de Entrega: Atendeu, todos os itens foram apresentados, incluindo GitHub; faltam apenas datas no cronograma e métricas para avaliar o ganho do paralelismo."*
+
+### 1.8.1 Cronograma Oficial com Datas das Sprints
+
+| Sprint | Data-Limite | Marco Avaliativo | Escopo Principal no SIGAAS |
+| :--- | :---: | :--- | :--- |
+| **Sprint 01** | Concluída | Planejamento Inicial | Tema, requisitos, formação de equipe e repositório GitHub. |
+| **Sprint 02** | 19/09 | Arquitetura e Modelagem | Arquitetura do sistema, Classes, MER, Relacional, Protótipo e Banco criado. |
+| **Sprint 03** | 19/09 | Estrutura Inicial Funcional | Conexão PostgreSQL, login com autenticação, perfis RBAC, CRUD e deploy local. |
 | **Sprint 04** | 26/09 | Primeiro Módulo Completo | Módulo operacional integrado (Salas, Cursos, Turmas, Matrículas e Grade). |
-| **Sprint 05** | 03/10 | Segundo Módulo Funcional | Motor de alocação em C com OpenMP, Speedup e integração `ctypes`. |
-| **Sprint 06** | 17/10 | Aprimoramento e IA | Ajustes da Pré-Banca, modelo preditivo de falta e integração. |
+| **Sprint 05** | 03/10 | Segundo Módulo Funcional | Algoritmo de alocação em C com OpenMP, Speedup e integração `ctypes`. |
+| **Sprint 06** | 17/10 | Aprimoramento e IA | Ajustes da Pré-Banca, modelo preditivo scikit-learn e remanejamento. |
 | **Sprint 07** | 24/10 | Sistema Quase Completo | Dashboard de indicadores, relatórios, filtros e trilha de auditoria. |
-| **Sprint 08** | 31/10 | Sistema Praticamente Concluído | Usabilidade refinada, revisão geral de regras e permissões multi-campus. |
-| **Sprint 09** | 07/11 | Testes Completos | Testes funcionais, validações, cobertura >= 85% e saneamento de bugs. |
-| **Sprint 10** | 14/11 | Release Candidate | Sistema estável, interface final, OpenAPI/Swagger e README atualizado. |
+| **Sprint 08** | 31/10 | Sistema Praticamente Concluído | Usabilidade refinada, revisão de regras e permissões multi-campus. |
+| **Sprint 09** | 07/11 | Testes Completos | Testes funcionais, validação, cobertura >= 85% e saneamento de bugs. |
+| **Sprint 10** | 14/11 | Release Candidate | Sistema estabilizado, OpenAPI/Swagger e README atualizado. |
 | **Sprint 11** | 21/11 | Preparação para Entrega | Manual do Usuário, Manual Técnico e code review completo. |
-| **Sprint 12** | 28/11 | Versão Final e Vídeos | Code Freeze, produção do vídeo horizontal (YouTube) e vertical (Instagram). |
+| **Sprint 12** | 28/11 | Versão Final e Vídeos | Code Freeze, produção do vídeo no YouTube (16:9) e Instagram (9:16). |
 | **Entrega Final**| 05/12 | Envio Definitivo no Teams | Submissão final sem prorrogação. |
 
 ---
 
-### 1.2.2 Métricas Formais para Avaliação do Ganho de Paralelismo (OpenMP vs. Sequencial)
-Em atendimento à solicitação ("*definam métricas para comparar o desempenho sequencial × OpenMP*"), a validação científica de Tópicos Avançados será regida pelas seguintes formulações:
+### 1.8.2 Métricas Científicas para Comparação Sequencial × OpenMP
+Para atender ao critério de rigor científico de Tópicos Avançados, a avaliação experimental do motor de alocação em C é regida por:
 
 1. **Tempo de Execução ($T$)**:
-   - $T_s$: Tempo sequencial puro medido com 1 thread.
-   - $T_p(k)$: Tempo paralelo medido com $k \in \{1, 2, 4, 8\}$ threads OpenMP.
-   - Instrumentação com `omp_get_wtime()`, calculando média e desvio padrão em 10 execuções independentes.
+   - $T_s$: Tempo sequencial puro com 1 thread.
+   - $T_p(k)$: Tempo paralelo com $k \in \{1, 2, 4, 8\}$ threads OpenMP.
+   - Instrumentação via `omp_get_wtime()`, calculando média e desvio padrão em 10 repetições por cenário.
 
 2. **Speedup Experimental ($S_k$)**:
    $$S_k = \frac{T_s}{T_p(k)}$$
@@ -69,13 +122,13 @@ Em atendimento à solicitação ("*definam métricas para comparar o desempenho 
 3. **Eficiência Computacional ($E_k$)**:
    $$E_k = \frac{S_k}{k} \times 100\%$$
 
-4. **Fração Paralelizável e Limite Teórico (Lei de Amdahl)**:
+4. **Fração Paralelizável Teórica (Lei de Amdahl)**:
    $$S_{\max} = \frac{1}{(1 - f) + \frac{f}{k}}$$
-   *Onde $f$ representa a fração do código paralelizada pelo algoritmo de busca de alocações.*
+   *Onde $f$ representa a fração do algoritmo de busca paralelizada entre as threads.*
 
-5. **Cenários Experimentais de Carga**:
+5. **Cenários de Carga de Benchmark**:
    - **Pequeno (Funcional)**: 20 turmas $\times$ 10 salas.
-   - **Médio (Operacional Real)**: 100 turmas $\times$ 40 salas com restrições mistas de equipamentos.
+   - **Médio (Operacional)**: 100 turmas $\times$ 40 salas com restrições mistas de equipamentos.
    - **Stress (Escala Computacional)**: 500 turmas $\times$ 150 salas com restrições densas de turno.
 
 ---
@@ -84,7 +137,7 @@ Em atendimento à solicitação ("*definam métricas para comparar o desempenho 
 
 ## 2.1 Arquitetura do Sistema
 
-A arquitetura do SIGAAS adota o padrão em camadas desacopladas com isolamento estrito de responsabilidades:
+A arquitetura adota separação em camadas desacopladas com isolamento estrito:
 
 ```
 [ Navegador Web ]
@@ -114,12 +167,6 @@ A arquitetura do SIGAAS adota o padrão em camadas desacopladas com isolamento e
 │ - Zero dependência externa│  │  - Migrations Alembic   │
 └──────────────────────────┘   └─────────────────────────┘
 ```
-
-### Componentes e Tecnologias:
-- **Cliente (SPA)**: Angular 20 com TypeScript, componentes standalone, signals reativos e Tailwind CSS. Nenhuma regra de negócio crítica roda no cliente.
-- **Servidor da Aplicação**: FastAPI (Python 3.12). Ponto único de entrada HTTP, orquestrador de chamadas, validador de schemas com Pydantic v2 e controle de sessões.
-- **Motor Computacional**: Biblioteca nativa em C (`motor_alocacao.so`) compilada com GCC e flags `-O3 -fopenmp`. Não acessa o banco diretamente; recebe estruturas C em memória via `ctypes` e retorna as alocações computadas.
-- **Banco de Dados**: PostgreSQL 16 Alpine, rodando em container Docker dedicado, garantindo integridade referencial com chaves estrangeiras e índices compostos.
 
 ---
 
@@ -237,12 +284,11 @@ classDiagram
 ## 2.3 Modelo Entidade-Relacionamento (MER Conceitual)
 
 - **CAMPUS**: Entidade que ancora o isolamento multi-tenant do sistema (`(1,n)` com Sala, Usuario e Curso).
-- **USUARIO**: Representa os atores do sistema, classificados pelo atributo discriminador `perfil` (`admin`, `coordenador`, `secretaria`, `professor`, `aluno`).
+- **USUARIO**: Representa os atores do sistema, classificados pelo discriminador `perfil` (`admin`, `coordenador`, `secretaria`, `professor`, `aluno`).
 - **SALA**: Representa os espaços físicos do campus. Possui relacionamento `(n,m)` com **EQUIPAMENTO** através da entidade associativa **SALA_EQUIPAMENTO**.
 - **CURSO & DISCIPLINA**: Estruturam a oferta acadêmica institucional.
 - **TURMA**: Instância letiva de uma disciplina em um período específico, vinculada a um professor e associada a múltiplos alunos via **MATRICULA**.
 - **HORARIO**: Entidade central de alocação que vincula uma Turma a uma Sala em um dia da semana (`0=Segunda` a `5=Sábado`) e intervalo de horas.
-- **SUGESTAO_REMANEJAMENTO & PREVISAO_FALTA**: Entidades preditivas reservadas para o job de IA.
 - **LOG_ALOCACAO**: Trilha de auditoria imutável que registra todas as alterações de sala com carimbo de tempo e usuário responsável.
 
 ---
