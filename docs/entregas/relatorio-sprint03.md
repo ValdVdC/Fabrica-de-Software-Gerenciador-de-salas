@@ -282,7 +282,7 @@ classDiagram
 
 ---
 
-### 2.3 Modelo Entidade-Relacionamento (MER Conceitual)
+## 2.3 Modelo Entidade-Relacionamento (MER Conceitual)
 
 ### Diagrama Conceitual Entidade-Relacionamento (Notação Crow's Foot)
 
