@@ -180,6 +180,10 @@ classDiagram
         +string nome
         +string cidade
         +string endereco
+        +bool ativo
+        +cadastrar()
+        +listar_salas()
+        +validar_capacidade()
     }
 
     class Usuario {
@@ -190,6 +194,9 @@ classDiagram
         +string senha_hash
         +PerfilUsuario perfil
         +bool ativo
+        +autenticar(senha: string) bool
+        +gerar_token() string
+        +possui_perfil(p: PerfilUsuario) bool
     }
 
     class Sala {
@@ -200,19 +207,23 @@ classDiagram
         +TipoSala tipo
         +int capacidade
         +List~string~ turnos_disponiveis
+        +bool ativo
+        +verificar_disponibilidade(dia: int, hi: time, hf: time) bool
+        +capacidade_suficiente(qtd: int) bool
     }
 
     class Equipamento {
         +int id
         +string nome
         +string descricao
+        +vincular_sala(sala_id: int, qtd: int)
     }
 
     class SalaEquipamento {
-        +int id
         +int sala_id
         +int equipamento_id
         +int quantidade
+        +atualizar_quantidade(qtd: int)
     }
 
     class Curso {
@@ -220,6 +231,7 @@ classDiagram
         +int campus_id
         +string nome
         +string codigo
+        +adicionar_disciplina(d: Disciplina)
     }
 
     class Disciplina {
@@ -228,6 +240,7 @@ classDiagram
         +string nome
         +string codigo
         +int carga_horaria
+        +criar_turma(periodo: string) Turma
     }
 
     class Turma {
@@ -237,13 +250,18 @@ classDiagram
         +string periodo_letivo
         +int num_matriculados
         +Turno turno_preferido
+        +matricular_aluno(u: Usuario) bool
+        +calcular_ocupacao() float
     }
 
     class Matricula {
         +int id
         +int aluno_id
         +int turma_id
-        +datetime data_matricula
+        +date data_matricula
+        +string status
+        +trancar()
+        +cancelar()
     }
 
     class Horario {
@@ -254,6 +272,42 @@ classDiagram
         +int dia_semana
         +time hora_inicio
         +time hora_fim
+        +detectar_conflito(h: Horario) bool
+        +alocar_sala(s: Sala)
+    }
+
+    class Frequencia {
+        +int id
+        +int matricula_id
+        +int horario_id
+        +date data
+        +bool presente
+        +marcar_presenca()
+        +justificar_falta()
+    }
+
+    class PrevisaoFalta {
+        +int id
+        +int turma_id
+        +int horario_id
+        +date data_prevista
+        +float prob_ausencia
+        +string versao_modelo
+        +calcular_risco() float
+        +exige_remanejamento() bool
+    }
+
+    class SugestaoRemanejamento {
+        +int id
+        +int horario_id
+        +int sala_atual_id
+        +int sala_sugerida_id
+        +string motivo
+        +string justificativa
+        +StatusSugestao status
+        +int aprovado_por
+        +aprovar(coord_id: int)
+        +rejeitar(coord_id: int, just: string)
     }
 
     class LogAlocacao {
@@ -261,8 +315,9 @@ classDiagram
         +int horario_id
         +TipoEventoLog tipo_evento
         +int usuario_responsavel
-        +datetime criado_em
+        +datetime timestamp
         +string detalhes
+        +registrar_evento(tipo: TipoEventoLog, resp_id: int)
     }
 
     Campus "1" --> "*" Usuario : possui
@@ -277,6 +332,9 @@ classDiagram
     Turma "1" --> "*" Matricula : contem
     Turma "1" --> "*" Horario : alocada
     Sala "1" --> "*" Horario : sedia
+    Horario "1" --> "*" Frequencia : registra
+    Horario "1" --> "*" PrevisaoFalta : avaliado por
+    Horario "1" --> "*" SugestaoRemanejamento : remanejado por
     Horario "1" --> "*" LogAlocacao : audita
 ```
 
@@ -284,10 +342,118 @@ classDiagram
 
 ## 2.3 Modelo Entidade-Relacionamento (MER Conceitual)
 
-### Diagrama Conceitual Entidade-Relacionamento (Notação Crow's Foot)
+### Diagrama Conceitual Entidade-Relacionamento (Notação Crow's Foot com Atributos)
 
 ```mermaid
 erDiagram
+    CAMPUS {
+        int id PK
+        string nome
+        string cidade
+        string endereco
+        boolean ativo
+    }
+    USUARIO {
+        int id PK
+        int campus_id FK
+        string nome
+        string email
+        string senha_hash
+        string perfil
+        boolean ativo
+    }
+    EQUIPAMENTO {
+        int id PK
+        string nome
+        string descricao
+    }
+    SALA {
+        int id PK
+        int campus_id FK
+        string bloco
+        string numero
+        string tipo
+        int capacidade
+        json turnos_disponiveis
+        boolean ativo
+    }
+    SALA_EQUIPAMENTO {
+        int sala_id PK_FK
+        int equipamento_id PK_FK
+        int quantidade
+    }
+    CURSO {
+        int id PK
+        int campus_id FK
+        string nome
+        string codigo
+    }
+    DISCIPLINA {
+        int id PK
+        int curso_id FK
+        string nome
+        string codigo
+        int carga_horaria
+    }
+    TURMA {
+        int id PK
+        int disciplina_id FK
+        int professor_id FK
+        string periodo_letivo
+        int num_matriculados
+        string turno_preferido
+    }
+    MATRICULA {
+        int id PK
+        int aluno_id FK
+        int turma_id FK
+        date data_matricula
+        string status
+    }
+    HORARIO {
+        int id PK
+        int campus_id FK
+        int turma_id FK
+        int sala_id FK
+        int dia_semana
+        time hora_inicio
+        time hora_fim
+    }
+    LOG_ALOCACAO {
+        int id PK
+        int horario_id FK
+        json snapshot_evento
+        string tipo_evento
+        int usuario_responsavel FK
+        timestamp timestamp
+        text detalhes
+    }
+    FREQUENCIA {
+        int id PK
+        int matricula_id FK
+        int horario_id FK
+        date data
+        boolean presente
+    }
+    PREVISAO_FALTA {
+        int id PK
+        int turma_id FK
+        int horario_id FK
+        date data_prevista
+        float prob_ausencia
+        string versao_modelo
+    }
+    SUGESTAO_REMANEJAMENTO {
+        int id PK
+        int horario_id FK
+        int sala_atual_id FK
+        int sala_sugerida_id FK
+        text motivo
+        text justificativa
+        string status
+        int aprovado_por FK
+    }
+
     CAMPUS ||--o{ SALA : "possui"
     CAMPUS ||--o{ USUARIO : "possui"
     CAMPUS ||--o{ CURSO : "oferta"
@@ -307,34 +473,37 @@ erDiagram
 ```
 
 ### Descrição das Entidades e Regras de Cardinalidade:
-- **CAMPUS**: Entidade que ancora o isolamento multi-tenant do sistema (`(1,n)` com Sala, Usuario e Curso).
-- **USUARIO**: Representa os atores do sistema, classificados pelo discriminador `perfil` (`admin`, `coordenador`, `secretaria`, `professor`, `aluno`).
-- **SALA**: Representa os espaços físicos do campus. Possui relacionamento `(n,m)` com **EQUIPAMENTO** através da entidade associativa **SALA_EQUIPAMENTO**.
-- **CURSO & DISCIPLINA**: Estruturam a oferta acadêmica institucional.
+- **CAMPUS**: Entidade que ancora o isolamento multi-tenant do sistema (`(1,n)` com Sala, Usuario e Curso), com flag `ativo` de ciclo de vida.
+- **USUARIO**: Representa os atores do sistema, classificados pelo discriminador `perfil` (`admin`, `coordenador`, `secretaria`, `professor`, `aluno`), com unicidade de e-mail e hash criptográfico.
+- **SALA**: Representa os espaços físicos do campus. Possui relacionamento `(n,m)` com **EQUIPAMENTO** através da entidade associativa **SALA_EQUIPAMENTO** com chave primária composta `(sala_id, equipamento_id)`.
+- **CURSO & DISCIPLINA**: Estruturam a oferta acadêmica institucional por campus.
 - **TURMA**: Instância letiva de uma disciplina em um período específico, vinculada a um professor e associada a múltiplos alunos via **MATRICULA**.
 - **HORARIO**: Entidade central de alocação que vincula uma Turma a uma Sala em um dia da semana (`0=Segunda` a `5=Sábado`) e intervalo de horas.
-- **LOG_ALOCACAO**: Trilha de auditoria imutável que registra todas as alterações de sala com carimbo de tempo e usuário responsável.
+- **FREQUENCIA**: Registra os apontamentos diários de presença/falta por matrícula e horário, servindo como base histórica para o modelo preditivo.
+- **PREVISAO_FALTA**: Armazena as probabilidades de ausência calculadas pelo modelo de Machine Learning (`scikit-learn`) para cada horário futuro.
+- **SUGESTAO_REMANEJAMENTO**: Registra recomendações automáticas de troca de sala geradas pelo sistema quando detectada alta probabilidade de ociosidade, pendentes de aprovação humana pela coordenação.
+- **LOG_ALOCACAO**: Trilha de auditoria imutável que registra todas as alterações de sala com carimbo de tempo, snapshot do evento e usuário responsável.
 
 ---
 
 ## 2.4 Modelo Relacional
 
-O esquema físico foi implementado em PostgreSQL com 14 tabelas normalizadas até a Terceira Forma Normal (3FN):
+O esquema físico foi implementado em PostgreSQL com 14 tabelas normalizadas até a Terceira Forma Normal (3FN), com nomenclatura rigorosamente alinhada ao DDL e às migrations do Alembic:
 
-1. `campi` (**id** PK, nome VARCHAR(150), cidade VARCHAR(100), endereco VARCHAR(255), criado_em TIMESTAMP)
-2. `usuarios` (**id** PK, campus_id FK, nome VARCHAR(150), email VARCHAR(255) UNIQUE, senha_hash VARCHAR(255), perfil VARCHAR(20), ativo BOOLEAN, criado_em TIMESTAMP)
-3. `equipamentos` (**id** PK, nome VARCHAR(100) UNIQUE, descricao TEXT, criado_em TIMESTAMP)
-4. `salas` (**id** PK, campus_id FK, bloco VARCHAR(20), numero VARCHAR(20), tipo VARCHAR(30), capacidade INT, turnos_disponiveis JSON, criado_em TIMESTAMP, UNIQUE(campus_id, bloco, numero))
-5. `sala_equipamentos` (**id** PK, sala_id FK, equipamento_id FK, quantidade INT, UNIQUE(sala_id, equipamento_id))
-6. `cursos` (**id** PK, campus_id FK, nome VARCHAR(150), codigo VARCHAR(20), criado_em TIMESTAMP, UNIQUE(campus_id, codigo))
-7. `disciplinas` (**id** PK, curso_id FK, nome VARCHAR(150), codigo VARCHAR(20), carga_horaria INT, criado_em TIMESTAMP, UNIQUE(curso_id, codigo))
-8. `turmas` (**id** PK, disciplina_id FK, professor_id FK, periodo_letivo VARCHAR(10), num_matriculados INT, turno_preferido VARCHAR(20), criado_em TIMESTAMP)
-9. `matriculas` (**id** PK, aluno_id FK, turma_id FK, data_matricula TIMESTAMP, UNIQUE(aluno_id, turma_id))
-10. `horarios` (**id** PK, campus_id FK, turma_id FK, sala_id FK, dia_semana INT, hora_inicio TIME, hora_fim TIME, criado_em TIMESTAMP)
-11. `frequencias` (**id** PK, matricula_id FK, horario_id FK, data DATE, presente BOOLEAN, criado_em TIMESTAMP)
-12. `previsoes_falta` (**id** PK, turma_id FK, horario_id FK, data_prevista DATE, prob_ausencia NUMERIC(4,3), versao_modelo VARCHAR(50), criado_em TIMESTAMP)
-13. `sugestoes_remanejamento` (**id** PK, horario_id FK, sala_atual_id FK, sala_sugerida_id FK, motivo TEXT, status VARCHAR(20), aprovado_por FK, criado_em TIMESTAMP)
-14. `logs_alocacao` (**id** PK, horario_id FK, tipo_evento VARCHAR(30), usuario_responsavel FK, timestamp TIMESTAMP, detalhes TEXT)
+1. `campus` (**id** PK, nome VARCHAR(150), cidade VARCHAR(100), endereco VARCHAR(255), ativo BOOLEAN, created_at TIMESTAMP, updated_at TIMESTAMP)
+2. `usuario` (**id** PK, campus_id FK, nome VARCHAR(150), email VARCHAR(255) UNIQUE, senha_hash VARCHAR(255), perfil VARCHAR(30), ativo BOOLEAN, created_at TIMESTAMP, updated_at TIMESTAMP)
+3. `equipamento` (**id** PK, nome VARCHAR(100) UNIQUE, descricao VARCHAR(255), created_at TIMESTAMP)
+4. `sala` (**id** PK, campus_id FK, bloco VARCHAR(50), numero VARCHAR(50), tipo VARCHAR(30), capacidade INT, turnos_disponiveis JSON, ativo BOOLEAN, created_at TIMESTAMP, updated_at TIMESTAMP, UNIQUE(campus_id, bloco, numero), CHECK(capacidade > 0))
+5. `sala_equipamento` (**sala_id** PK/FK, **equipamento_id** PK/FK, quantidade INT, CHECK(quantidade > 0))
+6. `curso` (**id** PK, campus_id FK, nome VARCHAR(150), codigo VARCHAR(30), created_at TIMESTAMP, updated_at TIMESTAMP, UNIQUE(campus_id, codigo))
+7. `disciplina` (**id** PK, curso_id FK, nome VARCHAR(150), codigo VARCHAR(30), carga_horaria INT, created_at TIMESTAMP, updated_at TIMESTAMP, UNIQUE(curso_id, codigo), CHECK(carga_horaria > 0))
+8. `turma` (**id** PK, disciplina_id FK, professor_id FK, periodo_letivo VARCHAR(20), num_matriculados INT, turno_preferido VARCHAR(20), created_at TIMESTAMP, updated_at TIMESTAMP, CHECK(num_matriculados >= 0))
+9. `matricula` (**id** PK, aluno_id FK, turma_id FK, data_matricula DATE, status VARCHAR(20), created_at TIMESTAMP, UNIQUE(aluno_id, turma_id))
+10. `horario` (**id** PK, campus_id FK, turma_id FK, sala_id FK, dia_semana SMALLINT, hora_inicio TIME, hora_fim TIME, created_at TIMESTAMP, updated_at TIMESTAMP, CHECK(hora_inicio < hora_fim), CHECK(dia_semana >= 0 AND dia_semana <= 6))
+11. `log_alocacao` (**id** PK, horario_id FK, snapshot_evento JSON, tipo_evento VARCHAR(50), usuario_responsavel FK, timestamp TIMESTAMP, detalhes TEXT)
+12. `frequencia` (**id** PK, matricula_id FK, horario_id FK, data DATE, presente BOOLEAN, created_at TIMESTAMP)
+13. `previsao_falta` (**id** PK, turma_id FK, horario_id FK, data_prevista DATE, prob_ausencia FLOAT, versao_modelo VARCHAR(50), criado_em TIMESTAMP)
+14. `sugestao_remanejamento` (**id** PK, horario_id FK, sala_atual_id FK, sala_sugerida_id FK, motivo TEXT, justificativa TEXT, status VARCHAR(20), aprovado_por FK, criado_em TIMESTAMP, atualizado_em TIMESTAMP)
 
 ---
 
@@ -417,7 +586,7 @@ A interface visual foi concebida e desenvolvida através de componentes web stan
 ---
 
 ## 2.6 Banco de Dados Criado
-O banco de dados encontra-se plenamente criado através do script de migração versionada do Alembic (`backend/alembic/versions/001_initial_schema.py`), executado no PostgreSQL 16. O schema conta com criação automatizada de tipos ENUM nativos (`perfil_usuario`, `tipo_sala`, `turno`, `status_sugestao`, `tipo_evento_log`) e integridade referencial com chaves estrangeiras declaradas com `ON DELETE CASCADE` ou `ON DELETE RESTRICT`.
+O banco de dados encontra-se plenamente criado através do script de migração versionada do Alembic (`backend/alembic/versions/001_initial_schema.py`), executado no PostgreSQL 16. O schema conta com tipagem VARCHAR acompanhada de restrições de integridade CHECK (garantindo portabilidade e flexibilidade evolutiva, com validação estrita adicional em schemas Pydantic v2 no FastAPI) e integridade referencial com chaves estrangeiras declaradas com `ON DELETE CASCADE`, `ON DELETE RESTRICT` ou `ON DELETE SET NULL`.
 
 ---
 

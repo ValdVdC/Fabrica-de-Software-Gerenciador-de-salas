@@ -64,5 +64,4 @@ class DisciplinaRead(DisciplinaBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-from app.schemas.matricula import MatriculaBase, MatriculaCreate, MatriculaRead  # noqa: E402
 
