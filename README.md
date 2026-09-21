@@ -41,9 +41,17 @@ cp .env.example .env   # Preencha as variáveis de ambiente (banco e ClickUp)
 
 ### 2. Comandos de Inicialização (Atalhos)
 
+*   **Setup completo** (Sobe os containers, aplica migrações e popula os dados de teste):
+    ```bash
+    make setup
+    ```
 *   **Subir toda a stack** (Banco, API, Frontend e Cron) em segundo plano:
     ```bash
     make sigaas
+    ```
+*   **Verificar status dos containers**:
+    ```bash
+    make ps
     ```
 *   **Subir apenas o Banco de Dados e a API Backend**:
     ```bash
@@ -61,6 +69,8 @@ cp .env.example .env   # Preencha as variáveis de ambiente (banco e ClickUp)
     ```bash
     make reset
     ```
+    > [!WARNING]
+    > O comando `make reset` executa `docker compose down -v`, removendo o volume do PostgreSQL (`db_data`). Isso acarreta a perda permanente e irreversível de todos os dados locais. Recomenda-se realizar backup antes da execução caso existam dados que necessitem de preservação.
 
 ---
 
