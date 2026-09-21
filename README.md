@@ -30,19 +30,50 @@ Projeto desenvolvido com engenharia de software orientada por IA (**SDD + TDD**)
 
 ---
 
-## Como Rodar Localmente
+## Como Rodar Localmente (Via Makefile)
+
+O projeto possui um `Makefile` na raiz para simplificar o gerenciamento do ambiente Docker de forma rápida.
 
 ### 1. Configurar Ambiente
 ```bash
 cp .env.example .env   # Preencha as variáveis de ambiente (banco e ClickUp)
 ```
 
-### 2. Subir Banco de Dados via Docker
+### 2. Comandos de Inicialização (Atalhos)
+
+*   **Subir toda a stack** (Banco, API, Frontend e Cron) em segundo plano:
+    ```bash
+    make sigaas
+    ```
+*   **Subir apenas o Banco de Dados e a API Backend**:
+    ```bash
+    make backend
+    ```
+*   **Subir apenas o Banco de Dados**:
+    ```bash
+    make db
+    ```
+*   **Parar todos os serviços**:
+    ```bash
+    make down
+    ```
+*   **Resetar o ambiente** (Para todos os containers, limpa os volumes/dados do banco e inicia a stack do zero novamente):
+    ```bash
+    make reset
+    ```
+
+---
+
+## Desenvolvimento Local (Híbrido)
+
+Se você estiver desenvolvendo ativamente e preferir rodar as aplicações no seu próprio host para contar com o *hot-reloading* instantâneo de cada framework:
+
+### 1. Inicie o banco de dados via Docker
 ```bash
-docker compose up -d db
+make db
 ```
 
-### 3. Backend (FastAPI)
+### 2. Backend (FastAPI)
 ```bash
 cd backend
 python -m venv .venv
@@ -55,14 +86,14 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-### 4. Frontend (Angular)
+### 3. Frontend (Angular)
 ```bash
 cd frontend
 npm install
 ng serve
 ```
 
-### 5. Sincronização e Automação do ClickUp
+### 4. Sincronização e Automação do ClickUp
 ```bash
 pip install -r scripts/requirements.txt
 python scripts/clickup_sync.py test-connection
