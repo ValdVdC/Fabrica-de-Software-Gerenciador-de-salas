@@ -1,21 +1,22 @@
 # Relatório Técnico Consolidado: Sprints 01, 02 e 03
 ## Sistema Integrado de Gestão Acadêmica, Alocação de Salas e Escalas com IA (SIGAAS)
 **Disciplina:** Fábrica de Software & Tópicos Avançados em Computação  
+**Turma:** 8MB - CC  
+**Equipe:** Grupo 31 — SIGAAS  
 **Data de Consolidação:** 19 de Setembro de 2026  
 **Repositório Oficial:** [https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas](https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas)  
-**Identificação da Equipe:** Grupo de Desenvolvimento SIGAAS  
 
 ---
 
 ### Identificação da Equipe e Distribuição de Papéis
 
-| Integrante | Papel no Squad | Responsabilidade Técnica Principal |
-| :--- | :--- | :--- |
-| **Líder / Scrum Master** | Scrum Master (SM) | Gestão de entregas, facilitação ágil, governança de branches e submissão no Teams |
-| **Product Owner** | Product Owner (PO) | Levantamento de requisitos, refinamento de regras de negócio e validação de aceites |
-| **Desenvolvedor Backend** | Dev Backend | Arquitetura FastAPI, integração C/OpenMP (`ctypes`), JWT e migrations Alembic |
-| **Desenvolvedor Frontend** | Dev Frontend | Interface SPA Angular 20, componentes visuais, serviços reativos e interceptors |
-| **Responsável BD & Docs** | DBA / Documentador | Modelagem relacional PostgreSQL, scripts de seed, integridade e documentação técnica |
+| Integrante | Matrícula | Papel no Squad | Responsabilidade Técnica Principal |
+| :--- | :---: | :--- | :--- |
+| **Ewerton Thyago Tavares da Silva** | 01573977 | Scrum Master (Líder) | Facilitação ágil, gestão de entregas, governança de branches e submissão no Teams |
+| **Wesclei Batista Da Cruz Júnior** | 01606772 | Product Owner | Levantamento de requisitos, regras de negócio e validação dos critérios de aceite |
+| **Osvaldo Vasconcelos de Carvalho** | 01614171 | Dev Backend / Sistemas | Arquitetura de API, integração FFI C/OpenMP (`ctypes`), endpoints e migrations |
+| **Gabriel Porfírio dos Santos** | 01591399 | Dev Frontend | Interface SPA Angular 20, componentes, estados reativos e interceptors |
+| **Flávio Vecch de Brito Farias** | 01600988 | DBA & Documentação | Modelagem relacional PostgreSQL, scripts de seed, integridade e documentação técnica |
 
 ---
 

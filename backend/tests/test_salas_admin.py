@@ -215,3 +215,8 @@ def test_criar_usuario_sucesso_e_duplicidade(client, setup_cenario):
     resp_dup = client.post("/api/v1/usuarios", json=payload, headers={"Authorization": f"Bearer {token}"})
     assert resp_dup.status_code == 409
 
+    # Validacao de formato de email invalido via EmailStr (HTTP 422)
+    payload_invalido = {**payload, "email": "nao-e-um-email"}
+    resp_invalido = client.post("/api/v1/usuarios", json=payload_invalido, headers={"Authorization": f"Bearer {token}"})
+    assert resp_invalido.status_code == 422
+

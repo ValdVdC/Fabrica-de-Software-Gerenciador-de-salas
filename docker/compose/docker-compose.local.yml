@@ -33,6 +33,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme_local_only}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-gestao_salas}:${POSTGRES_PASSWORD:-changeme_local_only}@db:5432/${POSTGRES_DB:-gestao_salas}
       - SECRET_KEY=${SECRET_KEY:-super-secret-key-change-in-production-min-32-chars}
+      - PYTHONPATH=/app
     depends_on:
       db:
         condition: service_healthy
@@ -40,6 +41,7 @@ services:
       - "8000:8000"
     volumes:
       - ../../backend:/app
+      - ../../scripts:/scripts:ro
     networks:
       - sigaas_network
 
