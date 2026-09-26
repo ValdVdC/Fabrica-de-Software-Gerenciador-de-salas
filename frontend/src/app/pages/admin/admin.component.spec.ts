@@ -24,11 +24,24 @@ describe('AdminComponent', () => {
 
   beforeEach(async () => {
     mockLoading.set(false);
-    // prettier-ignore
-    adminServiceSpy = jasmine.createSpyObj('AdminService', ['listarSalas', 'listarEquipamentos', 'criarSala', 'criarEquipamento'], {
-      salas: mockSalas.asReadonly(), equipamentos: mockEquipamentos.asReadonly(),
-      errorMessage: signal<string | null>(null).asReadonly(), isLoading: mockLoading.asReadonly(),
-    });
+    adminServiceSpy = jasmine.createSpyObj(
+      'AdminService',
+      [
+        'listarSalas',
+        'listarEquipamentos',
+        'criarSala',
+        'criarEquipamento',
+        'atualizarSala',
+        'excluirSala',
+        'associarEquipamento',
+      ],
+      {
+        salas: mockSalas.asReadonly(),
+        equipamentos: mockEquipamentos.asReadonly(),
+        errorMessage: signal<string | null>(null).asReadonly(),
+        isLoading: mockLoading.asReadonly(),
+      },
+    );
 
     authServiceSpy = jasmine.createSpyObj('AuthService', [], {
       currentUser: mockCurrentUser.asReadonly(),
@@ -165,5 +178,68 @@ describe('AdminComponent', () => {
     component.cadastrarSala();
     expect(component.mensagemSucesso()).toBeNull();
     expect(component.formBloco).toBe('A');
+  });
+
+  it('deve iniciar e cancelar edicao de sala corretamente', () => {
+    // prettier-ignore
+    const salaAlvo: Sala = { id: 10, campus_id: 2, bloco: 'C', numero: '301', tipo: 'auditorio', capacidade: 120, turnos_disponiveis: ['matutino'], ativo: true };
+    component.iniciarEdicao(salaAlvo);
+    expect(component.salaEmEdicao()).toEqual(salaAlvo);
+    expect(component.formEditBloco).toBe('C');
+    expect(component.formEditNumero).toBe('301');
+    expect(component.formEditTipo).toBe('auditorio');
+    expect(component.formEditCapacidade).toBe(120);
+
+    component.cancelarEdicao();
+    expect(component.salaEmEdicao()).toBeNull();
+  });
+
+  it('deve salvar edicao de sala com sucesso e fechar modo edicao', () => {
+    // prettier-ignore
+    const salaAlvo: Sala = { id: 10, campus_id: 2, bloco: 'C', numero: '301', tipo: 'auditorio', capacidade: 120, turnos_disponiveis: ['matutino'], ativo: true };
+    const salaAtualizada: Sala = { ...salaAlvo, capacidade: 150, tipo: 'regular' };
+    adminServiceSpy.atualizarSala.and.returnValue(of(salaAtualizada));
+
+    component.iniciarEdicao(salaAlvo);
+    component.formEditCapacidade = 150;
+    component.formEditTipo = 'regular';
+    component.salvarEdicao();
+
+    expect(adminServiceSpy.atualizarSala).toHaveBeenCalledWith(10, {
+      bloco: 'C', numero: '301', tipo: 'regular', capacidade: 150,
+    });
+    expect(component.mensagemSucesso()).toContain('Sala C-301 atualizada com sucesso!');
+    expect(component.salaEmEdicao()).toBeNull();
+  });
+
+  it('deve excluir sala com sucesso e fechar edicao caso a sala excluida estivesse em edicao', () => {
+    // prettier-ignore
+    const salaAlvo: Sala = { id: 15, campus_id: 2, bloco: 'D', numero: '401', tipo: 'laboratorio', capacidade: 25, turnos_disponiveis: ['vespertino'], ativo: true };
+    adminServiceSpy.excluirSala.and.returnValue(of(void 0));
+
+    component.iniciarEdicao(salaAlvo);
+    component.excluirSala(salaAlvo);
+
+    expect(adminServiceSpy.excluirSala).toHaveBeenCalledWith(15);
+    expect(component.mensagemSucesso()).toContain('Sala D-401 removida com sucesso.');
+    expect(component.salaEmEdicao()).toBeNull();
+  });
+
+  it('deve vincular equipamento a sala com sucesso', () => {
+    adminServiceSpy.associarEquipamento.and.returnValue(
+      of({ sala_id: 1, equipamento_id: 10, quantidade: 3 }),
+    );
+    component.formAssocSalaId = 1;
+    component.formAssocEquipId = 10;
+    component.formAssocQtd = 3;
+    component.vincularEquipamento();
+
+    expect(adminServiceSpy.associarEquipamento).toHaveBeenCalledWith(1, {
+      equipamento_id: 10,
+      quantidade: 3,
+    });
+    expect(component.mensagemSucesso()).toContain('Equipamento vinculado a sala com sucesso!');
+    expect(component.formAssocSalaId).toBeNull();
+    expect(component.formAssocEquipId).toBeNull();
   });
 });
