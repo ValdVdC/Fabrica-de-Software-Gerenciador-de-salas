@@ -206,7 +206,10 @@ describe('AdminComponent', () => {
     component.salvarEdicao();
 
     expect(adminServiceSpy.atualizarSala).toHaveBeenCalledWith(10, {
-      bloco: 'C', numero: '301', tipo: 'regular', capacidade: 150,
+      bloco: 'C',
+      numero: '301',
+      tipo: 'regular',
+      capacidade: 150,
     });
     expect(component.mensagemSucesso()).toContain('Sala C-301 atualizada com sucesso!');
     expect(component.salaEmEdicao()).toBeNull();
