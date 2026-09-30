@@ -22,6 +22,15 @@ export interface SalaCreate {
   turnos_disponiveis: string[];
 }
 
+export interface SalaUpdate {
+  bloco?: string;
+  numero?: string;
+  tipo?: 'regular' | 'laboratorio' | 'auditorio' | 'reuniao';
+  capacidade?: number;
+  turnos_disponiveis?: string[];
+  ativo?: boolean;
+}
+
 export interface Equipamento {
   id: number;
   nome: string;
@@ -78,6 +87,24 @@ export class AdminService {
     return this.executar(this.http.post<Sala>('/api/v1/salas', payload), (nova) =>
       this._salas.update((lista) => [...lista, nova]),
     );
+  }
+
+  atualizarSala(salaId: number, payload: SalaUpdate): Observable<Sala> {
+    if (!Number.isInteger(salaId) || salaId <= 0) {
+      throw new Error('Identificador de sala invalido');
+    }
+    return this.executar(this.http.put<Sala>(`/api/v1/salas/${salaId}`, payload), (atualizada) => {
+      this._salas.update((lista) => lista.map((s) => (s.id === atualizada.id ? atualizada : s)));
+    });
+  }
+
+  excluirSala(salaId: number): Observable<void> {
+    if (!Number.isInteger(salaId) || salaId <= 0) {
+      throw new Error('Identificador de sala invalido');
+    }
+    return this.executar(this.http.delete<void>(`/api/v1/salas/${salaId}`), () => {
+      this._salas.update((lista) => lista.filter((s) => s.id !== salaId));
+    });
   }
 
   listarEquipamentos(): Observable<Equipamento[]> {

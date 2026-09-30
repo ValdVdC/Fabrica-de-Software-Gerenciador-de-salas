@@ -1,7 +1,13 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
-import { AdminService, SalaCreate, EquipamentoCreate } from '../../services/admin.service';
+import {
+  AdminService,
+  Sala,
+  SalaCreate,
+  SalaUpdate,
+  EquipamentoCreate,
+} from '../../services/admin.service';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -27,25 +33,55 @@ import { AuthService } from '../../services/auth.service';
       @if (mensagemSucesso()) { <div class="alert alert-success">{{ mensagemSucesso() }}</div> }
 
       @if (abaAtiva() === 'salas') {
-        <div class="panel-card">
-          <h3>Cadastrar Nova Sala</h3>
-          <form (ngSubmit)="cadastrarSala()" class="form-row">
-            <input type="text" [(ngModel)]="formBloco" name="bloco" required maxlength="50" placeholder="Bloco (Ex: A)" class="form-input" />
-            <input type="text" [(ngModel)]="formNumero" name="numero" required maxlength="50" placeholder="Numero (Ex: 101)" class="form-input" />
-            <select [(ngModel)]="formTipo" name="tipo" class="form-input"><option value="regular">Regular</option><option value="laboratorio">Laboratorio</option><option value="auditorio">Auditorio</option><option value="reuniao">Reuniao</option></select>
-            <input type="number" [(ngModel)]="formCapacidade" name="capacidade" min="1" max="5000" placeholder="Capacidade" class="form-input tabular-nums" />
-            <button type="submit" [disabled]="adminService.isLoading() || campusId <= 0" class="btn-primary">Salvar Sala</button>
-          </form>
-        </div>
+        @if (salaEmEdicao(); as editando) {
+          <div class="panel-card edit-card">
+            <h3>Editar Sala {{ editando.bloco }} - {{ editando.numero }}</h3>
+            <form (ngSubmit)="salvarEdicao()" class="form-row">
+              <input type="text" [(ngModel)]="formEditBloco" name="editBloco" required maxlength="50" placeholder="Bloco (Ex: A)" class="form-input" />
+              <input type="text" [(ngModel)]="formEditNumero" name="editNumero" required maxlength="50" placeholder="Numero (Ex: 101)" class="form-input" />
+              <select [(ngModel)]="formEditTipo" name="editTipo" class="form-input">
+                <option value="regular">Regular</option>
+                <option value="laboratorio">Laboratorio</option>
+                <option value="auditorio">Auditorio</option>
+                <option value="reuniao">Reuniao</option>
+              </select>
+              <input type="number" [(ngModel)]="formEditCapacidade" name="editCapacidade" min="1" max="5000" placeholder="Capacidade" class="form-input tabular-nums" />
+              <button type="submit" [disabled]="adminService.isLoading()" class="btn-primary">Atualizar Sala</button>
+              <button type="button" (click)="cancelarEdicao()" class="btn-secondary">Cancelar</button>
+            </form>
+          </div>
+        } @else {
+          <div class="panel-card">
+            <h3>Cadastrar Nova Sala</h3>
+            <form (ngSubmit)="cadastrarSala()" class="form-row">
+              <input type="text" [(ngModel)]="formBloco" name="bloco" required maxlength="50" placeholder="Bloco (Ex: A)" class="form-input" />
+              <input type="text" [(ngModel)]="formNumero" name="numero" required maxlength="50" placeholder="Numero (Ex: 101)" class="form-input" />
+              <select [(ngModel)]="formTipo" name="tipo" class="form-input"><option value="regular">Regular</option><option value="laboratorio">Laboratorio</option><option value="auditorio">Auditorio</option><option value="reuniao">Reuniao</option></select>
+              <input type="number" [(ngModel)]="formCapacidade" name="capacidade" min="1" max="5000" placeholder="Capacidade" class="form-input tabular-nums" />
+              <button type="submit" [disabled]="adminService.isLoading() || campusId <= 0" class="btn-primary">Salvar Sala</button>
+            </form>
+          </div>
+        }
 
         <div class="table-card">
           <table class="data-table">
-            <thead><tr><th>Bloco / Sala</th><th>Tipo</th><th>Capacidade</th><th>Turnos</th></tr></thead>
+            <thead><tr><th>Bloco / Sala</th><th>Tipo</th><th>Capacidade</th><th>Turnos</th><th>Acoes</th></tr></thead>
             <tbody>
               @for (sala of adminService.salas(); track sala.id) {
-                <tr><td class="font-bold">{{ sala.bloco }} - Sala {{ sala.numero }}</td><td><span class="badge">{{ sala.tipo }}</span></td><td class="tabular-nums">{{ sala.capacidade }} alunos</td><td>{{ (sala.turnos_disponiveis || []).join(', ') || 'Nenhum' }}</td></tr>
+                <tr>
+                  <td class="font-bold">{{ sala.bloco }} - Sala {{ sala.numero }}</td>
+                  <td><span class="badge">{{ sala.tipo }}</span></td>
+                  <td class="tabular-nums">{{ sala.capacidade }} alunos</td>
+                  <td>{{ (sala.turnos_disponiveis || []).join(', ') || 'Nenhum' }}</td>
+                  <td>
+                    <div class="actions-cell">
+                      <button type="button" class="btn-action btn-edit" (click)="iniciarEdicao(sala)" [disabled]="adminService.isLoading()">Editar</button>
+                      <button type="button" class="btn-action btn-delete" (click)="excluirSala(sala)" [disabled]="adminService.isLoading()">Excluir</button>
+                    </div>
+                  </td>
+                </tr>
               } @empty {
-                <tr><td colspan="4" class="empty-msg">Nenhuma sala cadastrada neste campus.</td></tr>
+                <tr><td colspan="5" class="empty-msg">Nenhuma sala cadastrada neste campus.</td></tr>
               }
             </tbody>
           </table>
@@ -59,6 +95,22 @@ import { AuthService } from '../../services/auth.service';
             <input type="text" [(ngModel)]="formEquipNome" name="equipNome" required minlength="2" maxlength="100" placeholder="Nome (Ex: Projetor)" class="form-input flex-2" />
             <input type="text" [(ngModel)]="formEquipDesc" name="equipDesc" maxlength="255" placeholder="Descricao (opcional)" class="form-input flex-2" />
             <button type="submit" [disabled]="adminService.isLoading()" class="btn-primary">Cadastrar Item</button>
+          </form>
+        </div>
+
+        <div class="panel-card">
+          <h3>Vincular Equipamento a Sala</h3>
+          <form (ngSubmit)="vincularEquipamento()" class="form-row">
+            <select [(ngModel)]="formAssocSalaId" name="assocSala" required class="form-input">
+              <option [ngValue]="null" disabled>Selecione a Sala</option>
+              @for (s of adminService.salas(); track s.id) { <option [ngValue]="s.id">{{ s.bloco }} - Sala {{ s.numero }}</option> }
+            </select>
+            <select [(ngModel)]="formAssocEquipId" name="assocEquip" required class="form-input">
+              <option [ngValue]="null" disabled>Selecione o Equipamento</option>
+              @for (eq of adminService.equipamentos(); track eq.id) { <option [ngValue]="eq.id">{{ eq.nome }}</option> }
+            </select>
+            <input type="number" [(ngModel)]="formAssocQtd" name="assocQtd" min="1" max="1000" placeholder="Qtd" class="form-input tabular-nums" style="max-width: 90px;" />
+            <button type="submit" [disabled]="adminService.isLoading() || !formAssocSalaId || !formAssocEquipId" class="btn-primary">Vincular</button>
           </form>
         </div>
 
@@ -119,6 +171,16 @@ import { AuthService } from '../../services/auth.service';
     .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600; }
     .stat-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin: 0.25rem 0; }
     .stat-card small { font-size: 0.75rem; color: #94a3b8; }
+    .btn-secondary { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8125rem; font-weight: 500; cursor: pointer; }
+    .btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
+    .actions-cell { display: flex; gap: 0.375rem; align-items: center; }
+    .btn-action { border: 1px solid #cbd5e1; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; cursor: pointer; }
+    .btn-edit { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .btn-edit:hover:not(:disabled) { background: #dbeafe; }
+    .btn-delete { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+    .btn-delete:hover:not(:disabled) { background: #fee2e2; }
+    .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+    .edit-card { border-left: 3px solid #2563eb; }
   `],
 })
 export class AdminComponent implements OnInit {
@@ -133,6 +195,16 @@ export class AdminComponent implements OnInit {
   formNumero = '';
   formTipo: 'regular' | 'laboratorio' | 'auditorio' | 'reuniao' = 'regular';
   formCapacidade = 40;
+
+  readonly salaEmEdicao = signal<Sala | null>(null);
+  formEditBloco = '';
+  formEditNumero = '';
+  formEditTipo: 'regular' | 'laboratorio' | 'auditorio' | 'reuniao' = 'regular';
+  formEditCapacidade = 40;
+
+  formAssocSalaId: number | null = null;
+  formAssocEquipId: number | null = null;
+  formAssocQtd = 1;
 
   formEquipNome = '';
   formEquipDesc = '';
@@ -155,6 +227,61 @@ export class AdminComponent implements OnInit {
   selecionarAba(aba: 'salas' | 'equipamentos' | 'resumo'): void {
     this.abaAtiva.set(aba);
     this.mensagemSucesso.set(null);
+    this.cancelarEdicao();
+  }
+
+  iniciarEdicao(sala: Sala): void {
+    this.salaEmEdicao.set(sala);
+    this.formEditBloco = sala.bloco;
+    this.formEditNumero = sala.numero;
+    this.formEditTipo = sala.tipo;
+    this.formEditCapacidade = sala.capacidade;
+    this.mensagemSucesso.set(null);
+  }
+
+  cancelarEdicao(): void {
+    this.salaEmEdicao.set(null);
+  }
+
+  salvarEdicao(): void {
+    const salaAtual = this.salaEmEdicao();
+    if (!salaAtual || this.adminService.isLoading()) return;
+
+    const bloco = this.formEditBloco.trim();
+    const numero = this.formEditNumero.trim();
+    if (!bloco || !numero) return;
+
+    const capNum = Math.floor(Number(this.formEditCapacidade));
+    if (isNaN(capNum) || capNum < 1 || capNum > 5000) return;
+
+    const payload: SalaUpdate = {
+      bloco,
+      numero,
+      tipo: this.formEditTipo,
+      capacidade: capNum,
+    };
+
+    this.adminService.atualizarSala(salaAtual.id, payload).subscribe({
+      next: (s) => {
+        this.mensagemSucesso.set(`Sala ${s.bloco}-${s.numero} atualizada com sucesso!`);
+        this.salaEmEdicao.set(null);
+      },
+      error: () => {},
+    });
+  }
+
+  excluirSala(sala: Sala): void {
+    if (this.adminService.isLoading()) return;
+    this.mensagemSucesso.set(null);
+    this.adminService.excluirSala(sala.id).subscribe({
+      next: () => {
+        this.mensagemSucesso.set(`Sala ${sala.bloco}-${sala.numero} removida com sucesso.`);
+        if (this.salaEmEdicao()?.id === sala.id) {
+          this.cancelarEdicao();
+        }
+      },
+      error: () => {},
+    });
   }
 
   cadastrarSala(): void {
@@ -210,5 +337,27 @@ export class AdminComponent implements OnInit {
       },
       error: () => {},
     });
+  }
+
+  vincularEquipamento(): void {
+    if (this.adminService.isLoading()) return;
+    if (!this.formAssocSalaId || !this.formAssocEquipId) return;
+    const qtd = Math.floor(Number(this.formAssocQtd));
+    if (isNaN(qtd) || qtd < 1 || qtd > 1000) return;
+
+    this.adminService
+      .associarEquipamento(this.formAssocSalaId, {
+        equipamento_id: this.formAssocEquipId,
+        quantidade: qtd,
+      })
+      .subscribe({
+        next: () => {
+          this.mensagemSucesso.set('Equipamento vinculado a sala com sucesso!');
+          this.formAssocSalaId = null;
+          this.formAssocEquipId = null;
+          this.formAssocQtd = 1;
+        },
+        error: () => {},
+      });
   }
 }

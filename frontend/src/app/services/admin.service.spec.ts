@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { AdminService, Sala, Equipamento, SalaCreate } from './admin.service';
+import { AdminService, Sala, Equipamento, SalaCreate, SalaUpdate } from './admin.service';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -141,5 +141,50 @@ describe('AdminService', () => {
     expect(service.salas()).toEqual([]);
     expect(service.equipamentos()).toEqual([]);
     expect(service.errorMessage()).toBeNull();
+  });
+
+  it('atualiza sala existente e sincroniza signal local', () => {
+    // prettier-ignore
+    const salaInicial: Sala = { id: 5, campus_id: 1, bloco: 'A', numero: '101', tipo: 'regular', capacidade: 40, turnos_disponiveis: ['matutino'], ativo: true };
+    (service as any)._salas.set([salaInicial]);
+
+    const payloadUpdate: SalaUpdate = { capacidade: 50, tipo: 'laboratorio' };
+    const salaAtualizada: Sala = { ...salaInicial, ...payloadUpdate };
+
+    service.atualizarSala(5, payloadUpdate).subscribe((res) => {
+      expect(res.capacidade).toBe(50);
+      expect(res.tipo).toBe('laboratorio');
+    });
+
+    const req = httpMock.expectOne('/api/v1/salas/5');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual(payloadUpdate);
+    req.flush(salaAtualizada);
+
+    expect(service.salas().find((s) => s.id === 5)?.capacidade).toBe(50);
+  });
+
+  it('exclui sala existente e remove do signal local', () => {
+    // prettier-ignore
+    const s1: Sala = { id: 1, campus_id: 1, bloco: 'A', numero: '101', tipo: 'regular', capacidade: 40, turnos_disponiveis: ['matutino'], ativo: true };
+    // prettier-ignore
+    const s2: Sala = { id: 2, campus_id: 1, bloco: 'B', numero: '102', tipo: 'laboratorio', capacidade: 30, turnos_disponiveis: ['vespertino'], ativo: true };
+    (service as any)._salas.set([s1, s2]);
+
+    service.excluirSala(1).subscribe();
+
+    const req = httpMock.expectOne('/api/v1/salas/1');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(service.salas().some((s) => s.id === 1)).toBeFalse();
+    expect(service.salas().length).toBe(1);
+  });
+
+  it('rejeita atualizar ou excluir com salaId invalido', () => {
+    expect(() => service.atualizarSala(0, { capacidade: 10 })).toThrowError(
+      'Identificador de sala invalido',
+    );
+    expect(() => service.excluirSala(-1)).toThrowError('Identificador de sala invalido');
   });
 });
