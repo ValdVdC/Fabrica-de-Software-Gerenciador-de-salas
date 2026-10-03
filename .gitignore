@@ -87,3 +87,4 @@ dist/
 
 # Antigravity (estado local, não versionar)
 .agent/cache/
+scratch/

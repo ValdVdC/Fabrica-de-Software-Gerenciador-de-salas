@@ -9,6 +9,7 @@ import {
   EquipamentoCreate,
 } from '../../services/admin.service';
 import { AuthService } from '../../services/auth.service';
+import { AlocacaoService } from '../../services/alocacao.service';
 
 @Component({
   selector: 'app-admin',
@@ -25,6 +26,7 @@ import { AuthService } from '../../services/auth.service';
       <nav class="tabs-nav" aria-label="Abas">
         <button type="button" [class.active]="abaAtiva() === 'salas'" (click)="selecionarAba('salas')">Salas &amp; Espacos</button>
         <button type="button" [class.active]="abaAtiva() === 'equipamentos'" (click)="selecionarAba('equipamentos')">Equipamentos</button>
+        <button type="button" [class.active]="abaAtiva() === 'alocacao'" (click)="selecionarAba('alocacao')">Alocacao Inteligente</button>
         <button type="button" [class.active]="abaAtiva() === 'resumo'" (click)="selecionarAba('resumo')">Resumo &amp; Metricas</button>
       </nav>
 
@@ -128,6 +130,106 @@ import { AuthService } from '../../services/auth.service';
         </div>
       }
 
+      @if (abaAtiva() === 'alocacao') {
+        <div class="panel-card">
+          <h3>Motor de Alocacao Paralelo OpenMP (Sprint 05)</h3>
+          <p class="section-desc">Otimizacao combinatoria de salas com heuristica Best-Fit, medicao cientifica de Speedup e persistencia de horarios.</p>
+          <div class="form-row" style="margin-top: 0.75rem; align-items: flex-end;">
+            <div class="form-group">
+              <label class="input-label" for="periodoLetivoInput">Periodo Letivo</label>
+              <input id="periodoLetivoInput" type="text" [(ngModel)]="formPeriodoLetivo" name="periodoLetivo" required placeholder="Ex: 2026.1" class="form-input" style="max-width: 130px;" />
+            </div>
+            <div class="form-group">
+              <label class="input-label" for="maxThreadsSelect">Threads OpenMP</label>
+              <select id="maxThreadsSelect" [(ngModel)]="formMaxThreads" name="maxThreads" class="form-input" style="max-width: 140px;">
+                <option [ngValue]="1">1 Thread (Seq)</option>
+                <option [ngValue]="2">2 Threads</option>
+                <option [ngValue]="4">4 Threads</option>
+                <option [ngValue]="8">8 Threads</option>
+              </select>
+            </div>
+            <div class="form-group form-check">
+              <label class="check-label">
+                <input type="checkbox" [(ngModel)]="formSalvarNoBanco" name="salvarNoBanco" />
+                Persistir no PostgreSQL
+              </label>
+            </div>
+            <button type="button" (click)="executarAlocacao()" [disabled]="alocacaoService.isLoading() || campusId <= 0" class="btn-primary">
+              {{ alocacaoService.isLoading() ? 'Processando...' : 'Executar Alocacao Inteligente' }}
+            </button>
+            <button type="button" (click)="executarBenchmark('medio')" [disabled]="alocacaoService.isLoading()" class="btn-secondary">
+              Benchmark Cientifico
+            </button>
+          </div>
+        </div>
+
+        @if (alocacaoService.errorMessage()) { <div class="alert alert-error">{{ alocacaoService.errorMessage() }}</div> }
+        @if (alocacaoService.sucessoMessage()) { <div class="alert alert-success">{{ alocacaoService.sucessoMessage() }}</div> }
+
+        @if (alocacaoService.metricas(); as m) {
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-label">Speedup OpenMP</span>
+              <span class="stat-value tabular-nums">{{ m.speedup.toFixed(2) }}x</span>
+              <small>{{ m.threads }} threads utilizadas</small>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Eficiencia Computacional</span>
+              <span class="stat-value tabular-nums">{{ m.eficiencia_pct.toFixed(1) }}%</span>
+              <small>Speedup / {{ m.threads }} threads</small>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Fracao Amdahl (f)</span>
+              <span class="stat-value tabular-nums">{{ m.fracao_amdahl.toFixed(4) }}</span>
+              <small>Parametro f teorico</small>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Tempos de Execucao</span>
+              <span class="stat-value tabular-nums" style="font-size: 1.25rem;">{{ m.tempo_paralelo_ms.toFixed(2) }} ms</span>
+              <small>Sequencial: {{ m.tempo_sequencial_ms.toFixed(2) }} ms</small>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Alocacoes Concluidas</span>
+              <span class="stat-value tabular-nums">{{ m.alocadas }}/{{ m.total_turmas }}</span>
+              <small>{{ m.conflitos }} turmas sem vaga</small>
+            </div>
+          </div>
+        }
+
+        @if (alocacaoService.alocacoes().length > 0) {
+          <div class="table-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Turma</th>
+                  <th>Disciplina</th>
+                  <th>Sala Alocada</th>
+                  <th>Dia da Semana</th>
+                  <th>Horario</th>
+                  <th>Ociosidade</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of alocacaoService.alocacoes(); track item.turma_id) {
+                  <tr>
+                    <td class="tabular-nums font-bold">#{{ item.turma_id }}</td>
+                    <td>{{ item.disciplina_codigo }} - {{ item.disciplina_nome }}</td>
+                    <td>
+                      <span class="badge" [class.badge-success]="item.sala_id > 0" [class.badge-danger]="item.sala_id <= 0">
+                        {{ item.sala_id > 0 ? (item.sala_bloco + ' - Sala ' + item.sala_numero) : 'Sem Sala Disponivel' }}
+                      </span>
+                    </td>
+                    <td>{{ formatarDiaSemana(item.dia_semana) }}</td>
+                    <td class="tabular-nums">{{ item.hora_inicio }} - {{ item.hora_fim }}</td>
+                    <td class="tabular-nums">{{ item.score_desperdicio !== undefined && item.score_desperdicio >= 0 ? (item.score_desperdicio + ' vagas') : '-' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+
       @if (abaAtiva() === 'resumo') {
         <div class="stats-grid">
           <div class="stat-card"><span class="stat-label">Total de Salas</span><span class="stat-value tabular-nums">{{ totalSalas() }}</span><small>Espacos fisicos ativos</small></div>
@@ -151,7 +253,12 @@ import { AuthService } from '../../services/auth.service';
     .panel-card, .table-card, .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; }
     .panel-card { padding: 1rem; }
     .panel-card h3 { margin: 0 0 0.75rem; font-size: 0.9375rem; font-weight: 600; color: #0f172a; }
+    .section-desc { font-size: 0.8125rem; color: #64748b; margin: 0; }
     .form-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
+    .input-label { font-size: 0.75rem; font-weight: 600; color: #475569; }
+    .form-check { justify-content: flex-end; padding-bottom: 0.4rem; }
+    .check-label { font-size: 0.8125rem; display: flex; align-items: center; gap: 0.35rem; color: #334155; cursor: pointer; }
     .form-input { padding: 0.4rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8125rem; flex: 1; min-width: 110px; }
     .flex-2 { flex: 2; }
     .btn-primary { background: #0f172a; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
@@ -164,9 +271,11 @@ import { AuthService } from '../../services/auth.service';
     .data-table tr:hover { background: #f8fafc; }
     .font-bold { font-weight: 600; color: #0f172a; }
     .badge { background: #f1f5f9; color: #334155; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem; text-transform: capitalize; }
+    .badge-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .badge-danger { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
     .empty-msg { text-align: center; color: #94a3b8; padding: 1.5rem; }
     .tabular-nums { font-variant-numeric: tabular-nums; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
     .stat-card { padding: 1rem; display: flex; flex-direction: column; }
     .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600; }
     .stat-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin: 0.25rem 0; }
@@ -186,8 +295,9 @@ import { AuthService } from '../../services/auth.service';
 export class AdminComponent implements OnInit {
   readonly adminService = inject(AdminService);
   readonly authService = inject(AuthService);
+  readonly alocacaoService = inject(AlocacaoService);
 
-  readonly abaAtiva = signal<'salas' | 'equipamentos' | 'resumo'>('salas');
+  readonly abaAtiva = signal<'salas' | 'equipamentos' | 'alocacao' | 'resumo'>('salas');
   readonly mensagemSucesso = signal<string | null>(null);
 
   campusId = 0;
@@ -209,6 +319,11 @@ export class AdminComponent implements OnInit {
   formEquipNome = '';
   formEquipDesc = '';
 
+  // Formulario da aba de Alocacao Inteligente
+  formPeriodoLetivo = '2026.1';
+  formMaxThreads = 4;
+  formSalvarNoBanco = true;
+
   readonly totalSalas = computed(() => this.adminService.salas().length);
   readonly capacidadeTotal = computed(() =>
     this.adminService.salas().reduce((acc, s) => acc + s.capacidade, 0),
@@ -224,7 +339,7 @@ export class AdminComponent implements OnInit {
     this.adminService.listarEquipamentos().subscribe({ error: () => {} });
   }
 
-  selecionarAba(aba: 'salas' | 'equipamentos' | 'resumo'): void {
+  selecionarAba(aba: 'salas' | 'equipamentos' | 'alocacao' | 'resumo'): void {
     this.abaAtiva.set(aba);
     this.mensagemSucesso.set(null);
     this.cancelarEdicao();
@@ -262,30 +377,15 @@ export class AdminComponent implements OnInit {
     };
 
     this.adminService.atualizarSala(salaAtual.id, payload).subscribe({
-      next: (s) => {
-        this.mensagemSucesso.set(`Sala ${s.bloco}-${s.numero} atualizada com sucesso!`);
-        this.salaEmEdicao.set(null);
-      },
-      error: () => {},
-    });
-  }
-
-  excluirSala(sala: Sala): void {
-    if (this.adminService.isLoading()) return;
-    this.mensagemSucesso.set(null);
-    this.adminService.excluirSala(sala.id).subscribe({
       next: () => {
-        this.mensagemSucesso.set(`Sala ${sala.bloco}-${sala.numero} removida com sucesso.`);
-        if (this.salaEmEdicao()?.id === sala.id) {
-          this.cancelarEdicao();
-        }
+        this.mensagemSucesso.set(`Sala ${bloco} - ${numero} atualizada com sucesso.`);
+        this.cancelarEdicao();
       },
       error: () => {},
     });
   }
 
   cadastrarSala(): void {
-    this.mensagemSucesso.set(null);
     if (this.adminService.isLoading() || this.campusId <= 0) return;
 
     const bloco = this.formBloco.trim();
@@ -301,37 +401,50 @@ export class AdminComponent implements OnInit {
       numero,
       tipo: this.formTipo,
       capacidade: capNum,
-      turnos_disponiveis: ['matutino', 'vespertino'],
+      turnos_disponiveis: ['matutino', 'vespertino', 'noturno'],
     };
 
     this.adminService.criarSala(payload).subscribe({
-      next: (s) => {
-        this.mensagemSucesso.set(`Sala ${s.bloco}-${s.numero} cadastrada com sucesso!`);
+      next: (novaSala) => {
+        this.mensagemSucesso.set(
+          `Sala ${novaSala.bloco} - ${novaSala.numero} cadastrada com sucesso.`,
+        );
         this.formBloco = '';
         this.formNumero = '';
-        this.formTipo = 'regular';
         this.formCapacidade = 40;
+        this.formTipo = 'regular';
+      },
+      error: () => {},
+    });
+  }
+
+  excluirSala(sala: Sala): void {
+    if (this.adminService.isLoading()) return;
+    this.adminService.excluirSala(sala.id).subscribe({
+      next: () => {
+        this.mensagemSucesso.set(`Sala ${sala.bloco} - ${sala.numero} excluida com sucesso.`);
+        if (this.salaEmEdicao()?.id === sala.id) {
+          this.cancelarEdicao();
+        }
       },
       error: () => {},
     });
   }
 
   cadastrarEquipamento(): void {
-    this.mensagemSucesso.set(null);
     if (this.adminService.isLoading()) return;
 
     const nome = this.formEquipNome.trim();
-    if (nome.length < 2) return;
+    if (!nome) return;
 
-    const desc = this.formEquipDesc.trim();
     const payload: EquipamentoCreate = {
       nome,
-      descricao: desc.length > 0 ? desc : undefined,
+      descricao: this.formEquipDesc.trim() || undefined,
     };
 
     this.adminService.criarEquipamento(payload).subscribe({
-      next: (e) => {
-        this.mensagemSucesso.set(`Equipamento '${e.nome}' adicionado ao catalogo!`);
+      next: (novo) => {
+        this.mensagemSucesso.set(`Equipamento '${novo.nome}' cadastrado com sucesso.`);
         this.formEquipNome = '';
         this.formEquipDesc = '';
       },
@@ -340,24 +453,66 @@ export class AdminComponent implements OnInit {
   }
 
   vincularEquipamento(): void {
-    if (this.adminService.isLoading()) return;
-    if (!this.formAssocSalaId || !this.formAssocEquipId) return;
-    const qtd = Math.floor(Number(this.formAssocQtd));
-    if (isNaN(qtd) || qtd < 1 || qtd > 1000) return;
+    if (this.adminService.isLoading() || !this.formAssocSalaId || !this.formAssocEquipId) return;
+
+    const qtdNum = Math.floor(Number(this.formAssocQtd));
+    if (isNaN(qtdNum) || qtdNum < 1 || qtdNum > 1000) return;
 
     this.adminService
       .associarEquipamento(this.formAssocSalaId, {
         equipamento_id: this.formAssocEquipId,
-        quantidade: qtd,
+        quantidade: qtdNum,
       })
       .subscribe({
         next: () => {
-          this.mensagemSucesso.set('Equipamento vinculado a sala com sucesso!');
+          this.mensagemSucesso.set('Equipamento vinculado a sala com sucesso.');
           this.formAssocSalaId = null;
           this.formAssocEquipId = null;
           this.formAssocQtd = 1;
         },
         error: () => {},
       });
+  }
+
+  formatarDiaSemana(dia: number): string {
+    const dias = [
+      'Segunda-feira',
+      'Terca-feira',
+      'Quarta-feira',
+      'Quinta-feira',
+      'Sexta-feira',
+      'Sabado',
+      'Domingo',
+    ];
+    return dias[dia] ?? `Dia ${dia}`;
+  }
+
+  executarAlocacao(): void {
+    if (this.campusId <= 0 || this.alocacaoService.isLoading()) return;
+    this.alocacaoService
+      .otimizarAlocacao({
+        periodo_letivo: this.formPeriodoLetivo.trim() || '2026.1',
+        campus_id: this.campusId,
+        max_threads: Number(this.formMaxThreads) || 4,
+        salvar_no_banco: this.formSalvarNoBanco,
+      })
+      .subscribe({
+        next: () => {
+          if (this.formSalvarNoBanco) {
+            this.adminService.listarSalas(this.campusId).subscribe({ error: () => {} });
+          }
+        },
+        error: () => {},
+      });
+  }
+
+  executarBenchmark(cenario: string = 'medio'): void {
+    if (this.alocacaoService.isLoading()) return;
+    this.alocacaoService
+      .executarBenchmark({
+        cenario,
+        threads: Number(this.formMaxThreads) || 4,
+      })
+      .subscribe({ error: () => {} });
   }
 }

@@ -1,20 +1,23 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O3 -fPIC -fopenmp
+CFLAGS = -Wall -Wextra -pedantic -std=c11 -O3 -fPIC -fopenmp
 LDFLAGS = -shared -fopenmp
 
-TARGET = motor_alocacao.so
-SRCS = motor.c
-OBJS = $(SRCS:.c=.o)
+TARGET_SO = motor_alocacao.so
+TARGET_DLL = motor_alocacao.dll
+BENCHMARK_BIN = benchmark
 
-all: $(TARGET)
+all: $(TARGET_SO) $(TARGET_DLL) $(BENCHMARK_BIN)
 
-$(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $^
+$(TARGET_SO): motor.c motor.h
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ motor.c
 
-%.o: %.c motor.h
-	$(CC) $(CFLAGS) -c $< -o $@
+$(TARGET_DLL): motor.c motor.h
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ motor.c
+
+$(BENCHMARK_BIN): benchmark.c motor.c motor.h
+	$(CC) $(CFLAGS) -fopenmp -o $@ benchmark.c motor.c
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f *.o *.so *.dll $(BENCHMARK_BIN) $(BENCHMARK_BIN).exe
 
 .PHONY: all clean
