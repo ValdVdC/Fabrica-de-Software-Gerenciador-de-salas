@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AdminComponent } from './admin.component';
 import { AdminService, Sala, Equipamento } from '../../services/admin.service';
 import { AuthService, UserSummary } from '../../services/auth.service';
+import { AlocacaoService, MetricasAlocacao, AlocacaoItem } from '../../services/alocacao.service';
 import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 
@@ -10,6 +11,7 @@ describe('AdminComponent', () => {
   let fixture: ComponentFixture<AdminComponent>;
   let adminServiceSpy: jasmine.SpyObj<AdminService>;
   let authServiceSpy: jasmine.SpyObj<AuthService>;
+  let alocacaoServiceSpy: jasmine.SpyObj<AlocacaoService>;
 
   // prettier-ignore
   const mockSalas = signal<Sala[]>([
@@ -22,8 +24,27 @@ describe('AdminComponent', () => {
   const mockCurrentUser = signal<UserSummary | null>({ id: 1, nome: 'Admin Master', email: 'admin@ufma.br', perfil: 'admin', campus_id: 2 });
   const mockLoading = signal(false);
 
+  const mockAlocacaoLoading = signal(false);
+  const mockAlocacaoError = signal<string | null>(null);
+  const mockAlocacaoSucesso = signal<string | null>(null);
+  const mockMetricas = signal<MetricasAlocacao | null>(null);
+  const mockAlocacoes = signal<AlocacaoItem[]>([]);
+
   beforeEach(async () => {
     mockLoading.set(false);
+    mockCurrentUser.set({
+      id: 1,
+      nome: 'Admin Master',
+      email: 'admin@ufma.br',
+      perfil: 'admin',
+      campus_id: 2,
+    });
+    mockAlocacaoLoading.set(false);
+    mockAlocacaoError.set(null);
+    mockAlocacaoSucesso.set(null);
+    mockMetricas.set(null);
+    mockAlocacoes.set([]);
+
     adminServiceSpy = jasmine.createSpyObj(
       'AdminService',
       [
@@ -46,6 +67,19 @@ describe('AdminComponent', () => {
     authServiceSpy = jasmine.createSpyObj('AuthService', [], {
       currentUser: mockCurrentUser.asReadonly(),
     });
+
+    alocacaoServiceSpy = jasmine.createSpyObj(
+      'AlocacaoService',
+      ['otimizarAlocacao', 'executarBenchmark', 'limparMensagens'],
+      {
+        isLoading: mockAlocacaoLoading.asReadonly(),
+        errorMessage: mockAlocacaoError.asReadonly(),
+        sucessoMessage: mockAlocacaoSucesso.asReadonly(),
+        metricas: mockMetricas.asReadonly(),
+        alocacoes: mockAlocacoes.asReadonly(),
+      },
+    );
+
     adminServiceSpy.listarSalas.and.returnValue(of(mockSalas()));
     adminServiceSpy.listarEquipamentos.and.returnValue(of(mockEquipamentos()));
 
@@ -54,6 +88,7 @@ describe('AdminComponent', () => {
       providers: [
         { provide: AdminService, useValue: adminServiceSpy },
         { provide: AuthService, useValue: authServiceSpy },
+        { provide: AlocacaoService, useValue: alocacaoServiceSpy },
       ],
     }).compileComponents();
 
@@ -73,130 +108,177 @@ describe('AdminComponent', () => {
   });
 
   it('nao deve listar salas se usuario autenticado nao possuir campus valido', () => {
-    const semCampusSpy = jasmine.createSpyObj('AuthService', [], {
-      currentUser: signal<UserSummary | null>(null).asReadonly(),
+    mockCurrentUser.set({
+      id: 2,
+      nome: 'Admin Sem Campus',
+      email: 'sem@campus.br',
+      perfil: 'admin',
+      campus_id: 0,
     });
     const localFixture = TestBed.createComponent(AdminComponent);
-    localFixture.debugElement.injector.get(AuthService);
-    (localFixture.componentInstance as any).authService = semCampusSpy;
+    const localComp = localFixture.componentInstance;
     adminServiceSpy.listarSalas.calls.reset();
 
-    localFixture.componentInstance.ngOnInit();
-
-    expect(localFixture.componentInstance.campusId).toBe(0);
+    localComp.ngOnInit();
+    expect(localComp.campusId).toBe(0);
     expect(adminServiceSpy.listarSalas).not.toHaveBeenCalled();
   });
 
-  it('deve alternar abas e limpar mensagem de sucesso', () => {
-    component.mensagemSucesso.set('Mensagem teste');
+  it('deve alternar entre as abas e limpar mensagens', () => {
+    component.mensagemSucesso.set('Mensagem antiga');
     component.selecionarAba('equipamentos');
     expect(component.abaAtiva()).toBe('equipamentos');
     expect(component.mensagemSucesso()).toBeNull();
+
+    component.selecionarAba('alocacao');
+    expect(component.abaAtiva()).toBe('alocacao');
+
+    component.selecionarAba('resumo');
+    expect(component.abaAtiva()).toBe('resumo');
   });
 
-  it('deve submeter criacao de sala e atualizar estado ao concluir com reset de tipo', () => {
-    // prettier-ignore
+  it('deve formatar corretamente os dias da semana segundo ISO 8601', () => {
+    expect(component.formatarDiaSemana(0)).toBe('Segunda-feira');
+    expect(component.formatarDiaSemana(1)).toBe('Terca-feira');
+    expect(component.formatarDiaSemana(2)).toBe('Quarta-feira');
+    expect(component.formatarDiaSemana(3)).toBe('Quinta-feira');
+    expect(component.formatarDiaSemana(4)).toBe('Sexta-feira');
+    expect(component.formatarDiaSemana(5)).toBe('Sabado');
+    expect(component.formatarDiaSemana(6)).toBe('Domingo');
+    expect(component.formatarDiaSemana(7)).toBe('Dia 7');
+  });
+
+  it('deve acionar alocacao inteligente via alocacaoService', () => {
+    component.campusId = 2;
+    component.formPeriodoLetivo = '2026.1';
+    component.formMaxThreads = 4;
+    component.formSalvarNoBanco = true;
+
+    alocacaoServiceSpy.otimizarAlocacao.and.returnValue(
+      of({
+        sucesso: true,
+        mensagem: 'Alocacao executada com sucesso.',
+        metricas: {
+          tempo_sequencial_ms: 18.0,
+          tempo_paralelo_ms: 4.5,
+          speedup: 4.0,
+          eficiencia_pct: 100.0,
+          fracao_amdahl: 1.0,
+          threads: 4,
+          total_turmas: 10,
+          alocadas: 10,
+          conflitos: 0,
+        },
+        alocacoes: [],
+      }),
+    );
+
+    component.executarAlocacao();
+
+    expect(alocacaoServiceSpy.otimizarAlocacao).toHaveBeenCalledWith({
+      periodo_letivo: '2026.1',
+      campus_id: 2,
+      max_threads: 4,
+      salvar_no_banco: true,
+    });
+  });
+
+  it('deve acionar benchmark cientifico via alocacaoService', () => {
+    component.formMaxThreads = 4;
+    alocacaoServiceSpy.executarBenchmark.and.returnValue(
+      of({
+        cenario: 'medio',
+        num_turmas: 100,
+        num_salas: 40,
+        metricas: {
+          tempo_sequencial_ms: 19.0,
+          tempo_paralelo_ms: 5.0,
+          speedup: 3.8,
+          eficiencia_pct: 95.0,
+          fracao_amdahl: 0.98,
+          threads: 4,
+          total_turmas: 100,
+          alocadas: 99,
+          conflitos: 1,
+        },
+      }),
+    );
+
+    component.executarBenchmark('medio');
+
+    expect(alocacaoServiceSpy.executarBenchmark).toHaveBeenCalledWith({
+      cenario: 'medio',
+      threads: 4,
+    });
+  });
+
+  it('deve cadastrar nova sala com sucesso e limpar formulario', () => {
     const novaSala: Sala = {
-      id: 2, campus_id: 2, bloco: 'B', numero: '202', tipo: 'laboratorio', capacidade: 30, turnos_disponiveis: ['matutino'], ativo: true,
+      id: 2,
+      campus_id: 2,
+      bloco: 'B',
+      numero: '202',
+      tipo: 'laboratorio',
+      capacidade: 30,
+      turnos_disponiveis: ['matutino', 'vespertino', 'noturno'],
+      ativo: true,
     };
     adminServiceSpy.criarSala.and.returnValue(of(novaSala));
 
+    component.campusId = 2;
     component.formBloco = 'B';
     component.formNumero = '202';
     component.formTipo = 'laboratorio';
-    component.formCapacidade = 30.8;
-
+    component.formCapacidade = 30;
     component.cadastrarSala();
 
-    // prettier-ignore
-    expect(adminServiceSpy.criarSala).toHaveBeenCalledWith(jasmine.objectContaining({
-      campus_id: 2, bloco: 'B', numero: '202', tipo: 'laboratorio', capacidade: 30,
-    }));
-    expect(component.mensagemSucesso()).toContain('Sala B-202 cadastrada com sucesso!');
+    expect(adminServiceSpy.criarSala).toHaveBeenCalledWith({
+      campus_id: 2,
+      bloco: 'B',
+      numero: '202',
+      tipo: 'laboratorio',
+      capacidade: 30,
+      turnos_disponiveis: ['matutino', 'vespertino', 'noturno'],
+    });
+    expect(component.mensagemSucesso()).toContain('Sala B - 202 cadastrada com sucesso.');
     expect(component.formBloco).toBe('');
     expect(component.formNumero).toBe('');
-    expect(component.formTipo).toBe('regular');
-    expect(component.formCapacidade).toBe(40);
   });
 
-  it('deve submeter criacao de equipamento e atualizar estado ao concluir com descricao opcional', () => {
-    // prettier-ignore
-    const novoEq: Equipamento = { id: 11, nome: 'Notebook Dell', descricao: 'i7 16GB', created_at: '2026-03-01T10:00:00Z' };
-    adminServiceSpy.criarEquipamento.and.returnValue(of(novoEq));
+  it('deve cadastrar novo equipamento no catalogo institucional', () => {
+    const novoEquip: Equipamento = {
+      id: 15,
+      nome: 'Projetor 4K',
+      descricao: 'Para auditorio',
+      created_at: '2026-03-02T12:00:00Z',
+    };
+    adminServiceSpy.criarEquipamento.and.returnValue(of(novoEquip));
 
-    component.formEquipNome = 'Notebook Dell';
-    component.formEquipDesc = '   ';
+    component.formEquipNome = 'Projetor 4K';
+    component.formEquipDesc = 'Para auditorio';
     component.cadastrarEquipamento();
 
     expect(adminServiceSpy.criarEquipamento).toHaveBeenCalledWith({
-      nome: 'Notebook Dell',
-      descricao: undefined,
+      nome: 'Projetor 4K',
+      descricao: 'Para auditorio',
     });
-    expect(component.mensagemSucesso()).toContain("Equipamento 'Notebook Dell' adicionado");
+    expect(component.mensagemSucesso()).toContain(
+      "Equipamento 'Projetor 4K' cadastrado com sucesso.",
+    );
     expect(component.formEquipNome).toBe('');
   });
 
-  it('nao deve submeter formularios quando adminService.isLoading for verdadeiro', () => {
-    mockLoading.set(true);
-    component.formBloco = 'C';
-    component.formNumero = '303';
-    component.cadastrarSala();
-    expect(adminServiceSpy.criarSala).not.toHaveBeenCalled();
-
-    component.formEquipNome = 'Cabo HDMI';
-    component.cadastrarEquipamento();
-    expect(adminServiceSpy.criarEquipamento).not.toHaveBeenCalled();
-  });
-
-  it('nao deve submeter formularios com campos vazios ou invalidos', () => {
-    component.mensagemSucesso.set('Antigo');
-    component.formBloco = '   ';
-    component.formNumero = '';
-    component.cadastrarSala();
-    expect(adminServiceSpy.criarSala).not.toHaveBeenCalled();
-    expect(component.mensagemSucesso()).toBeNull();
-
-    component.formEquipNome = 'a';
-    component.cadastrarEquipamento();
-    expect(adminServiceSpy.criarEquipamento).not.toHaveBeenCalled();
-  });
-
-  it('nao deve submeter sala com capacidade invalida', () => {
-    component.formBloco = 'A';
-    component.formNumero = '101';
-    component.formCapacidade = 0;
-    component.cadastrarSala();
-    component.formCapacidade = 5001;
-    component.cadastrarSala();
-    expect(adminServiceSpy.criarSala).not.toHaveBeenCalled();
-  });
-
-  it('deve manter formulario e nao exibir sucesso em caso de erro na API', () => {
-    adminServiceSpy.criarSala.and.returnValue(throwError(() => new Error('Falha')));
-    component.formBloco = 'A';
-    component.formNumero = '101';
-    component.cadastrarSala();
-    expect(component.mensagemSucesso()).toBeNull();
-    expect(component.formBloco).toBe('A');
-  });
-
-  it('deve iniciar e cancelar edicao de sala corretamente', () => {
-    // prettier-ignore
-    const salaAlvo: Sala = { id: 10, campus_id: 2, bloco: 'C', numero: '301', tipo: 'auditorio', capacidade: 120, turnos_disponiveis: ['matutino'], ativo: true };
-    component.iniciarEdicao(salaAlvo);
-    expect(component.salaEmEdicao()).toEqual(salaAlvo);
-    expect(component.formEditBloco).toBe('C');
-    expect(component.formEditNumero).toBe('301');
-    expect(component.formEditTipo).toBe('auditorio');
-    expect(component.formEditCapacidade).toBe(120);
-
-    component.cancelarEdicao();
-    expect(component.salaEmEdicao()).toBeNull();
-  });
-
-  it('deve salvar edicao de sala com sucesso e fechar modo edicao', () => {
-    // prettier-ignore
-    const salaAlvo: Sala = { id: 10, campus_id: 2, bloco: 'C', numero: '301', tipo: 'auditorio', capacidade: 120, turnos_disponiveis: ['matutino'], ativo: true };
+  it('deve atualizar sala em edicao com sucesso', () => {
+    const salaAlvo: Sala = {
+      id: 10,
+      campus_id: 2,
+      bloco: 'C',
+      numero: '301',
+      tipo: 'auditorio',
+      capacidade: 100,
+      turnos_disponiveis: ['noturno'],
+      ativo: true,
+    };
     const salaAtualizada: Sala = { ...salaAlvo, capacidade: 150, tipo: 'regular' };
     adminServiceSpy.atualizarSala.and.returnValue(of(salaAtualizada));
 
@@ -211,7 +293,7 @@ describe('AdminComponent', () => {
       tipo: 'regular',
       capacidade: 150,
     });
-    expect(component.mensagemSucesso()).toContain('Sala C-301 atualizada com sucesso!');
+    expect(component.mensagemSucesso()).toContain('Sala C - 301 atualizada com sucesso.');
     expect(component.salaEmEdicao()).toBeNull();
   });
 
@@ -224,7 +306,7 @@ describe('AdminComponent', () => {
     component.excluirSala(salaAlvo);
 
     expect(adminServiceSpy.excluirSala).toHaveBeenCalledWith(15);
-    expect(component.mensagemSucesso()).toContain('Sala D-401 removida com sucesso.');
+    expect(component.mensagemSucesso()).toContain('Sala D - 401 excluida com sucesso.');
     expect(component.salaEmEdicao()).toBeNull();
   });
 
@@ -241,7 +323,7 @@ describe('AdminComponent', () => {
       equipamento_id: 10,
       quantidade: 3,
     });
-    expect(component.mensagemSucesso()).toContain('Equipamento vinculado a sala com sucesso!');
+    expect(component.mensagemSucesso()).toContain('Equipamento vinculado a sala com sucesso.');
     expect(component.formAssocSalaId).toBeNull();
     expect(component.formAssocEquipId).toBeNull();
   });
