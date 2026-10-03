@@ -607,6 +607,43 @@ python scripts/seed_db.py
 
 ---
 
+## 3.7 Dificuldades Encontradas e Soluções Aplicadas na Sprint 03
+
+1. **Compilação C/OpenMP no Container Slim**:
+   - *Desafio*: O container Python 3.12 Slim não incluía os cabeçalhos padrão da biblioteca C (`stdio.h`, `libc6-dev`) para compilar `motor_alocacao.so`.
+   - *Solução*: Substituição de pacotes avulsos pelo metapacote `build-essential` no `Dockerfile` do backend, garantindo compilação nativa com OpenMP.
+2. **Normalização de Final de Linha (CRLF vs LF) e Cache Docker**:
+   - *Desafio*: Ambientes Windows geravam quebras de linha CRLF que causavam falhas em scripts shell montados em containers Linux.
+   - *Solução*: Configuração de arquivo `.gitattributes` forçando `eol=lf` em scripts e adição de diretivas no Dockerfile.
+3. **Limite de Diff por PR**:
+   - *Desafio*: Manter cada entrega dentro do limite normativo de no máximo 400 linhas de código modificado por PR.
+   - *Solução*: Fatiamento vertical estrito com criação de serviços reativos no frontend em PRs complementares aos endpoints de backend, acompanhado de testes de contrato automatizados.
+
+---
+
+## 3.8 Próximos Passos (Transição para Sprint 04 e 05)
+1. **Primeiro Módulo Completo da Sprint 04**: Integração completa dos módulos de cadastro acadêmico e visualização de grade horária (Salas, Cursos, Turmas, Matrículas e Horários).
+2. **Desenvolvimento do Algoritmo de Alocação em C (Sprint 05)**: Implementação do algoritmo exato/heurístico de busca de salas sem conflitos em `backend/motor_alocacao/motor.c`.
+3. **Paralelização OpenMP e Coleta Científica de Speedup**: Medição dos tempos de execução sequencial vs. paralelo com $k \in \{1, 2, 4, 8\}$ threads sob os cenários de carga de 20, 100 e 500 turmas.
+
+---
+
+## 3.9 Registro e Justificativa de Ajustes de Modelagem (Sprint 02 → Sprint 03)
+
+Em atendimento às boas práticas de engenharia de software e aos critérios avaliativos da disciplina, registra-se a evolução técnica entre a modelagem conceitual inicial (Sprint 02) e o modelo físico relacional implementado e versionado via Alembic (Sprint 03):
+
+| Item de Modelagem | Estado Conceitual (Sprint 02) | Estado Físico Refinado (Sprint 03) | Justificativa Técnica da Alteração |
+| :--- | :--- | :--- | :--- |
+| **Nomenclatura de Tabelas** | Plural (`campi`, `usuarios`, `salas`) | Singular (`campus`, `usuario`, `sala`) | Padronização idiomática em PostgreSQL e conformidade direta com os nomes de classes do ORM SQLAlchemy 2.0. |
+| **Auditoria Temporal** | Campo único `criado_em` | Par atômico `created_at` e `updated_at` | Rastreabilidade granular do ciclo de vida das entidades, permitindo identificar quando um registro foi modificado após sua criação. |
+| **Tabela Associativa** | `sala_equipamento` com ID substituto (`id` PK) | Chave primária composta `(sala_id, equipamento_id)` | Eliminação de surrogate key desnecessária; garantia estrutural e física no SGBD contra duplicidade de associação entre sala e equipamento. |
+| **Ciclo de Vida / Soft-Delete** | Não contemplado em `campus` e `sala` | Coluna booleana `ativo` com valor padrão `true` | Preservação de integridade referencial com horários históricos sem exclusão física de registros essenciais. |
+| **Tipagem de Enumerações** | Tipos nativos `CREATE TYPE ... AS ENUM` | Colunas `VARCHAR` com restrições `CHECK` e Pydantic | Portabilidade em migrações, redução de overhead de locking em DDLs no PostgreSQL e validação semântica em nível de aplicação. |
+| **Rastreamento de Matrícula** | Apenas timestamp de matrícula | Adição de coluna `status: VARCHAR(20)` (`ativa`, `trancada`, `cancelada`) | Viabilização do controle acadêmico de evasão discente que alimenta o modelo preditivo de faltas. |
+| **Integridade de Alocação** | Restrições básicas | `CHECK(hora_inicio < hora_fim)` e `CHECK(dia_semana BETWEEN 0 AND 6)` | Salvaguarda física contra corrupção de horários no banco antes mesmo do motor em C processar a grade. |
+
+---
+
 # PARTE 4 — SPRINT 04: PRIMEIRO MÓDULO COMPLETO (ATUAL)
 
 ## 4.1 Descrição do Primeiro Módulo Totalmente Funcional
@@ -644,6 +681,9 @@ A Sprint 04 consolida o **Módulo Operacional de Gestão de Infraestrutura e Ofe
        └────────────────────────────────────────────────────────┘
 ```
 
+![Figura 1 — Tela de Autenticação e Perfis de Acesso](images/print_01_login.png)
+*Figura 1 — Tela de login com contas demonstrativas para alternância rápida entre perfis RBAC.*
+
 ### 4.1.1 Gestão de Salas e Espaços Físicos (Painel do Administrador)
 A interface de infraestrutura (`/admin`) permite ao Administrador e Coordenador executar o ciclo de vida completo dos espaços físicos:
 1. **Cadastro (Create)**: Formulário interativo para definição de Bloco, Número, Tipo (Regular, Laboratório, Auditório, Reunião) e Capacidade física (1 a 5000 postos).
@@ -651,8 +691,17 @@ A interface de infraestrutura (`/admin`) permite ao Administrador e Coordenador 
 3. **Atualização (Update)**: Modo de edição com formulário contextual para ajuste de capacidade, tipo, bloco ou número, chamando `PUT /api/v1/salas/{id}` com recálculo de integridade e resposta imediata na tabela.
 4. **Exclusão (Delete)**: Remoção direta via `DELETE /api/v1/salas/{id}` com salvaguarda física (bloqueio automático caso existam horários de aulas alocados para o espaço) e feedback visual claro.
 
+![Figura 2 — Painel Administrativo de Salas e Espaços Físicos](images/print_02_admin_salas.png)
+*Figura 2 — Consulta reativa de salas físicas com paginação, badges semânticos de tipo e ações operacionais de edição e exclusão.*
+
+![Figura 3 — Formulário Contextual de Edição de Sala](images/print_03_admin_editar_sala.png)
+*Figura 3 — Modo de edição de sala física com autopreenchimento e validação de capacidade.*
+
 ### 4.1.2 Catálogo e Associação de Recursos Materiais
 A aba de Equipamentos permite o cadastro padronizado de recursos (ex.: Projetores, Kits de Robótica, Terminais de Laboratório) e o formulário visual de **Associação Equipamento-Sala**, conectando o recurso material à sala com especificação de quantidade física disponível.
+
+![Figura 4 — Catálogo de Recursos e Associação Equipamento-Sala](images/print_05_admin_equipamentos.png)
+*Figura 4 — Catálogo de equipamentos e formulário de vinculação de recursos materiais às salas com especificação de quantidade instalada.*
 
 ### 4.1.3 Gestão Acadêmica de Cursos, Disciplinas, Turmas e Matrículas (Secretaria)
 No painel da Secretaria (`/secretaria`), o fluxo acadêmico é composto de forma hierárquica e encadeada:
@@ -661,10 +710,19 @@ No painel da Secretaria (`/secretaria`), o fluxo acadêmico é composto de forma
 3. **Turmas**: Abertura de turmas para o período letivo (ex.: `2026.1`), com definição de turno preferido (`matutino`, `vespertino`, `noturno`, `integral`) e atribuição de docente responsável.
 4. **Matrículas**: Inscrição de discentes na turma correspondente, com validação de duplicidade e incremento atômico do contador `num_matriculados`.
 
+![Figura 5 — Painel Acadêmico da Secretaria](images/print_06_secretaria.png)
+*Figura 5 — Gestão integrada de cursos, disciplinas curriculares, turmas semestrais e matrículas discentes.*
+
 ### 4.1.4 Grade Horária Semanal Integrada (Docentes e Discentes)
 O componente `GradeHorariaComponent` consome o endpoint `GET /api/v1/horarios/meus`:
 - **Docentes (`/professor`)**: Visualizam a grade semanal das turmas sob sua regência, identificando a sala e bloco onde ministrarão cada aula.
 - **Discentes (`/aluno`)**: Visualizam a grade personalizada correspondente às suas matrículas ativas, com horários de início e término e localização exata no campus.
+
+![Figura 6 — Grade Horária Semanal do Docente](images/print_07_professor_grade.png)
+*Figura 6 — Matriz visual de horários semanais do professor com identificação de turma, disciplina e sala alocada.*
+
+![Figura 7 — Grade Horária Semanal do Discente](images/print_08_aluno_grade.png)
+*Figura 7 — Visão semanal personalizada do discente exibindo turmas matriculadas e salas alocadas.*
 
 ---
 
@@ -790,6 +848,9 @@ O sistema implementa uma camada padronizada de captura de exceções para garant
    - **Sucesso**: Caixa com borda verde suave (`#bbf7d0`), fundo verde claro (`#f0fdf4`) e texto verde escuro (`#15803d`).
    - **Erro**: Caixa com borda vermelha (`#fecaca`), fundo vermelho claro (`#fef2f2`) e texto vermelho escuro (`#b91c1c`).
 
+![Figura 8 — Feedback Visual de Erro HTTP 409 Conflict](images/print_04_admin_erro_409.png)
+*Figura 8 — Notificação semântica de conflito na interface ao tentar cadastrar sala duplicada no mesmo campus.*
+
 ---
 
 ## 4.5 Navegação, Usabilidade e Acessibilidade
@@ -845,7 +906,11 @@ flowchart TD
 O repositório do SIGAAS adota práticas de nível corporativo (*Enterprise Software Engineering*):
 - **Trunk-Based Development**: Trabalho estritamente conduzido em branches semânticas com Pull Requests direcionados à `main`.
 - **Squash and Merge Exclusivo**: Preservação de histórico linear de commits no formato Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, `test(...)`).
-- **Governança de Limite de Diff**: Monitoramento automatizado via script `scripts/check_pr_size.py` garantindo que PRs de código não excedam de 300 a 400 linhas modificadas.
+- **Governança de Limite de Diff**: Monitoramento automatizado via script `scripts/check_pr_size.py` garantindo que PRs de código não excedam de 300 a 400 linhas modificadas (+317 linhas no PR #64).
+- **Rastreabilidade Oficial do Módulo**:
+  - **Pull Request Oficial**: [PR #64](https://github.com/ValdVdC/Fabrica-de-Software-Gerenciador-de-salas/pull/64) (`feat(admin): implementar crud completo de salas e relatorio da sprint 04`)
+  - **Commit na Branch `main`**: `35da5e5adbcf060b3d5971e358ca39c3af93d915`
+  - **Pipeline de CI Enterprise**: Execução `36248364771` aprovada com 100% de sucesso (Governança, Pytest 93%, Motor C OpenMP, Karma e Docker Smoke Test).
 
 ### 4.6.1 Cobertura de Testes Automatizados no Backend (Pytest)
 A suíte de testes do backend atinge **93% de cobertura de código**, superando com folga a meta mínima institucional de 85%:
