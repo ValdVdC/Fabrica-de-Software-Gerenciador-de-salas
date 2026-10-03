@@ -17,10 +17,12 @@ typedef struct {
 } GradeOcupacaoSala;
 
 static int verificar_sobreposicao(int ini1, int fim1, int ini2, int fim2) {
+    if (ini1 >= fim1 || ini2 >= fim2) return 0;
     return !(fim1 <= ini2 || ini1 >= fim2);
 }
 
 static int sala_tem_conflito(const GradeOcupacaoSala* grade, int dia_semana, int ini, int fim) {
+    if (!grade || !grade->intervalos) return 0;
     for (int k = 0; k < grade->count; k++) {
         if (grade->intervalos[k].dia_semana == dia_semana) {
             if (verificar_sobreposicao(ini, fim, grade->intervalos[k].inicio_min, grade->intervalos[k].fim_min)) {
@@ -32,6 +34,7 @@ static int sala_tem_conflito(const GradeOcupacaoSala* grade, int dia_semana, int
 }
 
 static void adicionar_reserva(GradeOcupacaoSala* grade, int dia_semana, int ini, int fim) {
+    if (!grade) return;
     if (grade->count >= grade->capacidade) {
         int nova_cap = (grade->capacidade == 0) ? 16 : grade->capacidade * 2;
         IntervaloHorario* novo_ptr = (IntervaloHorario*)realloc(grade->intervalos, (size_t)nova_cap * sizeof(IntervaloHorario));
@@ -39,6 +42,7 @@ static void adicionar_reserva(GradeOcupacaoSala* grade, int dia_semana, int ini,
         grade->intervalos = novo_ptr;
         grade->capacidade = nova_cap;
     }
+    if (!grade->intervalos) return;
     grade->intervalos[grade->count].dia_semana = dia_semana;
     grade->intervalos[grade->count].inicio_min = ini;
     grade->intervalos[grade->count].fim_min = fim;
@@ -73,35 +77,38 @@ static unsigned int prng_next(unsigned int* seed) {
     return *seed;
 }
 
-static void gerar_ordem_turmas(int* ordem, int num_turmas, const TurmaC* turmas, int iteracao) {
+static void ordenar_turmas_bfd(int* ordem, int num_turmas, const TurmaC* turmas) {
     for (int i = 0; i < num_turmas; i++) {
         ordem[i] = i;
     }
-
-    if (iteracao == 0) {
-        // Ordenacao deterministica Best-Fit Decreasing:
-        // Laboratorios primeiro, depois turmas com mais alunos
-        for (int i = 0; i < num_turmas - 1; i++) {
-            for (int j = i + 1; j < num_turmas; j++) {
-                int ti = ordem[i];
-                int tj = ordem[j];
-                int lab_i = (turmas[ti].tipo_exigido == TIPO_SALA_LABORATORIO);
-                int lab_j = (turmas[tj].tipo_exigido == TIPO_SALA_LABORATORIO);
-                if (lab_j > lab_i || (lab_j == lab_i && turmas[tj].num_matriculados > turmas[ti].num_matriculados)) {
-                    int tmp = ordem[i];
-                    ordem[i] = ordem[j];
-                    ordem[j] = tmp;
-                }
+    for (int i = 0; i < num_turmas - 1; i++) {
+        for (int j = i + 1; j < num_turmas; j++) {
+            int ti = ordem[i];
+            int tj = ordem[j];
+            int lab_i = (turmas[ti].tipo_exigido == TIPO_SALA_LABORATORIO);
+            int lab_j = (turmas[tj].tipo_exigido == TIPO_SALA_LABORATORIO);
+            if (lab_j > lab_i || (lab_j == lab_i && turmas[tj].num_matriculados > turmas[ti].num_matriculados)) {
+                int tmp = ordem[i];
+                ordem[i] = ordem[j];
+                ordem[j] = tmp;
             }
         }
-    } else {
-        // Perturbacao deterministica baseada na iteracao
+    }
+}
+
+static void gerar_ordem_turmas(int* ordem, int num_turmas, const int* ordem_base_bfd, int iteracao) {
+    memcpy(ordem, ordem_base_bfd, (size_t)num_turmas * sizeof(int));
+
+    if (iteracao > 0 && num_turmas > 1) {
         unsigned int seed = (unsigned int)iteracao * 2654435761U + 13U;
-        for (int i = num_turmas - 1; i > 0; i--) {
-            int j = (int)(prng_next(&seed) % (unsigned int)(i + 1));
-            int tmp = ordem[i];
-            ordem[i] = ordem[j];
-            ordem[j] = tmp;
+        // Perturbacoes locais sobre a base Best-Fit Decreasing
+        int num_trocas = 1 + (int)(prng_next(&seed) % (unsigned int)(num_turmas > 10 ? 5 : 2));
+        for (int k = 0; k < num_trocas; k++) {
+            int p1 = (int)(prng_next(&seed) % (unsigned int)num_turmas);
+            int p2 = (int)(prng_next(&seed) % (unsigned int)num_turmas);
+            int tmp = ordem[p1];
+            ordem[p1] = ordem[p2];
+            ordem[p2] = tmp;
         }
     }
 }
@@ -132,6 +139,7 @@ static void executar_tentativa(
 
         int melhor_sala_idx = -1;
         int menor_desperdicio = 10000000;
+        int desperdicio_real_melhor = 0;
 
         for (int j = 0; j < num_salas; j++) {
             const SalaC* s = &salas[j];
@@ -145,12 +153,18 @@ static void executar_tentativa(
             }
 
             int desp = s->capacidade - t->num_matriculados;
+            int desp_ajustado = desp;
+
+            // Penalidades para preservar espacos nobres
             if (t->tipo_exigido == TIPO_SALA_REGULAR && s->tipo == TIPO_SALA_LABORATORIO) {
-                desp += 500;
+                desp_ajustado += 500;
+            } else if (t->tipo_exigido == TIPO_SALA_REGULAR && (s->tipo == TIPO_SALA_AUDITORIO || s->tipo == TIPO_SALA_REUNIAO)) {
+                desp_ajustado += 300;
             }
 
-            if (desp < menor_desperdicio) {
-                menor_desperdicio = desp;
+            if (desp_ajustado < menor_desperdicio) {
+                menor_desperdicio = desp_ajustado;
+                desperdicio_real_melhor = desp;
                 melhor_sala_idx = j;
             }
         }
@@ -163,10 +177,10 @@ static void executar_tentativa(
         if (melhor_sala_idx >= 0) {
             const SalaC* s = &salas[melhor_sala_idx];
             resultado_local[i].sala_id = s->id;
-            resultado_local[i].score_desperdicio = s->capacidade - t->num_matriculados;
+            resultado_local[i].score_desperdicio = desperdicio_real_melhor;
             adicionar_reserva(&grades_salas[melhor_sala_idx], t->dia_semana_sugerido, t->hora_inicio_min, t->hora_fim_min);
             alocados++;
-            desperdicio += resultado_local[i].score_desperdicio;
+            desperdicio += menor_desperdicio;
         } else {
             resultado_local[i].sala_id = -1;
             resultado_local[i].score_desperdicio = -1;
@@ -192,70 +206,84 @@ static void executar_busca_combinatoria(
 ) {
     if (num_threads < 1) num_threads = 1;
 
+    int* ordem_base_bfd = (int*)malloc((size_t)num_turmas * sizeof(int));
+    if (!ordem_base_bfd) {
+        *total_alocado_out = 0;
+        *total_pendente_out = num_turmas;
+        return;
+    }
+    ordenar_turmas_bfd(ordem_base_bfd, num_turmas, turmas);
+
     long long melhor_score_global = -9223372036854775807LL;
     int global_alocados = 0;
     int global_pendentes = num_turmas;
 
     #pragma omp parallel num_threads(num_threads) default(none) \
-        shared(turmas, num_turmas, salas, num_salas, num_iteracoes, melhor_resultado, \
-               melhor_score_global, global_alocados, global_pendentes)
+        shared(turmas, num_turmas, salas, num_salas, num_iteracoes, ordem_base_bfd, \
+               melhor_resultado, melhor_score_global, global_alocados, global_pendentes)
     {
         int* ordem_local = (int*)malloc((size_t)num_turmas * sizeof(int));
         AlocacaoItemC* res_local = (AlocacaoItemC*)malloc((size_t)num_turmas * sizeof(AlocacaoItemC));
         AlocacaoItemC* res_melhor_thread = (AlocacaoItemC*)malloc((size_t)num_turmas * sizeof(AlocacaoItemC));
         GradeOcupacaoSala* grades_local = (GradeOcupacaoSala*)malloc((size_t)num_salas * sizeof(GradeOcupacaoSala));
 
-        for (int j = 0; j < num_salas; j++) {
-            grades_local[j].count = 0;
-            grades_local[j].capacidade = 16;
-            grades_local[j].intervalos = (IntervaloHorario*)malloc(16 * sizeof(IntervaloHorario));
-        }
+        if (ordem_local && res_local && res_melhor_thread && grades_local) {
+            for (int j = 0; j < num_salas; j++) {
+                grades_local[j].count = 0;
+                grades_local[j].intervalos = (IntervaloHorario*)malloc(16 * sizeof(IntervaloHorario));
+                grades_local[j].capacidade = grades_local[j].intervalos ? 16 : 0;
+            }
 
-        long long melhor_score_thread = -9223372036854775807LL;
-        int thread_alocados = 0;
-        int thread_pendentes = num_turmas;
+            long long melhor_score_thread = -9223372036854775807LL;
+            int thread_alocados = 0;
+            int thread_pendentes = num_turmas;
 
-        #pragma omp for schedule(dynamic, 16)
-        for (int iter = 0; iter < num_iteracoes; iter++) {
-            gerar_ordem_turmas(ordem_local, num_turmas, turmas, iter);
+            #pragma omp for schedule(dynamic, 16)
+            for (int iter = 0; iter < num_iteracoes; iter++) {
+                gerar_ordem_turmas(ordem_local, num_turmas, ordem_base_bfd, iter);
 
-            int t_alocados = 0;
-            int t_pendentes = 0;
-            long long t_desperdicio = 0;
+                int t_alocados = 0;
+                int t_pendentes = 0;
+                long long t_desperdicio = 0;
 
-            executar_tentativa(
-                turmas, num_turmas, salas, num_salas, ordem_local,
-                res_local, grades_local, &t_alocados, &t_pendentes, &t_desperdicio
-            );
+                executar_tentativa(
+                    turmas, num_turmas, salas, num_salas, ordem_local,
+                    res_local, grades_local, &t_alocados, &t_pendentes, &t_desperdicio
+                );
 
-            long long score = (long long)t_alocados * 1000000000LL - t_desperdicio;
-            if (score > melhor_score_thread) {
-                melhor_score_thread = score;
-                thread_alocados = t_alocados;
-                thread_pendentes = t_pendentes;
-                memcpy(res_melhor_thread, res_local, (size_t)num_turmas * sizeof(AlocacaoItemC));
+                long long score = (long long)t_alocados * 1000000000LL - t_desperdicio;
+                if (score > melhor_score_thread) {
+                    melhor_score_thread = score;
+                    thread_alocados = t_alocados;
+                    thread_pendentes = t_pendentes;
+                    memcpy(res_melhor_thread, res_local, (size_t)num_turmas * sizeof(AlocacaoItemC));
+                }
+            }
+
+            #pragma omp critical
+            {
+                if (melhor_score_thread > melhor_score_global) {
+                    melhor_score_global = melhor_score_thread;
+                    global_alocados = thread_alocados;
+                    global_pendentes = thread_pendentes;
+                    memcpy(melhor_resultado, res_melhor_thread, (size_t)num_turmas * sizeof(AlocacaoItemC));
+                }
+            }
+
+            for (int j = 0; j < num_salas; j++) {
+                if (grades_local[j].intervalos) {
+                    free(grades_local[j].intervalos);
+                }
             }
         }
 
-        #pragma omp critical
-        {
-            if (melhor_score_thread > melhor_score_global) {
-                melhor_score_global = melhor_score_thread;
-                global_alocados = thread_alocados;
-                global_pendentes = thread_pendentes;
-                memcpy(melhor_resultado, res_melhor_thread, (size_t)num_turmas * sizeof(AlocacaoItemC));
-            }
-        }
-
-        for (int j = 0; j < num_salas; j++) {
-            free(grades_local[j].intervalos);
-        }
-        free(grades_local);
-        free(res_melhor_thread);
-        free(res_local);
-        free(ordem_local);
+        if (grades_local) free(grades_local);
+        if (res_melhor_thread) free(res_melhor_thread);
+        if (res_local) free(res_local);
+        if (ordem_local) free(ordem_local);
     }
 
+    free(ordem_base_bfd);
     *total_alocado_out = global_alocados;
     *total_pendente_out = global_pendentes;
 }
@@ -274,10 +302,10 @@ int otimizar_alocacao_salas(
     }
 
     int threads_alvo = max_threads;
-    int max_disponivel = omp_get_num_procs();
-    if (threads_alvo <= 0 || threads_alvo > max_disponivel) {
-        threads_alvo = max_disponivel;
+    if (threads_alvo <= 0) {
+        threads_alvo = omp_get_num_procs();
     }
+    if (threads_alvo < 1) threads_alvo = 1;
 
     int num_iteracoes = 800;
     if (num_turmas <= 20) {
@@ -287,6 +315,8 @@ int otimizar_alocacao_salas(
     }
 
     AlocacaoItemC* res_seq = (AlocacaoItemC*)malloc((size_t)num_turmas * sizeof(AlocacaoItemC));
+    if (!res_seq) return -2;
+
     int seq_alocado = 0, seq_pendente = 0;
 
     double t0_seq = omp_get_wtime();
@@ -343,6 +373,13 @@ int executar_benchmark_cenario(
     TurmaC* turmas = (TurmaC*)malloc((size_t)num_turmas * sizeof(TurmaC));
     SalaC* salas = (SalaC*)malloc((size_t)num_salas * sizeof(SalaC));
     AlocacaoItemC* resultados = (AlocacaoItemC*)malloc((size_t)num_turmas * sizeof(AlocacaoItemC));
+
+    if (!turmas || !salas || !resultados) {
+        if (turmas) free(turmas);
+        if (salas) free(salas);
+        if (resultados) free(resultados);
+        return -2;
+    }
 
     for (int j = 0; j < num_salas; j++) {
         salas[j].id = j + 1;

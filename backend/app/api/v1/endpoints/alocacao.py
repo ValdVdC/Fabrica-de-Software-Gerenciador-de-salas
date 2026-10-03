@@ -2,10 +2,11 @@
 Endpoints para Alocacao Inteligente de Salas via Motor C com OpenMP (Sprint 05).
 """
 
+import re
 from datetime import time
 from typing import Dict, List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import require_role
@@ -42,6 +43,8 @@ from app.services.motor_service import (
 )
 
 router = APIRouter()
+
+PADRAO_LAB = re.compile(r"\b(lab|laboratorio|laboratório|pratica|prática)\b", re.IGNORECASE)
 
 
 def _converter_turno_enum(turno: Turno | str) -> int:
@@ -99,8 +102,9 @@ def otimizar_alocacao_endpoint(
     db: Session = Depends(get_db),
 ):
     """Executa a alocacao combinatoria de salas com OpenMP e persiste atomicamente no PostgreSQL."""
-    if current_user.perfil == PerfilUsuario.COORDENADOR and current_user.campus_id:
-        if current_user.campus_id != payload.campus_id:
+    # Blindagem estrita de isolamento multi-campus (SEC-01 / BOLA)
+    if current_user.perfil == PerfilUsuario.COORDENADOR:
+        if not current_user.campus_id or current_user.campus_id != payload.campus_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Acesso negado: coordenador restrito ao seu proprio campus.",
@@ -159,7 +163,7 @@ def otimizar_alocacao_endpoint(
     for idx, t in enumerate(turmas_db):
         mapa_turmas_info[t.id] = t
         tipo_exigido = TIPO_SALA_LABORATORIO if (
-            "lab" in t.disciplina.nome.lower() or "lab" in t.disciplina.codigo.lower()
+            PADRAO_LAB.search(t.disciplina.nome) or PADRAO_LAB.search(t.disciplina.codigo)
         ) else TIPO_SALA_REGULAR
 
         turno_int = _converter_turno_enum(t.turno_preferido)
@@ -200,24 +204,29 @@ def otimizar_alocacao_endpoint(
             )
         )
 
-    # 4. Executar algoritmo de alocação no motor C
-    alocacoes_c, metricas_c = motor_service.otimizar_alocacao(
-        turmas=turmas_c,
-        salas=salas_c,
-        max_threads=payload.max_threads,
-    )
+    # 4. Executar algoritmo de alocacao no motor C
+    try:
+        alocacoes_c, metricas_c = motor_service.otimizar_alocacao(
+            turmas=turmas_c,
+            salas=salas_c,
+            max_threads=payload.max_threads,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Motor de alocacao C indisponivel: {exc}",
+        )
 
     horarios_novos: List[Horario] = []
     itens_resposta: List[AlocacaoItemResponse] = []
 
     for item in alocacoes_c:
+        t = mapa_turmas_info[item["turma_id"]]
+        hora_ini = time(item["hora_inicio_min"] // 60, item["hora_inicio_min"] % 60)
+        hora_fim = time(item["hora_fim_min"] // 60, item["hora_fim_min"] % 60)
+
         if item["sala_id"] > 0:
-            t = mapa_turmas_info[item["turma_id"]]
             s = mapa_salas_info[item["sala_id"]]
-
-            hora_ini = time(item["hora_inicio_min"] // 60, item["hora_inicio_min"] % 60)
-            hora_fim = time(item["hora_fim_min"] // 60, item["hora_fim_min"] % 60)
-
             itens_resposta.append(
                 AlocacaoItemResponse(
                     turma_id=t.id,
@@ -244,31 +253,60 @@ def otimizar_alocacao_endpoint(
                         hora_fim=hora_fim,
                     )
                 )
+        else:
+            # Turma com conflito ou sem sala compativel disponivel
+            itens_resposta.append(
+                AlocacaoItemResponse(
+                    turma_id=t.id,
+                    disciplina_codigo=t.disciplina.codigo,
+                    disciplina_nome=t.disciplina.nome,
+                    sala_id=-1,
+                    sala_bloco="",
+                    sala_numero="",
+                    dia_semana=item["dia_semana"],
+                    hora_inicio=hora_ini.strftime("%H:%M"),
+                    hora_fim=hora_fim.strftime("%H:%M"),
+                    score_desperdicio=-1,
+                )
+            )
 
-    # 5. Persistência atômica no PostgreSQL
-    if payload.salvar_no_banco and horarios_novos:
-        db.add_all(horarios_novos)
-        db.flush()
+    # 5. Persistencia atomica e idempotente no PostgreSQL (SEC-04)
+    if payload.salvar_no_banco:
+        try:
+            # Idempotencia: remove horarios previamente alocados para este lote de turmas
+            turmas_ids = [t.id for t in turmas_db]
+            if turmas_ids:
+                db.execute(delete(Horario).where(Horario.turma_id.in_(turmas_ids)))
 
-        # Registro de Auditoria
-        log_auditoria = LogAlocacao(
-            horario_id=horarios_novos[0].id if horarios_novos else None,
-            snapshot_evento={
-                "periodo_letivo": payload.periodo_letivo,
-                "campus_id": payload.campus_id,
-                "metricas": metricas_c,
-                "total_alocados": len(horarios_novos),
-            },
-            tipo_evento=TipoEventoLog.CRIACAO,
-            usuario_responsavel=current_user.id,
-            detalhes=(
-                f"Alocacao inteligente OpenMP: {metricas_c['threads_utilizadas']} threads, "
-                f"speedup {metricas_c['speedup']}x, eficiencia {metricas_c['eficiencia']}%, "
-                f"{len(horarios_novos)}/{len(turmas_c)} turmas alocadas."
-            ),
-        )
-        db.add(log_auditoria)
-        db.commit()
+            if horarios_novos:
+                db.add_all(horarios_novos)
+                db.flush()
+
+            # Registro de Auditoria
+            log_auditoria = LogAlocacao(
+                horario_id=horarios_novos[0].id if horarios_novos else None,
+                snapshot_evento={
+                    "periodo_letivo": payload.periodo_letivo,
+                    "campus_id": payload.campus_id,
+                    "metricas": metricas_c,
+                    "total_alocados": len(horarios_novos),
+                },
+                tipo_evento=TipoEventoLog.CRIACAO,
+                usuario_responsavel=current_user.id,
+                detalhes=(
+                    f"Alocacao inteligente OpenMP: {metricas_c['threads_utilizadas']} threads, "
+                    f"speedup {metricas_c['speedup']}x, eficiencia {metricas_c['eficiencia']}%, "
+                    f"{len(horarios_novos)}/{len(turmas_c)} turmas alocadas."
+                ),
+            )
+            db.add(log_auditoria)
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Erro ao persistir transacao de alocacao no PostgreSQL: {exc}",
+            )
 
     metricas_resp = MetricasAlocacaoResponse(
         tempo_sequencial_ms=metricas_c["tempo_sequencial_ms"],
@@ -294,11 +332,11 @@ def otimizar_alocacao_endpoint(
     "/benchmark",
     response_model=AlocacaoBenchmarkResponse,
     status_code=status.HTTP_200_OK,
-    summary="Executar benchmark cientifico de alocacao com metricas OpenMP",
+    summary="Executar benchmark cientifico de alocacao com metricas OpenMP (Admin Exclusivo)",
 )
 def benchmark_alocacao_endpoint(
     payload: AlocacaoBenchmarkRequest,
-    current_user: Usuario = Depends(require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR)),
+    current_user: Usuario = Depends(require_role(PerfilUsuario.ADMIN)),
 ):
     """Executa a rotina de benchmark nos cenarios cientificos (Pequeno, Medio ou Stress)."""
     _ = current_user
@@ -311,11 +349,17 @@ def benchmark_alocacao_endpoint(
         cenario_lower = "medio"
         num_turmas, num_salas = 100, 40
 
-    metricas = motor_service.executar_benchmark(
-        num_turmas=num_turmas,
-        num_salas=num_salas,
-        num_threads=payload.threads,
-    )
+    try:
+        metricas = motor_service.executar_benchmark(
+            num_turmas=num_turmas,
+            num_salas=num_salas,
+            num_threads=payload.threads,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Motor de benchmark C indisponivel: {exc}",
+        )
 
     return AlocacaoBenchmarkResponse(
         cenario=cenario_lower,
