@@ -3,6 +3,7 @@ import { AdminComponent } from './admin.component';
 import { AdminService, Sala, Equipamento } from '../../services/admin.service';
 import { AuthService, UserSummary } from '../../services/auth.service';
 import { AlocacaoService, MetricasAlocacao, AlocacaoItem } from '../../services/alocacao.service';
+import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
 import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 
@@ -12,6 +13,7 @@ describe('AdminComponent', () => {
   let adminServiceSpy: jasmine.SpyObj<AdminService>;
   let authServiceSpy: jasmine.SpyObj<AuthService>;
   let alocacaoServiceSpy: jasmine.SpyObj<AlocacaoService>;
+  let iaServiceSpy: jasmine.SpyObj<IaService>;
 
   // prettier-ignore
   const mockSalas = signal<Sala[]>([
@@ -30,6 +32,37 @@ describe('AdminComponent', () => {
   const mockMetricas = signal<MetricasAlocacao | null>(null);
   const mockAlocacoes = signal<AlocacaoItem[]>([]);
 
+  const mockSugestao: SugestaoRemanejamento = {
+    id: 1,
+    horario_id: 10,
+    sala_atual_id: 101,
+    sala_sugerida_id: 204,
+    motivo: 'Ociosidade fisica',
+    justificativa: null,
+    status: 'pendente',
+    aprovado_por: null,
+    criado_em: '2026-10-15T10:00:00Z',
+    atualizado_em: '2026-10-15T10:00:00Z',
+    prob_ausencia: 0.78,
+    turma_id: 5,
+    disciplina_codigo: 'CC101',
+    disciplina_nome: 'Algoritmos I',
+    sala_atual_bloco: 'A',
+    sala_atual_numero: '101',
+    sala_atual_capacidade: 60,
+    sala_sugerida_bloco: 'B',
+    sala_sugerida_numero: '204',
+    sala_sugerida_capacidade: 25,
+    dia_semana: 0,
+    hora_inicio: '08:00',
+    hora_fim: '10:00',
+    campus_id: 2,
+  };
+  const mockSugestoes = signal<SugestaoRemanejamento[]>([mockSugestao]);
+  const mockIaLoading = signal(false);
+  const mockIaError = signal<string | null>(null);
+  const mockIaSucesso = signal<string | null>(null);
+
   beforeEach(async () => {
     mockLoading.set(false);
     mockCurrentUser.set({
@@ -44,6 +77,11 @@ describe('AdminComponent', () => {
     mockAlocacaoSucesso.set(null);
     mockMetricas.set(null);
     mockAlocacoes.set([]);
+
+    mockSugestoes.set([mockSugestao]);
+    mockIaLoading.set(false);
+    mockIaError.set(null);
+    mockIaSucesso.set(null);
 
     adminServiceSpy = jasmine.createSpyObj(
       'AdminService',
@@ -80,8 +118,38 @@ describe('AdminComponent', () => {
       },
     );
 
+    iaServiceSpy = jasmine.createSpyObj(
+      'IaService',
+      [
+        'obterSugestoes',
+        'aprovarSugestao',
+        'rejeitarSugestao',
+        'dispararAnalise',
+        'limparMensagens',
+        'definirErro',
+      ],
+      {
+        sugestoes: mockSugestoes.asReadonly(),
+        isLoading: mockIaLoading.asReadonly(),
+        errorMessage: mockIaError.asReadonly(),
+        sucessoMessage: mockIaSucesso.asReadonly(),
+      },
+    );
+    iaServiceSpy.definirErro.and.callFake((msg: string) => mockIaError.set(msg));
+
     adminServiceSpy.listarSalas.and.returnValue(of(mockSalas()));
     adminServiceSpy.listarEquipamentos.and.returnValue(of(mockEquipamentos()));
+    iaServiceSpy.obterSugestoes.and.returnValue(of(mockSugestoes()));
+    iaServiceSpy.aprovarSugestao.and.returnValue(of({ ...mockSugestao, status: 'aprovado' }));
+    iaServiceSpy.rejeitarSugestao.and.returnValue(of({ ...mockSugestao, status: 'rejeitado' }));
+    iaServiceSpy.dispararAnalise.and.returnValue(
+      of({
+        total_turmas_analisadas: 10,
+        total_sugestoes_geradas: 1,
+        sugestoes: mockSugestoes(),
+        tempo_processamento_ms: 25.0,
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [AdminComponent],
@@ -89,6 +157,7 @@ describe('AdminComponent', () => {
         { provide: AdminService, useValue: adminServiceSpy },
         { provide: AuthService, useValue: authServiceSpy },
         { provide: AlocacaoService, useValue: alocacaoServiceSpy },
+        { provide: IaService, useValue: iaServiceSpy },
       ],
     }).compileComponents();
 
@@ -146,6 +215,8 @@ describe('AdminComponent', () => {
     expect(component.formatarDiaSemana(5)).toBe('Sabado');
     expect(component.formatarDiaSemana(6)).toBe('Domingo');
     expect(component.formatarDiaSemana(7)).toBe('Dia 7');
+    expect(component.formatarDiaSemana(null)).toBe('Dia a definir');
+    expect(component.formatarDiaSemana(undefined)).toBe('Dia a definir');
   });
 
   it('deve acionar alocacao inteligente via alocacaoService', () => {
@@ -326,5 +397,87 @@ describe('AdminComponent', () => {
     expect(component.mensagemSucesso()).toContain('Equipamento vinculado a sala com sucesso.');
     expect(component.formAssocSalaId).toBeNull();
     expect(component.formAssocEquipId).toBeNull();
+  });
+
+  it('deve carregar sugestoes pendentes na inicializacao se campus for valido', () => {
+    expect(iaServiceSpy.obterSugestoes).toHaveBeenCalledWith('pendente', 2);
+  });
+
+  it('deve alternar para a aba de remanejamento e carregar sugestoes se lista estiver vazia', () => {
+    iaServiceSpy.obterSugestoes.calls.reset();
+    mockSugestoes.set([]);
+    component.selecionarAba('remanejamento');
+    expect(component.abaAtiva()).toBe('remanejamento');
+    expect(iaServiceSpy.obterSugestoes).toHaveBeenCalledWith('pendente', 2);
+    expect(iaServiceSpy.limparMensagens).toHaveBeenCalled();
+    expect(alocacaoServiceSpy.limparMensagens).toHaveBeenCalled();
+  });
+
+  it('deve calcular a economia de vagas corretamente entre sala atual e sugerida', () => {
+    const economia = component.calcularEconomiaVagas(mockSugestao);
+    expect(economia).toBe(35); // 60 - 25 = 35
+
+    const semEconomia: SugestaoRemanejamento = {
+      ...mockSugestao,
+      sala_atual_capacidade: 20,
+      sala_sugerida_capacidade: 25,
+    };
+    expect(component.calcularEconomiaVagas(semEconomia)).toBe(0);
+  });
+
+  it('deve aprovar sugestao chamando iaService.aprovarSugestao com justificativa informada', () => {
+    component.justificativas[1] = 'Aprovada para remanejamento de turma';
+    component.aprovarSugestao(mockSugestao);
+
+    expect(iaServiceSpy.aprovarSugestao).toHaveBeenCalledWith(
+      1,
+      'Aprovada para remanejamento de turma',
+    );
+    expect(component.justificativas[1]).toBeUndefined();
+  });
+
+  it('deve rejeitar sugestao chamando iaService.rejeitarSugestao com justificativa informada', () => {
+    component.justificativas[1] = 'Turma requer laboratorio especializado';
+    component.rejeitarSugestao(mockSugestao);
+
+    expect(iaServiceSpy.rejeitarSugestao).toHaveBeenCalledWith(
+      1,
+      'Turma requer laboratorio especializado',
+    );
+    expect(component.justificativas[1]).toBeUndefined();
+  });
+
+  it('nao deve rejeitar sugestao se justificativa for vazia e deve exibir mensagem de erro', () => {
+    iaServiceSpy.rejeitarSugestao.calls.reset();
+    component.justificativas[1] = '   ';
+    component.rejeitarSugestao(mockSugestao);
+
+    expect(iaServiceSpy.rejeitarSugestao).not.toHaveBeenCalled();
+    expect(iaServiceSpy.definirErro).toHaveBeenCalledWith(
+      'Justificativa e obrigatoria para rejeitar a sugestao.',
+    );
+  });
+
+  it('deve acionar analise preditiva de IA via executarAnaliseIA e atualizar lista', () => {
+    iaServiceSpy.obterSugestoes.calls.reset();
+    component.campusId = 2;
+    component.formPeriodoLetivo = '2026.1';
+    component.executarAnaliseIA();
+
+    expect(iaServiceSpy.dispararAnalise).toHaveBeenCalledWith(2, '2026.1', 0.4);
+    expect(component.filtroStatusRemanejamento).toBe('pendente');
+    expect(iaServiceSpy.obterSugestoes).toHaveBeenCalledWith('pendente', 2);
+  });
+
+  it('nao deve acionar aprovacao ou rejeicao se iaService.isLoading for true', () => {
+    mockIaLoading.set(true);
+    iaServiceSpy.aprovarSugestao.calls.reset();
+    iaServiceSpy.rejeitarSugestao.calls.reset();
+
+    component.aprovarSugestao(mockSugestao);
+    component.rejeitarSugestao(mockSugestao);
+
+    expect(iaServiceSpy.aprovarSugestao).not.toHaveBeenCalled();
+    expect(iaServiceSpy.rejeitarSugestao).not.toHaveBeenCalled();
   });
 });
