@@ -156,7 +156,7 @@ O pipeline e composto por:
 ## 4. Contratos OpenAPI REST
 
 ### 4.1 `GET /api/v1/sugestoes`
-- **Descricao**: Lista sugestoes de remanejamento com paginacao e filtros.
+- **Descricao**: Lista sugestoes de remanejamento com paginacao e filtros, ordenadas por probabilidade de absenteismo decrescente.
 - **Parametros**:
   - `status` (query, opcional): `pendente`, `aprovado`, `rejeitado`
   - `campus_id` (query, opcional, restrito a ADMIN): ID do campus

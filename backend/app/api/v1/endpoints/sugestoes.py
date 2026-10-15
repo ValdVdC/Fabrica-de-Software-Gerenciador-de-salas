@@ -2,7 +2,7 @@
 Endpoints REST para IA Preditiva de Absenteismo e Remanejamento Human-in-the-Loop (Sprint 06).
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 import time
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -14,7 +14,7 @@ from app.db.session import get_db
 from app.models.academico import Turma
 from app.models.alocacao import Horario, LogAlocacao
 from app.models.enums import PerfilUsuario, StatusSugestao, TipoEventoLog
-from app.models.ia import SugestaoRemanejamento
+from app.models.ia import PrevisaoFalta, SugestaoRemanejamento
 from app.models.usuario import Usuario
 from app.schemas.ia import (
     AnaliseIARequest,
@@ -41,7 +41,7 @@ def listar_sugestoes(
     db: Session = Depends(get_db),
 ):
     """
-    Lista sugestoes de remanejamento ordenadas por criacao mais recente,
+    Lista sugestoes de remanejamento ordenadas por probabilidade de absenteismo (e mais recentes),
     respeitando isolamento multi-campus (coordenadores so acessam seu campus).
     """
     stmt = (
@@ -49,6 +49,7 @@ def listar_sugestoes(
         .join(SugestaoRemanejamento.horario)
         .options(
             joinedload(SugestaoRemanejamento.horario).joinedload(Horario.turma).joinedload(Turma.disciplina),
+            joinedload(SugestaoRemanejamento.horario).selectinload(Horario.previsoes_falta),
             joinedload(SugestaoRemanejamento.sala_atual),
             joinedload(SugestaoRemanejamento.sala_sugerida),
         )
@@ -63,8 +64,17 @@ def listar_sugestoes(
     if status_filtro is not None:
         stmt = stmt.where(SugestaoRemanejamento.status == status_filtro)
 
-    stmt = stmt.order_by(SugestaoRemanejamento.criado_em.desc()).offset(skip).limit(limit)
-    sugestoes = db.scalars(stmt).all()
+    # Ordenacao por probabilidade de absenteismo decrescente (subquery da previsao mais recente)
+    subq_prob = (
+        select(PrevisaoFalta.prob_ausencia)
+        .where(PrevisaoFalta.horario_id == SugestaoRemanejamento.horario_id)
+        .order_by(PrevisaoFalta.criado_em.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
+
+    stmt = stmt.order_by(subq_prob.desc().nulls_last(), SugestaoRemanejamento.criado_em.desc()).offset(skip).limit(limit)
+    sugestoes = db.scalars(stmt).unique().all()
 
     return [converter_sugestao_para_read(s) for s in sugestoes]
 
@@ -83,8 +93,10 @@ def aprovar_ou_rejeitar_sugestao(
     stmt = (
         select(SugestaoRemanejamento)
         .where(SugestaoRemanejamento.id == sugestao_id)
+        .with_for_update()
         .options(
             joinedload(SugestaoRemanejamento.horario).joinedload(Horario.turma).joinedload(Turma.disciplina),
+            joinedload(SugestaoRemanejamento.horario).selectinload(Horario.previsoes_falta),
             joinedload(SugestaoRemanejamento.sala_atual),
             joinedload(SugestaoRemanejamento.sala_sugerida),
         )
@@ -97,7 +109,7 @@ def aprovar_ou_rejeitar_sugestao(
         )
 
     # Mitigacao de BOLA/IDOR: Coordenador nao pode alterar sugestao de outro campus
-    if current_user.perfil != PerfilUsuario.ADMIN and sugestao.horario.campus_id != current_user.campus_id:
+    if current_user.perfil != PerfilUsuario.ADMIN and (not sugestao.horario or sugestao.horario.campus_id != current_user.campus_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sugestao nao encontrada",
@@ -114,7 +126,7 @@ def aprovar_ou_rejeitar_sugestao(
     sala_anterior_id = horario.sala_id
 
     if payload.status == StatusSugestao.APROVADO:
-        # Validacao de integridade: checa se a sala sugerida permanece desocupada
+        # Validacao de integridade com lock pessimista: checa se a sala sugerida permanece desocupada
         conflito = db.scalar(
             select(Horario).where(
                 Horario.sala_id == sugestao.sala_sugerida_id,
@@ -122,7 +134,7 @@ def aprovar_ou_rejeitar_sugestao(
                 Horario.hora_inicio < horario.hora_fim,
                 Horario.hora_fim > horario.hora_inicio,
                 Horario.id != horario.id,
-            )
+            ).with_for_update()
         )
         if conflito:
             raise HTTPException(
@@ -137,7 +149,7 @@ def aprovar_ou_rejeitar_sugestao(
         sugestao.status = StatusSugestao.APROVADO
         sugestao.aprovado_por = current_user.id
         sugestao.justificativa = payload.justificativa
-        sugestao.atualizado_em = datetime.now()
+        sugestao.atualizado_em = datetime.now(timezone.utc)
 
         # Trilha de auditoria em log_alocacao
         log = LogAlocacao(
@@ -157,7 +169,7 @@ def aprovar_ou_rejeitar_sugestao(
         sugestao.status = StatusSugestao.REJEITADO
         sugestao.aprovado_por = current_user.id
         sugestao.justificativa = payload.justificativa
-        sugestao.atualizado_em = datetime.now()
+        sugestao.atualizado_em = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(sugestao)
@@ -189,13 +201,13 @@ def _executar_analise(
 
     tempo_ms = (time.perf_counter() - inicio) * 1000
 
-    # Total de turmas analisadas
-    stmt_turmas = select(Turma)
+    # Total de turmas com horarios analisadas
+    stmt_turmas = select(Turma.id).join(Horario, Horario.turma_id == Turma.id)
     if campus_alvo is not None:
-        stmt_turmas = stmt_turmas.join(Horario, Horario.turma_id == Turma.id).where(Horario.campus_id == campus_alvo)
+        stmt_turmas = stmt_turmas.where(Horario.campus_id == campus_alvo)
     if payload.periodo_letivo:
         stmt_turmas = stmt_turmas.where(Turma.periodo_letivo == payload.periodo_letivo)
-    total_turmas = len(db.scalars(stmt_turmas).unique().all())
+    total_turmas = len(db.scalars(stmt_turmas.distinct()).all())
 
     return AnaliseIAResponse(
         total_turmas_analisadas=total_turmas,
