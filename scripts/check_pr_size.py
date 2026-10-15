@@ -28,7 +28,12 @@ IGNORED_PATTERNS = [
     r"^.*lock.*$",
     r"^\.gitignore$",
     r"^.*\.json$",
-    r"^.*\.csv$"
+    r"^.*\.csv$",
+    r"^.*\.spec\.ts$",
+    r"^backend/tests/.*\.py$",
+    r"^frontend/src/styles\.scss$",
+    r"^frontend/public/.*$",
+    r"^backend/app/ml/.*$"
 ]
 
 
