@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "gestao_salas"
     POSTGRES_USER: str = "gestao_salas"
     POSTGRES_PASSWORD: str = "changeme_local_only"
-    DATABASE_URL: str = "postgresql://gestao_salas:changeme_local_only@localhost:5432/gestao_salas"
+    DATABASE_URL: str = "postgresql+psycopg2://gestao_salas:changeme_local_only@localhost:5432/gestao_salas"
     
     # JWT
     SECRET_KEY: str = "super-secret-key-change-in-production-min-32-chars"

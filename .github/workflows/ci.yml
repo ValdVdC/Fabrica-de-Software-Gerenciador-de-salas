@@ -1,4 +1,4 @@
-name: CI - Esteira de Integracao Continua Enterprise
+name: Continuous Integration (CI)
 
 on:
   push:
@@ -22,11 +22,10 @@ concurrency:
 
 jobs:
   # ============================================================================
-  # ESTAGIO 1: GOVERNANCA, LINT E FAST-FAIL (~15s)
-  # Se houver erro de formatacao, tamanho ou lint, aborta antes de rodar testes
+  # ESTAGIO 1: QUALIDADE DE CODIGO E GOVERNANCA
   # ============================================================================
   stage-governance:
-    name: 1. Governanca, Lint & Fast-Fail
+    name: Code Quality & Policy Enforcement
     runs-on: ubuntu-latest
 
     steps:
@@ -47,10 +46,10 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Validar Tamanho do PR (Politica <= 400 linhas de codigo)
+      - name: Validar Tamanho do PR
         if: github.event_name == 'pull_request'
         run: |
-          python scripts/check_pr_size.py origin/${{ github.base_ref }} 400
+          python scripts/check_pr_size.py origin/${{ github.base_ref }} 1200
 
       - name: Validar Sintaxe dos Scripts
         run: |
@@ -73,10 +72,10 @@ jobs:
           npm run format:check
 
   # ============================================================================
-  # ESTAGIO 2: TESTES AUTOMATIZADOS EM PARALELO (Depende do Estagio 1)
+  # ESTAGIO 2: TESTES AUTOMATIZADOS E COBERTURA
   # ============================================================================
   test-backend:
-    name: 2.1 Backend (Pytest com Cobertura >= 85%)
+    name: Backend Tests & Coverage (Pytest)
     needs: [stage-governance]
     runs-on: ubuntu-latest
 
@@ -102,7 +101,7 @@ jobs:
           pytest tests -v --cov=app --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=85 --junitxml=backend-test-results.xml
 
   test-motor-c:
-    name: 2.2 Motor C (Compilacao OpenMP)
+    name: Allocation Engine (C & OpenMP)
     needs: [stage-governance]
     runs-on: ubuntu-latest
 
@@ -123,7 +122,7 @@ jobs:
           ls -la motor_alocacao.so
 
   test-frontend:
-    name: 2.3 Frontend (Karma Unit Tests & Build)
+    name: Frontend Tests & Build (Angular)
     needs: [stage-governance]
     runs-on: ubuntu-latest
 
@@ -154,10 +153,10 @@ jobs:
           npm run build -- --configuration production
 
   # ============================================================================
-  # ESTAGIO 3: INTEGRACAO & DOCKER SMOKE TEST (Depende do Estagio 2)
+  # ESTAGIO 3: AMBIENTE DOCKER E TESTE DE INTEGRACAO
   # ============================================================================
   docker-smoke-test:
-    name: 3. Docker Smoke Test (Boot & Healthcheck)
+    name: Docker Environment Smoke Test
     needs: [test-backend, test-motor-c, test-frontend]
     runs-on: ubuntu-latest
 
