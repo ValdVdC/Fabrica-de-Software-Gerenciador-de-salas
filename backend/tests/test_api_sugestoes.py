@@ -3,7 +3,7 @@ Testes automatizados TDD para endpoints de Sugestoes de Remanejamento e IA Predi
 Cobre RBAC, BOLA/IDOR, atomicidade transacional, trilha de auditoria e conflitos de horario.
 """
 
-from datetime import time
+from datetime import date, time
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
@@ -20,6 +20,7 @@ from app.models import (
     Horario,
     LogAlocacao,
     PerfilUsuario,
+    PrevisaoFalta,
     Sala,
     StatusSugestao,
     SugestaoRemanejamento,
@@ -126,6 +127,23 @@ def seed_dados_sugestoes(test_db: Session):
         status=StatusSugestao.PENDENTE,
     )
     test_db.add_all([sug_c1, sug_c2])
+    test_db.flush()
+
+    prev_c1 = PrevisaoFalta(
+        turma_id=turma1.id,
+        horario_id=horario_c1.id,
+        data_prevista=date.today(),
+        prob_ausencia=0.75,
+        versao_modelo="v1.0-histgb",
+    )
+    prev_c2 = PrevisaoFalta(
+        turma_id=turma2.id,
+        horario_id=horario_c2.id,
+        data_prevista=date.today(),
+        prob_ausencia=0.68,
+        versao_modelo="v1.0-histgb",
+    )
+    test_db.add_all([prev_c1, prev_c2])
     test_db.commit()
 
     return {
@@ -151,12 +169,28 @@ def auth_header(user: Usuario) -> dict:
 
 
 def test_listar_sugestoes_admin_retorna_todos(client, seed_dados_sugestoes):
-    """Admin deve conseguir visualizar sugestoes de todos os campi."""
+    """Admin deve conseguir visualizar sugestoes de todos os campi ordenadas por probabilidade."""
     headers = auth_header(seed_dados_sugestoes["admin"])
     resp = client.get("/api/v1/sugestoes", headers=headers)
     assert resp.status_code == 200
     dados = resp.json()
     assert len(dados) == 2
+    assert dados[0]["prob_ausencia"] == 0.75
+    assert dados[1]["prob_ausencia"] == 0.68
+    assert dados[0]["prob_ausencia"] >= dados[1]["prob_ausencia"]
+
+
+def test_listar_sugestoes_ordenacao_por_probabilidade_decrescente(client, seed_dados_sugestoes):
+    """Garante que a listagem de sugestoes retorna ordenado pela maior probabilidade de absenteismo."""
+    headers = auth_header(seed_dados_sugestoes["admin"])
+    resp = client.get("/api/v1/sugestoes", headers=headers)
+    assert resp.status_code == 200
+    dados = resp.json()
+    assert len(dados) >= 2
+    for i in range(len(dados) - 1):
+        p1 = dados[i]["prob_ausencia"] or 0.0
+        p2 = dados[i + 1]["prob_ausencia"] or 0.0
+        assert p1 >= p2
 
 
 def test_listar_sugestoes_coordenador_isolamento_multi_campus_bola(client, seed_dados_sugestoes):

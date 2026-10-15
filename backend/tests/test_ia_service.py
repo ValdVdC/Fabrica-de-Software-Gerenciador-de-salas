@@ -3,7 +3,7 @@ Testes automatizados TDD para o servico de IA preditiva de absenteismo e remanej
 Valida pipeline scikit-learn, prevencao de vazamento temporal, calibracao e regra de ouro.
 """
 
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -289,3 +289,160 @@ def test_converter_sugestao_para_read(db_session, dados_cenario_ia):
     assert read_obj.sala_atual_bloco == "AUD"
     assert read_obj.sala_sugerida_bloco == "A"
     assert read_obj.status == StatusSugestao.PENDENTE
+    assert read_obj.prob_ausencia is not None
+    assert 0.0 <= read_obj.prob_ausencia <= 1.0
+
+
+def test_gerar_sugestoes_turma_sem_matriculados_ou_sala_invalida(db_session, dados_cenario_ia):
+    """Garante que turmas com 0 matriculados ou sem sala nao geram excecao nem sugestao espuria."""
+    turma_vazia = Turma(
+        disciplina_id=dados_cenario_ia["turma"].disciplina_id,
+        professor_id=dados_cenario_ia["prof"].id,
+        periodo_letivo="2026.1",
+        num_matriculados=0,
+        turno_preferido=Turno.MATUTINO,
+    )
+    db_session.add(turma_vazia)
+    db_session.flush()
+
+    horario_vazio = Horario(
+        campus_id=dados_cenario_ia["campus"].id,
+        turma_id=turma_vazia.id,
+        sala_id=dados_cenario_ia["sala_grande"].id,
+        dia_semana=1,
+        hora_inicio=time(8, 0),
+        hora_fim=time(10, 0),
+    )
+    db_session.add(horario_vazio)
+    db_session.commit()
+
+    sugestoes = gerar_sugestoes_remanejamento(db=db_session, campus_id=dados_cenario_ia["campus"].id)
+    # Nenhuma sugestao deve ter sido gerada para a turma com 0 matriculados
+    ids_horarios_sugeridos = [s.horario_id for s in sugestoes]
+    assert horario_vazio.id not in ids_horarios_sugeridos
+
+
+def test_prever_probabilidade_absenteismo_casos_de_borda(db_session):
+    """Valida resiliencia da inferencia quando horarios ou turmas possuem valores nulos/ausentes."""
+    horario_sem_relacionamentos = Horario(
+        campus_id=1,
+        turma_id=1,
+        sala_id=1,
+        dia_semana=4,
+        hora_inicio=time(19, 0),
+        hora_fim=time(21, 0),
+    )
+    # Sem turma ou sala associada no objeto em memoria
+    prob = prever_probabilidade_absenteismo(horario_sem_relacionamentos, db=db_session)
+    assert 0.0 <= prob <= 1.0
+
+
+def test_gerar_sugestoes_sem_conflito_entre_duas_turmas_mesmo_slot(db_session, dados_cenario_ia):
+    """
+    Quando duas turmas com alto absenteismo estao no mesmo horario e ha apenas UMA sala menor disponivel,
+    o algoritmo nao pode sugerir a mesma sala menor para ambas.
+    """
+    campus = dados_cenario_ia["campus"]
+    disc = dados_cenario_ia["turma"].disciplina
+    prof = dados_cenario_ia["prof"]
+
+    # Cria segunda sala grande e segunda turma para o mesmo horario (sexta 19:00 - 21:00)
+    sala_grande_2 = Sala(
+        campus_id=campus.id,
+        bloco="AUD",
+        numero="02",
+        tipo=TipoSala.REGULAR,
+        capacidade=100,
+        turnos_disponiveis=["matutino", "noturno"],
+        ativo=True,
+    )
+    db_session.add(sala_grande_2)
+    db_session.flush()
+
+    turma_2 = Turma(
+        disciplina_id=disc.id,
+        professor_id=prof.id,
+        periodo_letivo="2026.1",
+        num_matriculados=20,
+        turno_preferido=Turno.NOTURNO,
+    )
+    db_session.add(turma_2)
+    db_session.flush()
+
+    horario_2 = Horario(
+        campus_id=campus.id,
+        turma_id=turma_2.id,
+        sala_id=sala_grande_2.id,
+        dia_semana=4,
+        hora_inicio=time(19, 0),
+        hora_fim=time(21, 0),
+    )
+    db_session.add(horario_2)
+    db_session.commit()
+
+    sugestoes = gerar_sugestoes_remanejamento(db=db_session, campus_id=campus.id)
+    # As sugestoes geradas no lote nao podem ter salas sugeridas duplicadas para o mesmo slot
+    salas_sugeridas_slot = [
+        s.sala_sugerida_id for s in sugestoes
+        if s.horario.dia_semana == 4 and s.horario.hora_inicio == time(19, 0)
+    ]
+    assert len(salas_sugeridas_slot) == len(set(salas_sugeridas_slot))
+
+
+def test_extrair_dataset_frequencias_base_vazia_usa_priors(db_session):
+    """Quando o banco nao contem frequencias, deve retornar distribuicao prior sintetica."""
+    X, y = extrair_dataset_frequencias(db_session)
+    assert len(X) == 10
+    assert len(y) == 10
+    assert set(y.unique()) == {0, 1}
+
+
+def test_prever_probabilidade_absenteismo_erros_e_fallback(dados_cenario_ia):
+    """Valida erro quando nem db nem modelo sao fornecidos e o fallback heuristico."""
+    horario = dados_cenario_ia["horario"]
+    with pytest.raises(ValueError, match="db ou modelo deve ser informado"):
+        prever_probabilidade_absenteismo(horario, modelo=None, db=None)
+
+    # Forca excecao de predicao para testar o fallback deterministico
+    prob_fallback = prever_probabilidade_absenteismo(horario, modelo="objeto_invalido_sem_predict_proba")
+    assert 0.0 <= prob_fallback <= 1.0
+    assert prob_fallback > 0.30  # sexta-feira e noturno no fallback adicionam 0.35 + 0.15
+
+
+def test_gerar_sugestoes_com_filtro_periodo_letivo_e_incompatibilidade_turno(db_session, dados_cenario_ia):
+    """Valida filtro por periodo_letivo e restricao de turnos_disponiveis da sala candidata."""
+    campus = dados_cenario_ia["campus"]
+    sala_menor = dados_cenario_ia["sala_menor"]
+
+    # Torna a sala menor disponivel apenas no vespertino (incompativel com turma noturna)
+    sala_menor.turnos_disponiveis = ["vespertino"]
+    db_session.commit()
+
+    # Com periodo letivo inexistente nao encontra
+    sug_inexistente = gerar_sugestoes_remanejamento(db=db_session, campus_id=campus.id, periodo_letivo="2099.2")
+    assert len(sug_inexistente) == 0
+
+    # Com periodo correto, porem com sala menor de turno incompativel, nao deve sugerir
+    sug_compat = gerar_sugestoes_remanejamento(db=db_session, campus_id=campus.id, periodo_letivo="2026.1")
+    assert len(sug_compat) == 0
+
+
+def test_converter_sugestao_para_read_fallback_motivo():
+    """Valida extracao de prob_ausencia via string do motivo quando nao ha PrevisaoFalta anexada."""
+    horario = Horario(id=1, campus_id=1, turma_id=1, sala_id=1, dia_semana=4, hora_inicio=time(19, 0), hora_fim=time(21, 0))
+    sug = SugestaoRemanejamento(
+        id=999,
+        horario_id=1,
+        sala_atual_id=1,
+        sala_sugerida_id=2,
+        motivo="Probabilidade estimada de absenteismo: 58.5%. Remanejamento sugerido.",
+        status=StatusSugestao.PENDENTE,
+        criado_em=datetime.now(),
+        atualizado_em=datetime.now(),
+    )
+    sug.horario = horario
+    sug.sala_atual = None
+    sug.sala_sugerida = None
+
+    read_obj = converter_sugestao_para_read(sug)
+    assert read_obj.prob_ausencia == 0.585
