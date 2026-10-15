@@ -2,7 +2,6 @@
 Testes unitarios e de integracao para o motor de alocacao C com OpenMP (Sprint 05).
 """
 
-import pytest
 from app.services.motor_service import (
     motor_service,
     SalaC,
@@ -10,11 +9,8 @@ from app.services.motor_service import (
     TIPO_SALA_REGULAR,
     TIPO_SALA_LABORATORIO,
     TURNO_MATUTINO,
-    TURNO_VESPERTINO,
     TURNO_NOTURNO,
     TURNO_MASK_MATUTINO,
-    TURNO_MASK_VESPERTINO,
-    TURNO_MASK_NOTURNO,
 )
 
 
