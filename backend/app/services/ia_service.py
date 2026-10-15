@@ -5,13 +5,14 @@ e heuristica de recomendacao de salas menores livres.
 """
 
 import math
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import f1_score, precision_score, recall_score
@@ -45,7 +46,7 @@ def _obter_turno_str(turno_val: Any) -> str:
     return "matutino"
 
 
-def criar_pipeline_absenteismo() -> Pipeline:
+def criar_pipeline_absenteismo(calibrar: bool = True) -> Pipeline:
     """Instancia o pipeline scikit-learn com preprocessamento e classificador calibrado."""
     preprocessor = ColumnTransformer(
         transformers=[
@@ -58,13 +59,15 @@ def criar_pipeline_absenteismo() -> Pipeline:
         random_state=42,
         max_iter=100,
         min_samples_leaf=5,
-        learning_rate=0.08
+        learning_rate=0.08,
     )
+
+    clf = CalibratedClassifierCV(estimator=base_clf, method="sigmoid", cv=2) if calibrar else base_clf
 
     pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("classifier", base_clf),
+            ("classifier", clf),
         ]
     )
     return pipeline
@@ -148,8 +151,6 @@ def treinar_modelo_absenteismo(db: Session, force: bool = False) -> Dict[str, An
     """
     X, y = extrair_dataset_frequencias(db)
 
-    pipeline = criar_pipeline_absenteismo()
-
     # Particao temporal se o dataset for suficientemente volumoso
     metricas = {"f1": 0.0, "precision": 0.0, "recall": 0.0}
     unique_classes = np.unique(y)
@@ -166,7 +167,7 @@ def treinar_modelo_absenteismo(db: Session, force: bool = False) -> Dict[str, An
             y_tr, y_val = y.iloc[train_idx], y.iloc[val_idx]
 
             if len(np.unique(y_tr)) > 1:
-                pipe_fold = criar_pipeline_absenteismo()
+                pipe_fold = criar_pipeline_absenteismo(calibrar=False)
                 pipe_fold.fit(X_tr, y_tr)
                 preds = pipe_fold.predict(X_val)
                 f1_scores.append(f1_score(y_val, preds, zero_division=0))
@@ -179,11 +180,16 @@ def treinar_modelo_absenteismo(db: Session, force: bool = False) -> Dict[str, An
             metricas["precision"] = float(np.mean(prec_scores))
 
     # Ajuste final do modelo completo
+    class_counts = pd.Series(y).value_counts()
+    pode_calibrar = len(unique_classes) > 1 and len(class_counts) > 1 and min(class_counts) >= 2
+    pipeline = criar_pipeline_absenteismo(calibrar=pode_calibrar)
+
     if len(unique_classes) > 1:
         pipeline.fit(X, y)
     else:
         # Caso borda: apenas 1 classe presente no dataset
         X_priors, y_priors = _gerar_dados_sinteticos_priors()
+        pipeline = criar_pipeline_absenteismo(calibrar=True)
         pipeline.fit(X_priors, y_priors)
 
     ARTEFATO_DIR.mkdir(parents=True, exist_ok=True)
@@ -219,14 +225,15 @@ def prever_probabilidade_absenteismo(horario: Horario, modelo: Optional[Pipeline
             raise ValueError("db ou modelo deve ser informado para inferencia")
         modelo = carregar_ou_inicializar_modelo(db)
 
-    h_ini_min = horario.hora_inicio.hour * 60 + horario.hora_inicio.minute if horario.hora_inicio else 480
-    num_m = horario.turma.num_matriculados if (horario.turma and horario.turma.num_matriculados) else 1
-    cap = horario.sala.capacidade if (horario.sala and horario.sala.capacidade) else 1
+    dia_sem = horario.dia_semana if horario.dia_semana is not None else 0
+    h_ini_min = (horario.hora_inicio.hour * 60 + horario.hora_inicio.minute) if horario.hora_inicio else 480
+    num_m = (horario.turma.num_matriculados or 1) if (horario.turma and horario.turma.num_matriculados is not None) else 1
+    cap = (horario.sala.capacidade or 1) if (horario.sala and horario.sala.capacidade is not None) else 1
     razao = num_m / max(1, cap)
     turno_str = _obter_turno_str(horario.turma.turno_preferido if horario.turma else Turno.MATUTINO)
 
     sample = pd.DataFrame([{
-        "dia_semana": horario.dia_semana,
+        "dia_semana": dia_sem,
         "hora_inicio_minutos": h_ini_min,
         "num_matriculados": num_m,
         "capacidade_sala": cap,
@@ -237,7 +244,7 @@ def prever_probabilidade_absenteismo(horario: Horario, modelo: Optional[Pipeline
     try:
         probas = modelo.predict_proba(sample)
         # Probabilidade da classe 1 (falta)
-        classes = list(modelo.classes_)
+        classes = list(getattr(modelo, "classes_", [0, 1]))
         if 1 in classes:
             idx = classes.index(1)
             prob = float(probas[0][idx])
@@ -246,7 +253,7 @@ def prever_probabilidade_absenteismo(horario: Horario, modelo: Optional[Pipeline
     except Exception:
         # Fallback deterministico baseado em regras heuristicas caso o modelo falhe
         prob = 0.15
-        if horario.dia_semana == 4:
+        if dia_sem == 4:
             prob += 0.35
         if h_ini_min >= 1140:
             prob += 0.15
@@ -290,7 +297,9 @@ def gerar_sugestoes_remanejamento(
         sala_atual = h.sala
         if not turma or not sala_atual:
             continue
-        if turma.num_matriculados <= 0 or sala_atual.capacidade <= 0:
+        num_matric = turma.num_matriculados or 0
+        cap_sala = sala_atual.capacidade or 0
+        if num_matric <= 0 or cap_sala <= 0:
             continue
 
         prob_ausencia = prever_probabilidade_absenteismo(h, modelo=modelo)
@@ -306,9 +315,9 @@ def gerar_sugestoes_remanejamento(
         db.add(prev)
 
         # Calculo de demanda discente efetiva esperada
-        presentes_esperados = max(1, int(math.ceil(turma.num_matriculados * (1.0 - prob_ausencia))))
-        desperdicio = sala_atual.capacidade - presentes_esperados
-        taxa_ociosidade = desperdicio / sala_atual.capacidade
+        presentes_esperados = max(1, int(math.ceil(num_matric * (1.0 - prob_ausencia))))
+        desperdicio = cap_sala - presentes_esperados
+        taxa_ociosidade = desperdicio / cap_sala
 
         # Se ultrapassa o limiar e ha sobredimensionamento expressivo
         if taxa_ociosidade >= limiar_ociosidade and desperdicio >= 10:
@@ -331,7 +340,7 @@ def gerar_sugestoes_remanejamento(
                     Sala.id != sala_atual.id,
                     Sala.tipo == sala_atual.tipo,
                     Sala.capacidade >= presentes_esperados,
-                    Sala.capacidade < sala_atual.capacidade,
+                    Sala.capacidade < cap_sala,
                 )
                 .order_by(Sala.capacidade.asc())
             )
@@ -355,9 +364,37 @@ def gerar_sugestoes_remanejamento(
                         Horario.hora_fim > h.hora_inicio,
                     )
                 )
-                if not conflito:
-                    sala_escolhida = cand
-                    break
+                if conflito:
+                    continue
+
+                # Evita conflito com sugestoes pendentes existentes no banco
+                sugestao_pendente = db.scalar(
+                    select(SugestaoRemanejamento)
+                    .join(SugestaoRemanejamento.horario)
+                    .where(
+                        SugestaoRemanejamento.sala_sugerida_id == cand.id,
+                        SugestaoRemanejamento.status == StatusSugestao.PENDENTE,
+                        Horario.dia_semana == h.dia_semana,
+                        Horario.hora_inicio < h.hora_fim,
+                        Horario.hora_fim > h.hora_inicio,
+                    )
+                )
+                if sugestao_pendente:
+                    continue
+
+                # Evita sugerir a mesma sala para mais de uma turma no mesmo slot no lote atual
+                conflito_no_lote = any(
+                    s.sala_sugerida_id == cand.id and
+                    s.horario.dia_semana == h.dia_semana and
+                    s.horario.hora_inicio < h.hora_fim and
+                    s.horario.hora_fim > h.hora_inicio
+                    for s in sugestoes_geradas
+                )
+                if conflito_no_lote:
+                    continue
+
+                sala_escolhida = cand
+                break
 
             if sala_escolhida:
                 motivo = (
@@ -394,6 +431,17 @@ def converter_sugestao_para_read(sugestao: SugestaoRemanejamento) -> SugestaoRem
     s_atual = sugestao.sala_atual
     s_sug = sugestao.sala_sugerida
 
+    prob_aus: Optional[float] = None
+    if h and h.previsoes_falta:
+        prevs = sorted(h.previsoes_falta, key=lambda p: p.criado_em if p.criado_em else datetime.min)
+        prob_aus = prevs[-1].prob_ausencia
+    elif sugestao.motivo and "absenteismo:" in sugestao.motivo:
+        try:
+            part = sugestao.motivo.split("absenteismo:")[1].split("%")[0].strip()
+            prob_aus = round(float(part) / 100.0, 4)
+        except Exception:
+            pass
+
     return SugestaoRemanejamentoRead(
         id=sugestao.id,
         horario_id=sugestao.horario_id,
@@ -405,6 +453,7 @@ def converter_sugestao_para_read(sugestao: SugestaoRemanejamento) -> SugestaoRem
         aprovado_por=sugestao.aprovado_por,
         criado_em=sugestao.criado_em,
         atualizado_em=sugestao.atualizado_em,
+        prob_ausencia=prob_aus,
         turma_id=t.id if t else None,
         disciplina_codigo=disc.codigo if disc else None,
         disciplina_nome=disc.nome if disc else None,

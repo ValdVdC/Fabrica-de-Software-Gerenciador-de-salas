@@ -21,6 +21,7 @@ class SugestaoRemanejamentoRead(BaseModel):
     atualizado_em: datetime
 
     # Dados contextuais enriquecidos
+    prob_ausencia: Optional[float] = Field(None, ge=0.0, le=1.0, description="Probabilidade estimada de absenteismo discente")
     turma_id: Optional[int] = None
     disciplina_codigo: Optional[str] = None
     disciplina_nome: Optional[str] = None
@@ -30,7 +31,7 @@ class SugestaoRemanejamentoRead(BaseModel):
     sala_sugerida_bloco: Optional[str] = None
     sala_sugerida_numero: Optional[str] = None
     sala_sugerida_capacidade: Optional[int] = None
-    dia_semana: Optional[int] = None
+    dia_semana: Optional[int] = Field(None, ge=0, le=6, description="Dia da semana ISO 8601 (0=Segunda a 6=Domingo)")
     hora_inicio: Optional[time] = None
     hora_fim: Optional[time] = None
     campus_id: Optional[int] = None
