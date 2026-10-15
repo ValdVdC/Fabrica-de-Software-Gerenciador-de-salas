@@ -20,16 +20,43 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
   template: `
     <div class="admin-container">
       <header class="admin-header">
-        <h2>Gestao de Infraestrutura e Espacos</h2>
-        <p>Painel operacional de salas academicas, recursos materiais e controle institucional.</p>
+        <div class="admin-header-title-row">
+          <div>
+            <span class="admin-eyebrow">ADMINISTRACAO ACADEMICA / INFRAESTRUTURA</span>
+            <h2>Gestao de Infraestrutura e Espacos</h2>
+            <p>Painel operacional de salas academicas, recursos materiais e alocacao com IA (Human-in-the-Loop).</p>
+          </div>
+          <div class="campus-status-pill">
+            <span class="status-indicator-dot" aria-hidden="true"></span>
+            <span>Campus #{{ campusId > 0 ? campusId : 'Ativo' }}</span>
+          </div>
+        </div>
       </header>
 
       <nav class="tabs-nav" aria-label="Abas">
-        <button type="button" [class.active]="abaAtiva() === 'salas'" (click)="selecionarAba('salas')">Salas &amp; Espacos</button>
-        <button type="button" [class.active]="abaAtiva() === 'equipamentos'" (click)="selecionarAba('equipamentos')">Equipamentos</button>
-        <button type="button" [class.active]="abaAtiva() === 'alocacao'" (click)="selecionarAba('alocacao')">Alocacao Inteligente</button>
-        <button type="button" [class.active]="abaAtiva() === 'remanejamento'" (click)="selecionarAba('remanejamento')">Remanejamento IA</button>
-        <button type="button" [class.active]="abaAtiva() === 'resumo'" (click)="selecionarAba('resumo')">Resumo &amp; Metricas</button>
+        <button type="button" [class.active]="abaAtiva() === 'salas'" (click)="selecionarAba('salas')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path></svg>
+          Salas &amp; Espacos
+        </button>
+        <button type="button" [class.active]="abaAtiva() === 'equipamentos'" (click)="selecionarAba('equipamentos')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.12 6.4-6.05-4.06a2 2 0 0 0-2.17-.05L2.9 6.32a2 2 0 0 0-.9 1.69v8a2 2 0 0 0 .9 1.68l6.05 4.07a2 2 0 0 0 2.18 0l6.05-4.07a2 2 0 0 0 .9-1.68v-8a2 2 0 0 0-.88-1.61Z"></path></svg>
+          Equipamentos
+        </button>
+        <button type="button" [class.active]="abaAtiva() === 'alocacao'" (click)="selecionarAba('alocacao')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+          Alocacao Inteligente
+        </button>
+        <button type="button" [class.active]="abaAtiva() === 'remanejamento'" (click)="selecionarAba('remanejamento')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+          Remanejamento IA
+          @if (iaService.sugestoes().length > 0) {
+            <span class="tab-badge">{{ iaService.sugestoes().length }}</span>
+          }
+        </button>
+        <button type="button" [class.active]="abaAtiva() === 'resumo'" (click)="selecionarAba('resumo')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          Resumo &amp; Metricas
+        </button>
       </nav>
 
       @if (campusId <= 0) { <div class="alert alert-error">Campus nao identificado para o usuario autenticado.</div> }
@@ -47,7 +74,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
             <form (ngSubmit)="salvarEdicao()" class="form-row">
               <input type="text" [(ngModel)]="formEditBloco" name="editBloco" required maxlength="50" placeholder="Bloco (Ex: A)" class="form-input" />
               <input type="text" [(ngModel)]="formEditNumero" name="editNumero" required maxlength="50" placeholder="Numero (Ex: 101)" class="form-input" />
-              <select [(ngModel)]="formEditTipo" name="editTipo" class="form-input">
+              <select [(ngModel)]="formEditTipo" name="editTipo" class="form-input form-select">
                 <option value="regular">Regular</option>
                 <option value="laboratorio">Laboratorio</option>
                 <option value="auditorio">Auditorio</option>
@@ -64,7 +91,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
             <form (ngSubmit)="cadastrarSala()" class="form-row">
               <input type="text" [(ngModel)]="formBloco" name="bloco" required maxlength="50" placeholder="Bloco (Ex: A)" class="form-input" />
               <input type="text" [(ngModel)]="formNumero" name="numero" required maxlength="50" placeholder="Numero (Ex: 101)" class="form-input" />
-              <select [(ngModel)]="formTipo" name="tipo" class="form-input"><option value="regular">Regular</option><option value="laboratorio">Laboratorio</option><option value="auditorio">Auditorio</option><option value="reuniao">Reuniao</option></select>
+              <select [(ngModel)]="formTipo" name="tipo" class="form-input form-select"><option value="regular">Regular</option><option value="laboratorio">Laboratorio</option><option value="auditorio">Auditorio</option><option value="reuniao">Reuniao</option></select>
               <input type="number" [(ngModel)]="formCapacidade" name="capacidade" min="1" max="5000" placeholder="Capacidade" class="form-input tabular-nums" />
               <button type="submit" [disabled]="adminService.isLoading() || campusId <= 0" class="btn-primary">Salvar Sala</button>
             </form>
@@ -109,11 +136,11 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
         <div class="panel-card">
           <h3>Vincular Equipamento a Sala</h3>
           <form (ngSubmit)="vincularEquipamento()" class="form-row">
-            <select [(ngModel)]="formAssocSalaId" name="assocSala" required class="form-input">
+            <select [(ngModel)]="formAssocSalaId" name="assocSala" required class="form-input form-select">
               <option [ngValue]="null" disabled>Selecione a Sala</option>
               @for (s of adminService.salas(); track s.id) { <option [ngValue]="s.id">{{ s.bloco }} - Sala {{ s.numero }}</option> }
             </select>
-            <select [(ngModel)]="formAssocEquipId" name="assocEquip" required class="form-input">
+            <select [(ngModel)]="formAssocEquipId" name="assocEquip" required class="form-input form-select">
               <option [ngValue]="null" disabled>Selecione o Equipamento</option>
               @for (eq of adminService.equipamentos(); track eq.id) { <option [ngValue]="eq.id">{{ eq.nome }}</option> }
             </select>
@@ -140,14 +167,14 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
         <div class="panel-card">
           <h3>Motor de Alocacao Paralelo OpenMP (Sprint 05)</h3>
           <p class="section-desc">Otimizacao combinatoria de salas com heuristica Best-Fit, medicao cientifica de Speedup e persistencia de horarios.</p>
-          <div class="form-row" style="margin-top: 0.75rem; align-items: flex-end;">
+          <div class="form-row" style="margin-top: 0.85rem; align-items: flex-end;">
             <div class="form-group">
               <label class="input-label" for="periodoLetivoInput">Periodo Letivo</label>
               <input id="periodoLetivoInput" type="text" [(ngModel)]="formPeriodoLetivo" name="periodoLetivo" required placeholder="Ex: 2026.1" class="form-input" style="max-width: 130px;" />
             </div>
             <div class="form-group">
               <label class="input-label" for="maxThreadsSelect">Threads OpenMP</label>
-              <select id="maxThreadsSelect" [(ngModel)]="formMaxThreads" name="maxThreads" class="form-input" style="max-width: 140px;">
+              <select id="maxThreadsSelect" [(ngModel)]="formMaxThreads" name="maxThreads" class="form-input form-select" style="max-width: 140px;">
                 <option [ngValue]="1">1 Thread (Seq)</option>
                 <option [ngValue]="2">2 Threads</option>
                 <option [ngValue]="4">4 Threads</option>
@@ -161,6 +188,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
               </label>
             </div>
             <button type="button" (click)="executarAlocacao()" [disabled]="alocacaoService.isLoading() || campusId <= 0" class="btn-primary">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               {{ alocacaoService.isLoading() ? 'Processando...' : 'Executar Alocacao Inteligente' }}
             </button>
             <button type="button" (click)="executarBenchmark('medio')" [disabled]="alocacaoService.isLoading()" class="btn-secondary">
@@ -237,27 +265,52 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
       }
 
       @if (abaAtiva() === 'remanejamento') {
-        <div class="panel-card">
+        <div class="panel-card remanejamento-hero">
           <div class="remanejamento-toolbar">
-            <div>
-              <h3>Remanejamento Inteligente de Salas (IA Preditiva)</h3>
-              <p class="section-desc">Identificacao de absenteismo discente e propostas de realocacao para salas menores com liberacao de espaco fisico (Human-in-the-Loop).</p>
+            <div class="toolbar-title-group">
+              <div class="title-with-pill">
+                <h3>Remanejamento Inteligente de Salas</h3>
+                <span class="chip-ia">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+                  IA Preditiva
+                </span>
+              </div>
+              <p class="section-desc">Identificacao automatica de ociosidade por absenteismo discente com proposta de realocacao para salas menores com liberacao de espaco fisico (Human-in-the-Loop).</p>
             </div>
             <div class="toolbar-actions">
-              <select [(ngModel)]="filtroStatusRemanejamento" (change)="carregarSugestoes()" class="form-input" style="max-width: 140px;">
+              <select [(ngModel)]="filtroStatusRemanejamento" (change)="carregarSugestoes()" class="form-input form-select" style="max-width: 140px;">
                 <option value="pendente">Pendentes</option>
                 <option value="aprovado">Aprovadas</option>
                 <option value="rejeitado">Rejeitadas</option>
                 <option value="">Todas</option>
               </select>
               <button type="button" (click)="executarAnaliseIA()" [disabled]="iaService.isLoading() || campusId <= 0" class="btn-secondary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
                 {{ iaService.isLoading() ? 'Processando...' : 'Executar Analise IA' }}
               </button>
               <button type="button" (click)="carregarSugestoes()" [disabled]="iaService.isLoading()" class="btn-secondary">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 21h5v-5"></path></svg>
                 Atualizar Lista
               </button>
             </div>
           </div>
+
+          @if (iaService.sugestoes().length > 0) {
+            <div class="remanejamento-kpis">
+              <div class="kpi-card">
+                <span class="kpi-val kpi-val-ia tabular-nums">{{ sugestoesPendentesCount() }}</span>
+                <span class="kpi-label">Sugestoes Pendentes</span>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-val tabular-nums">{{ riscoMedioAbsenteismo() }}%</span>
+                <span class="kpi-label">Risco Medio de Ausencia</span>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-val kpi-val-green tabular-nums">+{{ totalVagasOtimizadas() }} vagas</span>
+                <span class="kpi-label">Potencial de Vagas Liberadas</span>
+              </div>
+            </div>
+          }
         </div>
 
         @if (iaService.errorMessage()) { <div class="alert alert-error">{{ iaService.errorMessage() }}</div> }
@@ -265,61 +318,104 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
 
         <div class="sugestoes-grid">
           @for (sug of iaService.sugestoes(); track sug.id) {
-            <div class="panel-card sugestao-card">
+            <div class="sugestao-card" [class.card-pendente]="sug.status === 'pendente'" [class.card-aprovado]="sug.status === 'aprovado'" [class.card-rejeitado]="sug.status === 'rejeitado'">
               <div class="sugestao-header">
-                <div>
-                  <span class="font-bold">{{ sug.disciplina_codigo }} - {{ sug.disciplina_nome || 'Turma Sem Nome' }}</span>
-                  <small class="meta-tag">Turma #{{ sug.turma_id }}</small>
+                <div class="header-main">
+                  <span class="code-badge">{{ sug.disciplina_codigo }}</span>
+                  <strong class="discipline-title">{{ sug.disciplina_nome || 'Turma Sem Nome' }}</strong>
+                  <span class="meta-pill">Turma #{{ sug.turma_id }}</span>
                 </div>
                 <div class="badges-row">
                   <span class="badge badge-ia">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h5l3 7 4-14 3 7h5"></path></svg>
                     {{ ((sug.prob_ausencia || 0) * 100).toFixed(0) }}% risco absenteismo
                   </span>
-                  <span class="badge" [class.badge-success]="sug.status === 'aprovado'" [class.badge-danger]="sug.status === 'rejeitado'">
+                  <span class="badge" [class.badge-pending]="sug.status === 'pendente'" [class.badge-success]="sug.status === 'aprovado'" [class.badge-danger]="sug.status === 'rejeitado'">
+                    @if (sug.status === 'pendente') {
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    } @else if (sug.status === 'aprovado') {
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    } @else {
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    }
                     {{ sug.status }}
                   </span>
                 </div>
               </div>
 
-              <div class="sugestao-meta">
-                <span>Horario: {{ formatarDiaSemana(sug.dia_semana) }}, {{ sug.hora_inicio || '--:--' }} - {{ sug.hora_fim || '--:--' }}</span>
-                <span>Motivo: {{ sug.motivo }}</span>
+              <div class="sugestao-schedule-bar">
+                <div class="schedule-item">
+                  <span class="schedule-label">Horario:</span>
+                  <span class="schedule-val font-semibold">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    {{ formatarDiaSemana(sug.dia_semana) }}, {{ sug.hora_inicio || '--:--' }} - {{ sug.hora_fim || '--:--' }}
+                  </span>
+                </div>
+                <div class="schedule-item">
+                  <span class="schedule-label">Motivo IA:</span>
+                  <span class="schedule-val">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    {{ sug.motivo }}
+                  </span>
+                </div>
               </div>
 
               <div class="comparativo-grid">
-                <div class="comparativo-box">
-                  <span class="comp-label">Sala Atual</span>
+                <div class="comparativo-box current-box">
+                  <div class="comp-header">
+                    <span class="comp-label">Sala Atual (Alocada)</span>
+                  </div>
                   <strong class="comp-title">{{ sug.sala_atual_bloco }} - Sala {{ sug.sala_atual_numero }}</strong>
-                  <small class="tabular-nums">Capacidade: {{ sug.sala_atual_capacidade }} alunos</small>
+                  <small class="tabular-nums comp-detail">Capacidade Instalada: <strong>{{ sug.sala_atual_capacidade }}</strong> postos</small>
                 </div>
                 <div class="comparativo-box destaque-box">
-                  <span class="comp-label">Sala Recomendada (IA)</span>
-                  <strong class="comp-title" style="color: #252ceb;">{{ sug.sala_sugerida_bloco }} - Sala {{ sug.sala_sugerida_numero }}</strong>
-                  <small class="tabular-nums">Capacidade: {{ sug.sala_sugerida_capacidade }} alunos</small>
+                  <div class="comp-header">
+                    <span class="comp-label label-destaque">Sala Recomendada (IA)</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+                  </div>
+                  <strong class="comp-title title-destaque">{{ sug.sala_sugerida_bloco }} - Sala {{ sug.sala_sugerida_numero }}</strong>
+                  <small class="tabular-nums comp-detail">Capacidade Adequada: <strong>{{ sug.sala_sugerida_capacidade }}</strong> postos</small>
                 </div>
                 <div class="comparativo-box economia-box">
-                  <span class="comp-label">Otimizacao</span>
-                  <strong class="comp-title tabular-nums" style="color: #15803d;">+{{ calcularEconomiaVagas(sug) }} vagas</strong>
-                  <small>Liberadas no campus</small>
+                  <div class="comp-header">
+                    <span class="comp-label label-economia">Otimizacao de Espaco</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                  </div>
+                  <strong class="comp-title title-economia tabular-nums">+{{ calcularEconomiaVagas(sug) }} vagas</strong>
+                  <small class="comp-detail detail-sub">Liberadas para alocacao no campus</small>
                 </div>
               </div>
 
               @if (sug.status === 'pendente') {
                 <div class="sugestao-decisao">
-                  <input type="text" [(ngModel)]="justificativas[sug.id]" placeholder="Justificativa da decisao (obrigatoria em caso de rejeicao)" class="form-input flex-2" maxlength="500" [disabled]="iaService.isLoading()" />
+                  <div class="input-container">
+                    <label class="decision-label" [for]="'justificativa-' + sug.id">Parecer da Gestao Academica (Aprovacao Humana):</label>
+                    <input [id]="'justificativa-' + sug.id" type="text" [(ngModel)]="justificativas[sug.id]" placeholder="Justificativa da decisao (obrigatoria em caso de rejeicao)..." class="form-input decision-input" maxlength="500" [disabled]="iaService.isLoading()" />
+                  </div>
                   <div class="sugestao-actions">
-                    <button type="button" class="btn-primary" (click)="aprovarSugestao(sug)" [disabled]="iaService.isLoading()">Aprovar Troca</button>
-                    <button type="button" class="btn-outline-danger" (click)="rejeitarSugestao(sug)" [disabled]="iaService.isLoading() || !justificativas[sug.id]?.trim()">Rejeitar</button>
+                    <button type="button" class="btn-primary" (click)="aprovarSugestao(sug)" [disabled]="iaService.isLoading()">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      Aprovar Troca
+                    </button>
+                    <button type="button" class="btn-outline-danger" (click)="rejeitarSugestao(sug)" [disabled]="iaService.isLoading() || !justificativas[sug.id]?.trim()">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      Rejeitar
+                    </button>
                   </div>
                 </div>
               } @else {
                 <div class="sugestao-finalizada">
-                  <small>Decisao registrada. Justificativa: {{ sug.justificativa || 'Nenhuma informada' }}</small>
+                  <span class="finalized-label">Decisao homologada por gestor academico:</span>
+                  <span class="finalized-text">Justificativa: {{ sug.justificativa || 'Nenhuma informada.' }}</span>
                 </div>
               }
             </div>
           } @empty {
-            <div class="panel-card empty-msg">Nenhuma sugestao de remanejamento encontrada com o filtro selecionado.</div>
+            <div class="panel-card empty-msg">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <p class="empty-title">Nenhuma sugestao de remanejamento encontrada com o filtro selecionado.</p>
+              <p class="empty-desc">Utilize o botao 'Executar Analise IA' acima para rodar a predicao sobre as turmas do periodo letivo ativo ou altere o filtro de status.</p>
+            </div>
           }
         </div>
       }
@@ -333,82 +429,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
       }
     </div>
   `,
-  // prettier-ignore
-  styles: [`
-    .admin-container { display: flex; flex-direction: column; gap: 1.25rem; }
-    .admin-header h2 { margin: 0; font-size: 1.5rem; font-weight: 700; color: #0f172a; }
-    .admin-header p { margin: 0.25rem 0 0; font-size: 0.875rem; color: #64748b; }
-    .tabs-nav { display: flex; gap: 0.5rem; border-bottom: 1px solid #e2e8f0; }
-    .tabs-nav button { background: none; border: none; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
-    .tabs-nav button.active { color: #0f172a; font-weight: 700; border-bottom-color: #0f172a; }
-    .alert { padding: 0.75rem; border-radius: 4px; font-size: 0.8125rem; }
-    .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
-    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
-    .panel-card, .table-card, .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; }
-    .panel-card { padding: 1rem; }
-    .panel-card h3 { margin: 0 0 0.75rem; font-size: 0.9375rem; font-weight: 600; color: #0f172a; }
-    .section-desc { font-size: 0.8125rem; color: #64748b; margin: 0; }
-    .form-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
-    .input-label { font-size: 0.75rem; font-weight: 600; color: #475569; }
-    .form-check { justify-content: flex-end; padding-bottom: 0.4rem; }
-    .check-label { font-size: 0.8125rem; display: flex; align-items: center; gap: 0.35rem; color: #334155; cursor: pointer; }
-    .form-input { padding: 0.4rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8125rem; flex: 1; min-width: 110px; }
-    .flex-2 { flex: 2; }
-    .btn-primary { background: #0f172a; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-    .table-card { overflow: hidden; }
-    .data-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; text-align: left; }
-    .data-table th, .data-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #e2e8f0; }
-    .data-table th { background: #f8fafc; color: #475569; font-weight: 600; }
-    .data-table td { color: #334155; border-bottom-color: #f1f5f9; }
-    .data-table tr:hover { background: #f8fafc; }
-    .font-bold { font-weight: 600; color: #0f172a; }
-    .badge { background: #f1f5f9; color: #334155; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem; text-transform: capitalize; }
-    .badge-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-    .badge-danger { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    .empty-msg { text-align: center; color: #94a3b8; padding: 1.5rem; }
-    .tabular-nums { font-variant-numeric: tabular-nums; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
-    .stat-card { padding: 1rem; display: flex; flex-direction: column; }
-    .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600; }
-    .stat-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin: 0.25rem 0; }
-    .stat-card small { font-size: 0.75rem; color: #94a3b8; }
-    .btn-secondary { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8125rem; font-weight: 500; cursor: pointer; }
-    .btn-secondary:hover:not(:disabled) { background: #e2e8f0; border-color: #4f46e5; }
-    .btn-primary { background: #252ceb; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
-    .btn-primary:hover:not(:disabled) { background: #1d22ba; }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-    .actions-cell { display: flex; gap: 0.375rem; align-items: center; }
-    .btn-action { border: 1px solid #cbd5e1; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; cursor: pointer; }
-    .btn-edit { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-    .btn-edit:hover:not(:disabled) { background: #dbeafe; }
-    .btn-delete { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
-    .btn-delete:hover:not(:disabled) { background: #fee2e2; }
-    .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
-    .edit-card { border-left: 3px solid #2563eb; }
-    .remanejamento-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
-    .toolbar-actions { display: flex; gap: 0.5rem; align-items: center; }
-    .sugestoes-grid { display: flex; flex-direction: column; gap: 0.75rem; }
-    .sugestao-card { display: flex; flex-direction: column; gap: 0.75rem; border-left: 3px solid #7c3aed; }
-    .sugestao-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
-    .meta-tag { color: #64748b; margin-left: 0.5rem; font-size: 0.75rem; }
-    .badges-row { display: flex; gap: 0.5rem; align-items: center; }
-    .badge-ia { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; font-weight: 700; }
-    .sugestao-meta { font-size: 0.75rem; color: #475569; display: flex; flex-direction: column; gap: 0.2rem; }
-    .comparativo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; }
-    .comparativo-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.2rem; }
-    .destaque-box { border-color: #cbd5e1; background: #fff; }
-    .economia-box { background: #f0fdf4; border-color: #bbf7d0; }
-    .comp-label { font-size: 0.6875rem; text-transform: uppercase; color: #64748b; font-weight: 600; }
-    .comp-title { font-size: 0.875rem; color: #0f172a; }
-    .sugestao-decisao { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 0.75rem; }
-    .sugestao-actions { display: flex; gap: 0.5rem; }
-    .sugestao-finalizada { font-size: 0.75rem; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 0.5rem; }
-    .btn-outline-danger { background: transparent; color: #b91c1c; border: 1px solid #fecaca; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
-    .btn-outline-danger:hover:not(:disabled) { background: #fef2f2; border-color: #b91c1c; }
-    .btn-outline-danger:disabled { opacity: 0.6; cursor: not-allowed; }
-  `],
+  styles: [],
 })
 export class AdminComponent implements OnInit {
   readonly adminService = inject(AdminService);
@@ -454,6 +475,19 @@ export class AdminComponent implements OnInit {
     this.adminService.salas().reduce((acc, s) => acc + s.capacidade, 0),
   );
   readonly totalEquipamentos = computed(() => this.adminService.equipamentos().length);
+
+  readonly sugestoesPendentesCount = computed(
+    () => this.iaService.sugestoes().filter((s) => s.status === 'pendente').length,
+  );
+  readonly riscoMedioAbsenteismo = computed(() => {
+    const list = this.iaService.sugestoes();
+    if (list.length === 0) return 0;
+    const soma = list.reduce((acc, s) => acc + (s.prob_ausencia || 0), 0);
+    return Math.round((soma / list.length) * 100);
+  });
+  readonly totalVagasOtimizadas = computed(() => {
+    return this.iaService.sugestoes().reduce((acc, s) => acc + this.calcularEconomiaVagas(s), 0);
+  });
 
   ngOnInit(): void {
     const user = this.authService.currentUser();
