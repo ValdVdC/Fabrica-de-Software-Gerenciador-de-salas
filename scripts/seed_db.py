@@ -210,21 +210,18 @@ def seed_database(session: Session) -> dict[str, int]:
     # Gera 8 semanas de historico em dias uteis.
     # Sexta-feira e turno noturno apresentam absenteismo acentuado.
     data_base_segunda = date(2026, 2, 9)
+    existing_freqs = set(
+        session.execute(
+            select(Frequencia.matricula_id, Frequencia.horario_id, Frequencia.data)
+        ).all()
+    )
     for h in horarios:
         mats = matriculas_por_turma.get(h.turma_id, [])
         dia_offset = h.dia_semana  # 0=Segunda, 2=Quarta, 4=Sexta
         for sem in range(8):
             dt_aula = data_base_segunda + timedelta(days=(sem * 7) + dia_offset)
             for mat in mats:
-                # Idempotencia: verifica se ja existe frequencia para esta matricula/horario/data
-                freq_existente = session.scalar(
-                    select(Frequencia).where(
-                        Frequencia.matricula_id == mat.id,
-                        Frequencia.horario_id == h.id,
-                        Frequencia.data == dt_aula
-                    )
-                )
-                if not freq_existente:
+                if (mat.id, h.id, dt_aula) not in existing_freqs:
                     # Determinismo com seed reproduzivel
                     rng = random.Random(mat.id * 1000 + sem * 10 + dia_offset)
                     # Probabilidade base de presenca
@@ -246,6 +243,7 @@ def seed_database(session: Session) -> dict[str, int]:
                         data=dt_aula,
                         presente=esta_presente
                     ))
+                    existing_freqs.add((mat.id, h.id, dt_aula))
 
     session.commit()
     return {
