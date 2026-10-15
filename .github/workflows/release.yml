@@ -1,4 +1,4 @@
-name: Release - Deploy & Versionamento
+name: Release & Deployment Pipeline
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   create-release:
-    name: Publicar Release no GitHub
+    name: Publish GitHub Release
     runs-on: ubuntu-latest
 
     steps:
