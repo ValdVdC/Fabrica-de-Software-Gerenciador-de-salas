@@ -4,7 +4,21 @@ Roteador central da API versao 1 (v1).
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import alocacao, auth, campi, cursos, disciplinas, equipamentos, horarios, matriculas, motor, salas, turmas, usuarios
+from app.api.v1.endpoints import (
+    alocacao,
+    auth,
+    campi,
+    cursos,
+    disciplinas,
+    equipamentos,
+    horarios,
+    matriculas,
+    motor,
+    salas,
+    sugestoes,
+    turmas,
+    usuarios,
+)
 
 api_router = APIRouter()
 
@@ -20,4 +34,6 @@ api_router.include_router(matriculas.router, prefix="/matriculas", tags=["Matric
 api_router.include_router(horarios.router, prefix="/horarios", tags=["Horarios"])
 api_router.include_router(motor.router, prefix="/motor", tags=["Motor"])
 api_router.include_router(alocacao.router, prefix="/alocacao", tags=["Alocacao"])
+api_router.include_router(sugestoes.router, prefix="/sugestoes", tags=["Sugestoes"])
+api_router.include_router(sugestoes.ia_router, prefix="/ia", tags=["IA Preditiva"])
 

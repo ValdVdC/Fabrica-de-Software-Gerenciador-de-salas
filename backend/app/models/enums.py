@@ -36,4 +36,5 @@ class StatusSugestao(str, Enum):
 class TipoEventoLog(str, Enum):
     CRIACAO = "criacao"
     REMANEJAMENTO = "remanejamento"
+    ALTERACAO = "alteracao"
     CANCELAMENTO = "cancelamento"

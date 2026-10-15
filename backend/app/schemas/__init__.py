@@ -6,6 +6,14 @@ from app.schemas.turma import TurmaBase, TurmaCreate, TurmaRead
 from app.schemas.matricula import MatriculaBase, MatriculaCreate, MatriculaRead
 from app.schemas.horario import HorarioBase, HorarioCreate, HorarioRead, HorarioMeuRead
 from app.schemas.auth import LoginRequest, TokenResponse
+from app.schemas.ia import (
+    SugestaoRemanejamentoRead,
+    SugestaoAprovacaoUpdate,
+    AnaliseIARequest,
+    AnaliseIAResponse,
+    TreinamentoIAResponse,
+    PrevisaoFaltaRead,
+)
 
 __all__ = [
     "CampusBase", "CampusCreate", "CampusRead",
@@ -15,4 +23,7 @@ __all__ = [
     "MatriculaBase", "MatriculaCreate", "MatriculaRead",
     "HorarioBase", "HorarioCreate", "HorarioRead", "HorarioMeuRead",
     "LoginRequest", "TokenResponse",
+    "SugestaoRemanejamentoRead", "SugestaoAprovacaoUpdate",
+    "AnaliseIARequest", "AnaliseIAResponse", "TreinamentoIAResponse",
+    "PrevisaoFaltaRead",
 ]
