@@ -157,12 +157,10 @@ describe('IaService', () => {
   });
 
   it('deve capturar erro 401 Unauthorized e atualizar errorMessage defensivamente', () => {
-    service
-      .obterSugestoes()
-      .subscribe({
-        next: () => fail('Deveria ter falhado com 401'),
-        error: (err) => expect(err.status).toBe(401),
-      });
+    service.obterSugestoes().subscribe({
+      next: () => fail('Deveria ter falhado com 401'),
+      error: (err) => expect(err.status).toBe(401),
+    });
     const req = httpMock.expectOne('/api/v1/sugestoes');
     req.flush({ detail: 'Token ausente ou expirado' }, { status: 401, statusText: 'Unauthorized' });
     expect(service.errorMessage()).toBe('Token ausente ou expirado');
@@ -170,12 +168,10 @@ describe('IaService', () => {
   });
 
   it('deve capturar erro 403 Forbidden com mensagem de privilegio insuficiente', () => {
-    service
-      .aprovarSugestao(1)
-      .subscribe({
-        next: () => fail('Deveria ter falhado com 403'),
-        error: (err) => expect(err.status).toBe(403),
-      });
+    service.aprovarSugestao(1).subscribe({
+      next: () => fail('Deveria ter falhado com 403'),
+      error: (err) => expect(err.status).toBe(403),
+    });
     const req = httpMock.expectOne('/api/v1/sugestoes/1');
     req.flush(
       { detail: 'Acesso negado: privilegio insuficiente' },
@@ -185,24 +181,20 @@ describe('IaService', () => {
   });
 
   it('deve capturar erro 404 Not Found (BOLA / registro inexistente)', () => {
-    service
-      .aprovarSugestao(999)
-      .subscribe({
-        next: () => fail('Deveria ter falhado com 404'),
-        error: (err) => expect(err.status).toBe(404),
-      });
+    service.aprovarSugestao(999).subscribe({
+      next: () => fail('Deveria ter falhado com 404'),
+      error: (err) => expect(err.status).toBe(404),
+    });
     const req = httpMock.expectOne('/api/v1/sugestoes/999');
     req.flush({ detail: 'Sugestao nao encontrada' }, { status: 404, statusText: 'Not Found' });
     expect(service.errorMessage()).toBe('Sugestao nao encontrada');
   });
 
   it('deve capturar erro 409 Conflict ao aprovar sugestao com sala ocupada', () => {
-    service
-      .aprovarSugestao(1)
-      .subscribe({
-        next: () => fail('Deveria ter falhado com 409'),
-        error: (err) => expect(err.status).toBe(409),
-      });
+    service.aprovarSugestao(1).subscribe({
+      next: () => fail('Deveria ter falhado com 409'),
+      error: (err) => expect(err.status).toBe(409),
+    });
     const req = httpMock.expectOne('/api/v1/sugestoes/1');
     req.flush(
       { detail: 'Sala sugerida nao esta mais disponivel no horario especificado' },
