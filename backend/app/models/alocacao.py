@@ -4,7 +4,7 @@ Modelos de dados para Alocacao de Horarios e Auditoria (LogAlocacao).
 
 from datetime import time, datetime
 from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import SmallInteger, Time, DateTime, ForeignKey, CheckConstraint, Text, JSON, func, Enum as SQLEnum
+from sqlalchemy import SmallInteger, Time, DateTime, ForeignKey, CheckConstraint, Text, JSON, func, Enum as SQLEnum, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
 from app.models.base import TimestampMixin
@@ -44,8 +44,12 @@ class Horario(TimestampMixin, Base):
 
 class LogAlocacao(Base):
     __tablename__ = "log_alocacao"
+    __table_args__ = (
+        Index("ix_log_alocacao_campus_id_timestamp", "campus_id", "timestamp"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    campus_id: Mapped[Optional[int]] = mapped_column(ForeignKey("campus.id", ondelete="SET NULL"), nullable=True, index=True)
     horario_id: Mapped[Optional[int]] = mapped_column(ForeignKey("horario.id", ondelete="SET NULL"), nullable=True, index=True)
     snapshot_evento: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     tipo_evento: Mapped[TipoEventoLog] = mapped_column(
@@ -56,5 +60,6 @@ class LogAlocacao(Base):
     detalhes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
+    campus: Mapped[Optional["Campus"]] = relationship("Campus")
     horario: Mapped[Optional["Horario"]] = relationship("Horario", back_populates="logs_alocacao")
     responsavel: Mapped["Usuario"] = relationship("Usuario")

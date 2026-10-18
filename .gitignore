@@ -77,6 +77,7 @@ dist/
 
 *.pkl
 *.joblib
+*.db
 /ia_previsao/dados/*
 !/ia_previsao/dados/.gitkeep
 
@@ -88,3 +89,4 @@ dist/
 # Antigravity (estado local, não versionar)
 .agent/cache/
 scratch/
+scripts/serve_local.py

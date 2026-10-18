@@ -153,6 +153,7 @@ def aprovar_ou_rejeitar_sugestao(
 
         # Trilha de auditoria em log_alocacao
         log = LogAlocacao(
+            campus_id=horario.campus_id,
             horario_id=horario.id,
             tipo_evento=TipoEventoLog.ALTERACAO,
             usuario_responsavel=current_user.id,

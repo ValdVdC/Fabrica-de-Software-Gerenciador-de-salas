@@ -11,10 +11,11 @@ from sqlalchemy.exc import IntegrityError
 from app.db.session import get_db
 from app.models.campus import Campus
 from app.models.sala import Sala, Equipamento, SalaEquipamento
-from app.models.enums import PerfilUsuario
+from app.models.enums import PerfilUsuario, TipoEventoLog
 from app.models.usuario import Usuario
 from app.schemas.sala import SalaCreate, SalaRead, SalaUpdate
 from app.schemas.equipamento import SalaEquipamentoCreate, SalaEquipamentoRead
+from app.services.log_service import registrar_evento
 from app.api.deps import get_current_user, require_role
 
 router = APIRouter()
@@ -67,8 +68,18 @@ def criar_sala(
         capacidade=payload.capacidade,
         turnos_disponiveis=turnos_str,
     )
-    db.add(sala)
     try:
+        db.add(sala)
+        db.flush()
+        registrar_evento(
+            db=db,
+            tipo=TipoEventoLog.CRIACAO,
+            usuario=current_user,
+            campus_id=sala.campus_id,
+            entidade="sala",
+            entidade_id=sala.id,
+            detalhes=f"Criacao da sala {sala.bloco}-{sala.numero}",
+        )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -169,6 +180,15 @@ def atualizar_sala(
         sala.ativo = payload.ativo
 
     try:
+        registrar_evento(
+            db=db,
+            tipo=TipoEventoLog.ALTERACAO,
+            usuario=current_user,
+            campus_id=sala.campus_id,
+            entidade="sala",
+            entidade_id=sala.id,
+            detalhes=f"Atualizacao da sala {sala.bloco}-{sala.numero}",
+        )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -193,11 +213,28 @@ def excluir_sala(
     if db.scalar(stmt):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Nao e possivel excluir sala com horarios alocados")
 
+    campus_id = sala.campus_id
+    bloco = sala.bloco
+    numero = sala.numero
+
     stmt_eq = select(SalaEquipamento).where(SalaEquipamento.sala_id == sala_id)
     for eq in db.scalars(stmt_eq).all():
         db.delete(eq)
 
-    db.delete(sala)
-    db.commit()
+    try:
+        registrar_evento(
+            db=db,
+            tipo=TipoEventoLog.CANCELAMENTO,
+            usuario=current_user,
+            campus_id=campus_id,
+            entidade="sala",
+            entidade_id=sala_id,
+            detalhes=f"Exclusao da sala {bloco}-{numero}",
+        )
+        db.delete(sala)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Conflito ao excluir sala")
     return None
 

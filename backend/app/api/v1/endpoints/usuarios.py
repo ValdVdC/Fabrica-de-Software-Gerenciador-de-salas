@@ -10,10 +10,11 @@ from sqlalchemy.exc import IntegrityError
 from app.db.session import get_db
 from app.models.campus import Campus
 from app.models.usuario import Usuario
-from app.models.enums import PerfilUsuario
+from app.models.enums import PerfilUsuario, TipoEventoLog
 from app.schemas.usuario import UsuarioCreate, UsuarioRead
 from app.core.security import get_password_hash
 from app.api.deps import require_role
+from app.services.log_service import registrar_evento
 
 router = APIRouter()
 
@@ -58,8 +59,18 @@ def criar_usuario(
         perfil=payload.perfil,
         ativo=True,
     )
-    db.add(usuario)
     try:
+        db.add(usuario)
+        db.flush()
+        registrar_evento(
+            db=db,
+            tipo=TipoEventoLog.CRIACAO,
+            usuario=current_user,
+            campus_id=usuario.campus_id,
+            entidade="usuario",
+            entidade_id=usuario.id,
+            detalhes=f"Criacao do usuario {usuario.nome} ({usuario.email})",
+        )
         db.commit()
     except IntegrityError:
         db.rollback()
