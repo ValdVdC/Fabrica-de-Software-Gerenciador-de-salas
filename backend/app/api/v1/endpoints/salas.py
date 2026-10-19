@@ -5,7 +5,7 @@ Endpoints para gestao de Salas e associacoes de equipamentos.
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
@@ -16,7 +16,7 @@ from app.models.usuario import Usuario
 from app.schemas.sala import SalaCreate, SalaRead, SalaUpdate
 from app.schemas.equipamento import SalaEquipamentoCreate, SalaEquipamentoRead
 from app.services.log_service import registrar_evento
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_current_user, montar_padrao_ilike, require_role
 
 router = APIRouter()
 
@@ -26,10 +26,11 @@ def listar_salas(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=100),
     campus_id: Optional[int] = Query(default=None, gt=0, description="Filtro por ID do campus"),
+    q: Optional[str] = Query(default=None, max_length=100, description="Busca textual por bloco ou numero"),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    """Lista salas cadastradas respeitando o isolamento multi-campus."""
+    """Lista salas cadastradas respeitando o isolamento multi-campus e busca textual."""
     stmt = select(Sala)
     if current_user.perfil == PerfilUsuario.ADMIN:
         if campus_id is not None:
@@ -37,7 +38,15 @@ def listar_salas(
     else:
         stmt = stmt.where(Sala.campus_id == current_user.campus_id)
 
-    stmt = stmt.offset(skip).limit(limit)
+    if padrao := montar_padrao_ilike(q):
+        stmt = stmt.where(
+            or_(
+                Sala.bloco.ilike(padrao, escape="\\"),
+                Sala.numero.ilike(padrao, escape="\\"),
+            )
+        )
+
+    stmt = stmt.order_by(Sala.id.asc()).offset(skip).limit(limit)
     return db.scalars(stmt).all()
 
 

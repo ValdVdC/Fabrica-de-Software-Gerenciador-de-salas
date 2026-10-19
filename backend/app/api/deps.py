@@ -60,3 +60,15 @@ def require_role(*roles: PerfilUsuario):
             )
         return current_user
     return role_checker
+
+
+def montar_padrao_ilike(q: str | None) -> str | None:
+    """Normaliza e escapa curingas SQL (\\, % e _) para busca textual literal via ilike."""
+    if q is None:
+        return None
+    termo = q.strip()
+    if not termo:
+        return None
+    escapado = termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escapado}%"
+

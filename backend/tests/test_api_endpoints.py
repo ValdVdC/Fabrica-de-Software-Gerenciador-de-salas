@@ -70,10 +70,11 @@ def test_serializacao_entidades_com_dados(client, test_db):
     s = Sala(campus_id=c.id, bloco="B", numero="201", tipo=TipoSala.REGULAR, capacidade=30, turnos_disponiveis=[Turno.MATUTINO])
     test_db.add_all([u, s])
     test_db.commit()
-    res_u = client.get(f"/api/v1/usuarios/{u.id}")
-    assert res_u.status_code == 200 and "senha_hash" not in res_u.json() and res_u.json()["perfil"] == "professor"
     token = create_access_token({"sub": str(u.id), "perfil": u.perfil.value})
-    res_s = client.get(f"/api/v1/salas/{s.id}", headers={"Authorization": f"Bearer {token}"})
+    headers = {"Authorization": f"Bearer {token}"}
+    res_u = client.get(f"/api/v1/usuarios/{u.id}", headers=headers)
+    assert res_u.status_code == 200 and "senha_hash" not in res_u.json() and res_u.json()["perfil"] == "professor"
+    res_s = client.get(f"/api/v1/salas/{s.id}", headers=headers)
     assert res_s.status_code == 200 and res_s.json()["tipo"] == "regular"
 
 
