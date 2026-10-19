@@ -407,50 +407,28 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 2rem;
+  padding: 0.75rem 1.5rem;
   background: #0f172a;
   color: #fff;
   border-bottom: 1px solid #1e293b;
-  min-height: 64px;
 }
 
 .header-brand {
   display: flex;
-  align-items: center;
-  gap: 0.85rem;
-}
-
-.brand-icon-box {
-  width: 32px;
-  height: 32px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #818cf8;
-}
-
-.brand-title-wrap {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
+  align-items: baseline;
+  gap: 0.75rem;
 }
 
 .brand-title {
   font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #fff;
 }
 
 .brand-sub {
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   color: #94a3b8;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .header-nav {
@@ -464,13 +442,10 @@ body {
   text-decoration: none;
   font-size: 0.8125rem;
   font-weight: 500;
-  padding: 0.45rem 0.95rem;
-  border-radius: 5px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
   border: 1px solid transparent;
   transition: all 0.15s ease-in-out;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
 }
 
 .nav-link:hover {
@@ -489,75 +464,45 @@ body {
 .header-user {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-}
-
-.user-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 9999px;
-  background: #334155;
-  color: #f8fafc;
-  font-size: 0.75rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #475569;
+  gap: 0.75rem;
 }
 
 .user-name {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: #e2e8f0;
 }
 
 .role-badge {
   background: #1e293b;
   color: #93c5fd;
-  padding: 0.2rem 0.55rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
   border: 1px solid #334155;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
   text-transform: capitalize;
-}
-
-.role-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: #10b981;
 }
 
 .campus-badge {
   background: #1e293b;
   color: #cbd5e1;
-  padding: 0.2rem 0.55rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-size: 0.75rem;
   border: 1px solid #334155;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
 }
 
 .btn-logout {
   background: transparent;
   border: 1px solid #475569;
   color: #cbd5e1;
-  padding: 0.35rem 0.75rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 4px;
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
 }
 
 .btn-logout:hover {
@@ -568,8 +513,8 @@ body {
 
 .shell-content {
   flex: 1;
-  padding: 1.75rem 2rem;
-  max-width: 1280px;
+  padding: 1.5rem;
+  max-width: 1200px;
   width: 100%;
   margin: 0 auto;
 }
