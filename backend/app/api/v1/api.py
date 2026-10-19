@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     auth,
     campi,
     cursos,
+    dashboard,
     disciplinas,
     equipamentos,
     horarios,
@@ -38,4 +39,5 @@ api_router.include_router(alocacao.router, prefix="/alocacao", tags=["Alocacao"]
 api_router.include_router(sugestoes.router, prefix="/sugestoes", tags=["Sugestoes"])
 api_router.include_router(sugestoes.ia_router, prefix="/ia", tags=["IA Preditiva"])
 api_router.include_router(logs.router, prefix="/logs", tags=["Logs"])
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 
