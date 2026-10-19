@@ -73,15 +73,17 @@ def cenario(test_db: Session):
     test_db.flush()
 
     d_ia = Disciplina(curso_id=curso1.id, nome="Inteligencia Artificial", codigo="IA_2026", carga_horaria=60)
+    d_iax = Disciplina(curso_id=curso1.id, nome="Topicos Avancados", codigo="IAX2026", carga_horaria=60)
     d_bd = Disciplina(curso_id=curso1.id, nome="Banco de Dados 100%", codigo="BD101", carga_horaria=60)
     d_c2 = Disciplina(curso_id=curso2.id, nome="Inteligencia Artificial Sul", codigo="IASUL", carga_horaria=60)
-    test_db.add_all([d_ia, d_bd, d_c2])
+    test_db.add_all([d_ia, d_iax, d_bd, d_c2])
     test_db.flush()
 
     t_not = Turma(disciplina_id=d_ia.id, professor_id=prof1.id, periodo_letivo="2026.1", turno_preferido=Turno.NOTURNO, num_matriculados=30)
+    t_iax = Turma(disciplina_id=d_iax.id, professor_id=prof1.id, periodo_letivo="2026.1", turno_preferido=Turno.NOTURNO, num_matriculados=15)
     t_mat = Turma(disciplina_id=d_bd.id, professor_id=prof1.id, periodo_letivo="2026.2", turno_preferido=Turno.MATUTINO, num_matriculados=25)
     t_c2 = Turma(disciplina_id=d_c2.id, professor_id=None, periodo_letivo="2026.1", turno_preferido=Turno.NOTURNO, num_matriculados=20)
-    test_db.add_all([t_not, t_mat, t_c2])
+    test_db.add_all([t_not, t_iax, t_mat, t_c2])
     test_db.flush()
 
     h1 = Horario(campus_id=c1.id, turma_id=t_not.id, sala_id=s_lab.id, dia_semana=1, hora_inicio=time(18, 30), hora_fim=time(20, 10))
@@ -96,7 +98,7 @@ def cenario(test_db: Session):
         "c1": c1, "c2": c2,
         "admin": admin, "coord1": coord1, "sec1": sec1, "prof1": prof1, "aluno1": aluno1, "coord2": coord2,
         "s_lab": s_lab, "s_num_lab": s_num_lab, "s_reg": s_reg, "s_pct": s_pct, "s_und": s_und, "s_bar": s_bar, "s_c2": s_c2,
-        "d_ia": d_ia, "d_bd": d_bd, "t_not": t_not, "t_mat": t_mat, "t_c2": t_c2,
+        "d_ia": d_ia, "d_iax": d_iax, "d_bd": d_bd, "t_not": t_not, "t_iax": t_iax, "t_mat": t_mat, "t_c2": t_c2,
         "h1": h1, "h2": h2, "h3": h3, "h4": h4, "h_c2": h_c2,
     }
 
@@ -148,11 +150,15 @@ def test_turmas_busca_textual_escape_e_isolamento(client: TestClient, cenario: d
     assert [t["id"] for t in res_nome.json()] == [cenario["t_not"].id]
 
     # Busca por periodo letivo
+    res_per1 = client.get("/api/v1/turmas?q=2026.1", headers=headers_sec)
+    assert res_per1.status_code == 200
+    assert {t["id"] for t in res_per1.json()} == {cenario["t_not"].id, cenario["t_iax"].id}
+
     res_per = client.get("/api/v1/turmas?q=2026.2", headers=headers_sec)
     assert res_per.status_code == 200
     assert [t["id"] for t in res_per.json()] == [cenario["t_mat"].id]
 
-    # Escape literal de '_' e '%'
+    # Escape literal de '_' (nao retorna IAX2026) e '%'
     res_und = client.get("/api/v1/turmas?q=IA_2026", headers=headers_sec)
     assert res_und.status_code == 200
     assert [t["id"] for t in res_und.json()] == [cenario["t_not"].id]
@@ -243,7 +249,9 @@ def test_horarios_filtros_combinados_e_isolamento(client: TestClient, cenario: d
     # Isolamento contra campus_id e sala_id de outro campus e GET /horarios/{id}
     res_bola = client.get(f"/api/v1/horarios?campus_id={cenario['c2'].id}", headers=headers_coord1)
     assert res_bola.status_code == 200
-    assert all(h["campus_id"] == cenario["c1"].id for h in res_bola.json())
+    assert {h["id"] for h in res_bola.json()} == {
+        cenario["h1"].id, cenario["h2"].id, cenario["h3"].id, cenario["h4"].id
+    }
 
     res_sala_alheia = client.get(f"/api/v1/horarios?sala_id={cenario['s_c2'].id}", headers=headers_coord1)
     assert res_sala_alheia.status_code == 200
