@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, require_role
 from app.db.session import get_db
 from app.models.academico import Curso, Disciplina, Turma
-from app.models.enums import PerfilUsuario
+from app.models.enums import PerfilUsuario, TipoEventoLog
 from app.models.usuario import Usuario
 from app.schemas.turma import TurmaCreate, TurmaRead
+from app.services.log_service import registrar_evento
 
 router = APIRouter()
 
@@ -75,8 +76,18 @@ def criar_turma(
         turno_preferido=payload.turno_preferido,
         num_matriculados=0,
     )
-    db.add(turma)
     try:
+        db.add(turma)
+        db.flush()
+        registrar_evento(
+            db=db,
+            tipo=TipoEventoLog.CRIACAO,
+            usuario=current_user,
+            campus_id=disciplina.curso.campus_id,
+            entidade="turma",
+            entidade_id=turma.id,
+            detalhes=f"Criacao da turma {turma.id} da disciplina {disciplina.codigo}",
+        )
         db.commit()
         db.refresh(turma)
     except IntegrityError:

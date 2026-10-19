@@ -14,6 +14,7 @@ from app.schemas.ia import (
     TreinamentoIAResponse,
     PrevisaoFaltaRead,
 )
+from app.schemas.log import LogRead
 
 __all__ = [
     "CampusBase", "CampusCreate", "CampusRead",
@@ -26,4 +27,5 @@ __all__ = [
     "SugestaoRemanejamentoRead", "SugestaoAprovacaoUpdate",
     "AnaliseIARequest", "AnaliseIAResponse", "TreinamentoIAResponse",
     "PrevisaoFaltaRead",
+    "LogRead",
 ]

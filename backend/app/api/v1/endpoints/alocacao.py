@@ -284,6 +284,7 @@ def otimizar_alocacao_endpoint(
 
             # Registro de Auditoria
             log_auditoria = LogAlocacao(
+                campus_id=payload.campus_id,
                 horario_id=horarios_novos[0].id if horarios_novos else None,
                 snapshot_evento={
                     "periodo_letivo": payload.periodo_letivo,
