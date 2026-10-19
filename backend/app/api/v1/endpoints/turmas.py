@@ -1,10 +1,10 @@
 """Endpoints para gestao de Turmas com RBAC e isolamento por campus."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_current_user, montar_padrao_ilike, require_role
 from app.db.session import get_db
 from app.models.academico import Curso, Disciplina, Turma
 from app.models.enums import PerfilUsuario, TipoEventoLog
@@ -21,16 +21,25 @@ def listar_turmas(
     limit: int = Query(default=100, ge=1, le=100),
     disciplina_id: int | None = Query(default=None, gt=0),
     campus_id: int | None = Query(default=None, gt=0),
+    q: str | None = Query(default=None, max_length=100, description="Busca textual por periodo letivo ou disciplina"),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
     stmt = select(Turma).join(Disciplina).join(Curso)
     if current_user.perfil != PerfilUsuario.ADMIN:
         stmt = stmt.where(Curso.campus_id == current_user.campus_id)
-    elif campus_id:
+    elif campus_id is not None:
         stmt = stmt.where(Curso.campus_id == campus_id)
-    if disciplina_id:
+    if disciplina_id is not None:
         stmt = stmt.where(Turma.disciplina_id == disciplina_id)
+    if padrao := montar_padrao_ilike(q):
+        stmt = stmt.where(
+            or_(
+                Turma.periodo_letivo.ilike(padrao, escape="\\"),
+                Disciplina.nome.ilike(padrao, escape="\\"),
+                Disciplina.codigo.ilike(padrao, escape="\\"),
+            )
+        )
     return db.scalars(stmt.order_by(Turma.id.asc()).offset(skip).limit(limit)).all()
 
 

@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.api.deps import get_current_user
 from app.models.alocacao import Horario
 from app.models.academico import Turma, Disciplina, Matricula
+from app.models.enums import Turno
 from app.models.sala import Sala
 from app.models.usuario import Usuario, PerfilUsuario
 from app.schemas.horario import HorarioRead, HorarioMeuRead
@@ -79,15 +80,42 @@ def listar_meus_horarios(
 def listar_horarios(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=100),
+    campus_id: int | None = Query(default=None, gt=0, description="Filtro por ID do campus"),
+    dia_semana: int | None = Query(default=None, ge=0, le=6, description="Filtro por dia da semana (0 a 6)"),
+    turno: Turno | None = Query(default=None, description="Filtro por turno da turma"),
+    sala_id: int | None = Query(default=None, gt=0, description="Filtro por ID da sala"),
+    turma_id: int | None = Query(default=None, gt=0, description="Filtro por ID da turma"),
     db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
 ):
-    stmt = select(Horario).order_by(Horario.id.asc()).offset(skip).limit(limit)
+    """Lista horarios respeitando o escopo de campus e filtros combinados."""
+    stmt = select(Horario)
+    if current_user.perfil == PerfilUsuario.ADMIN:
+        if campus_id is not None:
+            stmt = stmt.where(Horario.campus_id == campus_id)
+    else:
+        stmt = stmt.where(Horario.campus_id == current_user.campus_id)
+
+    if dia_semana is not None:
+        stmt = stmt.where(Horario.dia_semana == dia_semana)
+    if turno is not None:
+        stmt = stmt.join(Turma, Horario.turma_id == Turma.id).where(Turma.turno_preferido == turno)
+    if sala_id is not None:
+        stmt = stmt.where(Horario.sala_id == sala_id)
+    if turma_id is not None:
+        stmt = stmt.where(Horario.turma_id == turma_id)
+
+    stmt = stmt.order_by(Horario.id.asc()).offset(skip).limit(limit)
     return db.scalars(stmt).all()
 
 
 @router.get("/{horario_id}", response_model=HorarioRead)
-def obter_horario(horario_id: int, db: Session = Depends(get_db)):
+def obter_horario(
+    horario_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
     horario = db.get(Horario, horario_id)
-    if not horario:
+    if not horario or (current_user.perfil != PerfilUsuario.ADMIN and horario.campus_id != current_user.campus_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Horario nao encontrado")
     return horario
