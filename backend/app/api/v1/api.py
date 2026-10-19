@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     logs,
     matriculas,
     motor,
+    relatorios,
     salas,
     sugestoes,
     turmas,
@@ -40,4 +41,5 @@ api_router.include_router(sugestoes.router, prefix="/sugestoes", tags=["Sugestoe
 api_router.include_router(sugestoes.ia_router, prefix="/ia", tags=["IA Preditiva"])
 api_router.include_router(logs.router, prefix="/logs", tags=["Logs"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+api_router.include_router(relatorios.router, prefix="/relatorios", tags=["Relatorios"])
 

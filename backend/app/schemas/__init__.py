@@ -22,6 +22,7 @@ from app.schemas.dashboard import (
     OcupacaoPorTurnoRead,
     SugestoesPorStatusRead,
 )
+from app.schemas.relatorio import RelatorioOcupacaoSalaRead, RelatorioRemanejamentoRead
 
 __all__ = [
     "CampusBase", "CampusCreate", "CampusRead",
@@ -37,4 +38,5 @@ __all__ = [
     "LogRead",
     "SugestoesPorStatusRead", "DashboardResumoRead",
     "OcupacaoPorDiaRead", "OcupacaoPorTurnoRead", "DashboardOcupacaoRead",
+    "RelatorioOcupacaoSalaRead", "RelatorioRemanejamentoRead",
 ]
