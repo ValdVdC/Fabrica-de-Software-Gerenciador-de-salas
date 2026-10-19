@@ -4,7 +4,8 @@ Suporta filtros combinados, paginacao, ordenacao decrescente e isolamento multi-
 """
 
 from datetime import date, datetime, time, timezone
-from typing import List, Optional
+import json
+from typing import List, Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,8 +16,11 @@ from app.models.alocacao import LogAlocacao
 from app.models.enums import PerfilUsuario, TipoEventoLog
 from app.models.usuario import Usuario
 from app.schemas.log import LogRead
+from app.services.export_service import MAX_EXPORT_ROWS, gerar_csv_streaming
 
 router = APIRouter()
+
+COLUNAS_CSV_LOGS = tuple(LogRead.model_fields.keys())
 
 
 @router.get("", response_model=List[LogRead])
@@ -29,12 +33,13 @@ def listar_logs(
     data_inicio: Optional[date] = Query(default=None, description="Data inicial do periodo"),
     data_fim: Optional[date] = Query(default=None, description="Data final do periodo"),
     horario_id: Optional[int] = Query(default=None, gt=0, description="Filtro por ID de horario alocado"),
+    formato: Optional[Literal["json", "csv"]] = Query(default=None, description="Formato de retorno (json ou csv)"),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(
         require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR, PerfilUsuario.SECRETARIA)
     ),
 ):
-    """Consulta historico de operacoes com filtros combinados e isolamento de campus."""
+    """Consulta historico de operacoes com filtros combinados, isolamento de campus e exportacao CSV."""
     if data_inicio and data_fim and data_fim < data_inicio:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -43,7 +48,6 @@ def listar_logs(
 
     stmt = select(LogAlocacao)
 
-    # Isolamento de campus multi-tenant (BOLA)
     if current_user.perfil == PerfilUsuario.ADMIN:
         if campus_id is not None:
             stmt = stmt.where(LogAlocacao.campus_id == campus_id)
@@ -67,5 +71,25 @@ def listar_logs(
         dt_fim = datetime.combine(data_fim, time.max).replace(tzinfo=timezone.utc)
         stmt = stmt.where(LogAlocacao.timestamp <= dt_fim)
 
-    stmt = stmt.order_by(LogAlocacao.timestamp.desc(), LogAlocacao.id.desc()).offset(skip).limit(limit)
-    return db.scalars(stmt).all()
+    limite_efetivo = MAX_EXPORT_ROWS if formato == "csv" else limit
+    offset_efetivo = 0 if formato == "csv" else skip
+    stmt = stmt.order_by(LogAlocacao.timestamp.desc(), LogAlocacao.id.desc()).offset(offset_efetivo).limit(limite_efetivo)
+    registros = db.scalars(stmt).all()
+
+    if formato == "csv":
+        linhas_csv = (
+            {
+                "id": reg.id,
+                "campus_id": reg.campus_id,
+                "horario_id": reg.horario_id,
+                "tipo_evento": reg.tipo_evento.value if hasattr(reg.tipo_evento, "value") else str(reg.tipo_evento),
+                "usuario_responsavel": reg.usuario_responsavel,
+                "detalhes": reg.detalhes,
+                "snapshot_evento": json.dumps(reg.snapshot_evento, ensure_ascii=False) if reg.snapshot_evento else "",
+                "timestamp": reg.timestamp.isoformat() if reg.timestamp else "",
+            }
+            for reg in registros
+        )
+        return gerar_csv_streaming(linhas_csv, COLUNAS_CSV_LOGS, nome_arquivo="historico_logs.csv")
+
+    return registros
