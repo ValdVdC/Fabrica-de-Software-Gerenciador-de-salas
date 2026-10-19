@@ -480,4 +480,17 @@ describe('AdminComponent', () => {
     expect(iaServiceSpy.aprovarSugestao).not.toHaveBeenCalled();
     expect(iaServiceSpy.rejeitarSugestao).not.toHaveBeenCalled();
   });
+
+  it('deve renderizar painel sem subtitulos eyebrow informais e sem classes ou cores neon roxas de IA', () => {
+    component.selecionarAba('remanejamento');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+
+    expect(el.querySelector('.admin-eyebrow')).toBeNull();
+    expect(el.querySelector('.badge-ia')).toBeNull();
+    expect(el.querySelector('.chip-ia')).toBeNull();
+    expect(el.querySelector('.kpi-val-ia')).toBeNull();
+    expect(el.innerHTML).not.toContain('#7c3aed');
+    expect(el.innerHTML).not.toContain('#252ceb');
+  });
 });
