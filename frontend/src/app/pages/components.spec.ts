@@ -25,4 +25,16 @@ describe('Componentes Shell e Login', () => {
     expect(auth.currentRole()).toBe('professor');
     expect(router.navigate).toHaveBeenCalledWith(['/professor']);
   });
+  it('deve renderizar layout institucional limpo sem painel externo de demo ou toggle de senha', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.login-box')).not.toBeNull();
+    expect(el.querySelector('.roles-list')).not.toBeNull();
+    expect(el.querySelector('.demo-accounts-panel')).toBeNull();
+    expect(el.querySelector('.btn-toggle-eye')).toBeNull();
+    expect(el.querySelector('.login-wrapper')).toBeNull();
+    const senhaInput = el.querySelector('#senha') as HTMLInputElement;
+    expect(senhaInput?.getAttribute('type')).toBe('password');
+  });
 });
