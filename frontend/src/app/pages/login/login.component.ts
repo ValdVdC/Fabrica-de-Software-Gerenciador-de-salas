@@ -1,13 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AuthService, UserRole } from '../../services/auth.service';
-
-interface DemoAccount {
-  id: UserRole;
-  label: string;
-  email: string;
-}
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -54,24 +48,9 @@ interface DemoAccount {
         </div>
 
         <button type="submit" class="btn-submit" [disabled]="isLoading() || !email || !senha">
-          {{ isLoading() ? 'Autenticando...' : 'Entrar no Sistema' }}
+          {{ isLoading() ? 'Autenticando...' : 'Entrar' }}
         </button>
       </form>
-
-      <div class="demo-sep">Atalhos de Demonstracao</div>
-      <div class="roles-list">
-        @for (acc of demoAccounts; track acc.id) {
-          <button
-            type="button"
-            class="btn-role"
-            (click)="fillAndLogin(acc)"
-            [disabled]="isLoading()"
-          >
-            <strong>{{ acc.label }}</strong>
-            <small>{{ acc.email }}</small>
-          </button>
-        }
-      </div>
     </div>
   `,
   // prettier-ignore
@@ -83,7 +62,6 @@ interface DemoAccount {
     .form-control { padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.875rem; }
     .btn-submit { margin-top: 0.25rem; padding: 0.5rem; background: #0f172a; color: #fff; font-weight: 600; border: none; border-radius: 4px; cursor: pointer; }
     .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-    .demo-sep { margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600; }
   `],
 })
 export class LoginComponent {
@@ -95,32 +73,10 @@ export class LoginComponent {
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
-  readonly demoAccounts: DemoAccount[] = [
-    { id: 'admin', label: 'Admin', email: 'admin@sigaas.edu' },
-    { id: 'secretaria', label: 'Secretaria', email: 'secretaria@sigaas.edu' },
-    { id: 'professor', label: 'Professor', email: 'professor@sigaas.edu' },
-    { id: 'aluno', label: 'Aluno', email: 'aluno@sigaas.edu' },
-  ];
-
-  select(role: UserRole): void {
-    this.auth.setRole(role);
-    const target = role === 'coordenador' ? 'admin' : role;
-    this.router.navigate([`/${target}`]);
-  }
-
   onSubmit(): void {
     if (!this.email || !this.senha || this.isLoading()) {
       return;
     }
-    this.executeLogin(this.email, this.senha);
-  }
-
-  fillAndLogin(account: DemoAccount): void {
-    if (this.isLoading()) {
-      return;
-    }
-    this.email = account.email;
-    this.senha = 'sigaas123';
     this.executeLogin(this.email, this.senha);
   }
 
