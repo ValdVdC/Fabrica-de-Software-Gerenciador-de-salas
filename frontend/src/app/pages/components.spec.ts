@@ -26,7 +26,7 @@ describe('Componentes Shell e Login', () => {
     expect(auth.currentRole()).toBe('professor');
     expect(router.navigate).toHaveBeenCalledWith(['/professor']);
   });
-  it('deve exibir rotulos padronizados no shell e omitir avatar cosmetico', () => {
+  it('deve exibir rotulos padronizados com icones SVG sobrios no shell e omitir avatar cosmetico', () => {
     auth.setRole('admin');
     const fixture = TestBed.createComponent(ShellComponent);
     fixture.detectChanges();
@@ -34,14 +34,18 @@ describe('Componentes Shell e Login', () => {
 
     expect(el.querySelector('.user-avatar')).toBeNull();
     expect(el.querySelector('.nav-link')?.textContent?.trim()).toBe('Administracao');
+    expect(el.querySelector('.nav-link svg')).not.toBeNull();
+    expect(el.querySelector('.btn-logout svg')).not.toBeNull();
     expect(el.querySelector('.role-badge')?.textContent?.trim()).toBe('Administrador');
 
     auth.setRole('professor');
     fixture.detectChanges();
     expect(el.querySelector('.nav-link')?.textContent?.trim()).toBe('Grade Horaria');
+    expect(el.querySelector('.nav-link svg')).not.toBeNull();
 
     auth.setRole('aluno');
     fixture.detectChanges();
     expect(el.querySelector('.nav-link')?.textContent?.trim()).toBe('Grade Horaria');
+    expect(el.querySelector('.nav-link svg')).not.toBeNull();
   });
 });
