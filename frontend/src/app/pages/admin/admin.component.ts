@@ -20,43 +20,21 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
   template: `
     <div class="admin-container">
       <header class="admin-header">
-        <div class="admin-header-title-row">
-          <div>
-            <span class="admin-eyebrow">ADMINISTRACAO ACADEMICA / INFRAESTRUTURA</span>
-            <h2>Gestao de Infraestrutura e Espacos</h2>
-            <p>Painel operacional de salas academicas, recursos materiais e alocacao com IA (Human-in-the-Loop).</p>
-          </div>
-          <div class="campus-status-pill">
-            <span class="status-indicator-dot" aria-hidden="true"></span>
-            <span>Campus #{{ campusId > 0 ? campusId : 'Ativo' }}</span>
-          </div>
-        </div>
+        <h2>Gestao de Infraestrutura e Espacos</h2>
+        <p>Painel operacional de salas academicas, recursos materiais e alocacao com IA (Human-in-the-Loop).</p>
       </header>
 
       <nav class="tabs-nav" aria-label="Abas">
-        <button type="button" [class.active]="abaAtiva() === 'salas'" (click)="selecionarAba('salas')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path></svg>
-          Salas &amp; Espacos
-        </button>
-        <button type="button" [class.active]="abaAtiva() === 'equipamentos'" (click)="selecionarAba('equipamentos')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.12 6.4-6.05-4.06a2 2 0 0 0-2.17-.05L2.9 6.32a2 2 0 0 0-.9 1.69v8a2 2 0 0 0 .9 1.68l6.05 4.07a2 2 0 0 0 2.18 0l6.05-4.07a2 2 0 0 0 .9-1.68v-8a2 2 0 0 0-.88-1.61Z"></path></svg>
-          Equipamentos
-        </button>
-        <button type="button" [class.active]="abaAtiva() === 'alocacao'" (click)="selecionarAba('alocacao')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
-          Alocacao Inteligente
-        </button>
+        <button type="button" [class.active]="abaAtiva() === 'salas'" (click)="selecionarAba('salas')">Salas &amp; Espacos</button>
+        <button type="button" [class.active]="abaAtiva() === 'equipamentos'" (click)="selecionarAba('equipamentos')">Equipamentos</button>
+        <button type="button" [class.active]="abaAtiva() === 'alocacao'" (click)="selecionarAba('alocacao')">Alocacao Inteligente</button>
         <button type="button" [class.active]="abaAtiva() === 'remanejamento'" (click)="selecionarAba('remanejamento')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
           Remanejamento IA
           @if (iaService.sugestoes().length > 0) {
             <span class="tab-badge">{{ iaService.sugestoes().length }}</span>
           }
         </button>
-        <button type="button" [class.active]="abaAtiva() === 'resumo'" (click)="selecionarAba('resumo')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-          Resumo &amp; Metricas
-        </button>
+        <button type="button" [class.active]="abaAtiva() === 'resumo'" (click)="selecionarAba('resumo')">Resumo &amp; Metricas</button>
       </nav>
 
       @if (campusId <= 0) { <div class="alert alert-error">Campus nao identificado para o usuario autenticado.</div> }
@@ -188,7 +166,6 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
               </label>
             </div>
             <button type="button" (click)="executarAlocacao()" [disabled]="alocacaoService.isLoading() || campusId <= 0" class="btn-primary">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               {{ alocacaoService.isLoading() ? 'Processando...' : 'Executar Alocacao Inteligente' }}
             </button>
             <button type="button" (click)="executarBenchmark('medio')" [disabled]="alocacaoService.isLoading()" class="btn-secondary">
@@ -268,13 +245,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
         <div class="panel-card remanejamento-hero">
           <div class="remanejamento-toolbar">
             <div class="toolbar-title-group">
-              <div class="title-with-pill">
-                <h3>Remanejamento Inteligente de Salas</h3>
-                <span class="chip-ia">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
-                  IA Preditiva
-                </span>
-              </div>
+              <h3>Remanejamento Inteligente de Salas</h3>
               <p class="section-desc">Identificacao automatica de ociosidade por absenteismo discente com proposta de realocacao para salas menores com liberacao de espaco fisico (Human-in-the-Loop).</p>
             </div>
             <div class="toolbar-actions">
@@ -285,11 +256,9 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
                 <option value="">Todas</option>
               </select>
               <button type="button" (click)="executarAnaliseIA()" [disabled]="iaService.isLoading() || campusId <= 0" class="btn-secondary">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
                 {{ iaService.isLoading() ? 'Processando...' : 'Executar Analise IA' }}
               </button>
               <button type="button" (click)="carregarSugestoes()" [disabled]="iaService.isLoading()" class="btn-secondary">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 21h5v-5"></path></svg>
                 Atualizar Lista
               </button>
             </div>
@@ -298,7 +267,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
           @if (iaService.sugestoes().length > 0) {
             <div class="remanejamento-kpis">
               <div class="kpi-card">
-                <span class="kpi-val kpi-val-ia tabular-nums">{{ sugestoesPendentesCount() }}</span>
+                <span class="kpi-val tabular-nums">{{ sugestoesPendentesCount() }}</span>
                 <span class="kpi-label">Sugestoes Pendentes</span>
               </div>
               <div class="kpi-card">
@@ -326,18 +295,10 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
                   <span class="meta-pill">Turma #{{ sug.turma_id }}</span>
                 </div>
                 <div class="badges-row">
-                  <span class="badge badge-ia">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h5l3 7 4-14 3 7h5"></path></svg>
+                  <span class="badge badge-pending">
                     {{ ((sug.prob_ausencia || 0) * 100).toFixed(0) }}% risco absenteismo
                   </span>
                   <span class="badge" [class.badge-pending]="sug.status === 'pendente'" [class.badge-success]="sug.status === 'aprovado'" [class.badge-danger]="sug.status === 'rejeitado'">
-                    @if (sug.status === 'pendente') {
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    } @else if (sug.status === 'aprovado') {
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    } @else {
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    }
                     {{ sug.status }}
                   </span>
                 </div>
@@ -347,14 +308,12 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
                 <div class="schedule-item">
                   <span class="schedule-label">Horario:</span>
                   <span class="schedule-val font-semibold">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     {{ formatarDiaSemana(sug.dia_semana) }}, {{ sug.hora_inicio || '--:--' }} - {{ sug.hora_fim || '--:--' }}
                   </span>
                 </div>
                 <div class="schedule-item">
                   <span class="schedule-label">Motivo IA:</span>
                   <span class="schedule-val">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                     {{ sug.motivo }}
                   </span>
                 </div>
@@ -371,7 +330,6 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
                 <div class="comparativo-box destaque-box">
                   <div class="comp-header">
                     <span class="comp-label label-destaque">Sala Recomendada (IA)</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
                   </div>
                   <strong class="comp-title title-destaque">{{ sug.sala_sugerida_bloco }} - Sala {{ sug.sala_sugerida_numero }}</strong>
                   <small class="tabular-nums comp-detail">Capacidade Adequada: <strong>{{ sug.sala_sugerida_capacidade }}</strong> postos</small>
