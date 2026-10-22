@@ -10,26 +10,8 @@ import { AuthService, UserRole } from '../../services/auth.service';
     <div class="shell-layout">
       <header class="shell-header">
         <div class="header-brand">
-          <div class="brand-icon-box" aria-hidden="true">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
-              <path d="M6 6h10"></path>
-              <path d="M6 10h10"></path>
-            </svg>
-          </div>
-          <div class="brand-title-wrap">
-            <span class="brand-title">SIGAAS</span>
-            <span class="brand-sub">Gestao Academica</span>
-          </div>
+          <span class="brand-title">SIGAAS</span>
+          <span class="brand-sub">Gestao Academica</span>
         </div>
 
         <nav class="header-nav" aria-label="Navegacao Principal">
@@ -55,7 +37,7 @@ import { AuthService, UserRole } from '../../services/auth.service';
                 <path d="M8 10h.01"></path>
                 <path d="M16 10h.01"></path>
               </svg>
-              Infraestrutura &amp; IA
+              Administracao
             </a>
           } @else if (authService.currentRole() === 'secretaria') {
             <a routerLink="/secretaria" routerLinkActive="active" class="nav-link">
@@ -95,7 +77,7 @@ import { AuthService, UserRole } from '../../services/auth.service';
                 <line x1="8" y1="2" x2="8" y2="6"></line>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              Grade Docente
+              Grade Horaria
             </a>
           } @else if (authService.currentRole() === 'aluno') {
             <a routerLink="/aluno" routerLinkActive="active" class="nav-link">
@@ -110,41 +92,21 @@ import { AuthService, UserRole } from '../../services/auth.service';
                 stroke-linejoin="round"
                 aria-hidden="true"
               >
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
-                <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              Minha Grade
+              Grade Horaria
             </a>
           }
         </nav>
 
         <div class="header-user">
-          <div class="user-avatar" [title]="authService.currentUser()?.nome || 'Usuario'">
-            {{ obterIniciais(authService.currentUser()?.nome) }}
-          </div>
           <span class="user-name">{{ authService.currentUser()?.nome || 'Usuario' }}</span>
-          <span class="role-badge">
-            <span class="role-dot" aria-hidden="true"></span>
-            {{ formatarPerfil(authService.currentRole()) }}
-          </span>
+          <span class="role-badge">{{ formatarPerfil(authService.currentRole()) }}</span>
           @if (authService.currentUser()?.campus_id; as campusId) {
-            <span class="campus-badge">
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
-              Campus #{{ campusId }}
-            </span>
+            <span class="campus-badge">Campus #{{ campusId }}</span>
           }
           <button type="button" class="btn-logout" (click)="sair()">
             <svg
@@ -175,13 +137,6 @@ import { AuthService, UserRole } from '../../services/auth.service';
 export class ShellComponent {
   readonly authService = inject(AuthService);
   private readonly router = inject(Router);
-
-  obterIniciais(nome?: string): string {
-    if (!nome) return 'U';
-    const partes = nome.trim().split(/\s+/);
-    if (partes.length === 1) return partes[0].substring(0, 2).toUpperCase();
-    return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
-  }
 
   formatarPerfil(perfil: UserRole | null): string {
     switch (perfil) {
