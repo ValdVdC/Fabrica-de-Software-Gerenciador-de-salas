@@ -5,6 +5,7 @@ import { AdminComponent } from './pages/admin/admin.component';
 import { SecretariaComponent } from './pages/secretaria/secretaria.component';
 import { ProfessorComponent } from './pages/professor/professor.component';
 import { AlunoComponent } from './pages/aluno/aluno.component';
+import { RelatoriosComponent } from './pages/relatorios/relatorios.component';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
@@ -15,6 +16,12 @@ export const routes: Routes = [
     component: ShellComponent,
     canActivate: [authGuard],
     children: [
+      {
+        path: 'relatorios',
+        component: RelatoriosComponent,
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'coordenador', 'secretaria'] },
+      },
       {
         path: 'admin',
         component: AdminComponent,
