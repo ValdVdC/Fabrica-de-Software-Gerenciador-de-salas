@@ -142,6 +142,23 @@ import { AuthService, UserRole } from '../../services/auth.service';
               </svg>
               Relatorios
             </a>
+            <a routerLink="/historico" routerLinkActive="active" class="nav-link">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              Historico
+            </a>
           }
         </nav>
 

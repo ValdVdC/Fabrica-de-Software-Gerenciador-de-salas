@@ -42,7 +42,10 @@ export class SecretariaService {
     if (!Number.isInteger(id) || (id as number) <= 0) throw new Error(msg);
   }
 
-  private buildParams(entries: [string, number | undefined, string][]): HttpParams | undefined {
+  private buildParams(
+    entries: [string, number | undefined, string][],
+    q?: string,
+  ): HttpParams | undefined {
     let p = new HttpParams();
     for (const [key, val, label] of entries) {
       if (val !== undefined && val !== null) {
@@ -50,6 +53,7 @@ export class SecretariaService {
         p = p.set(key, val.toString());
       }
     }
+    if (q?.trim()) p = p.set('q', q.trim());
     return p.keys().length ? p : undefined;
   }
 
@@ -96,11 +100,14 @@ export class SecretariaService {
     );
   }
 
-  listarTurmas(disciplinaId?: number, campusId?: number): Observable<Turma[]> {
-    const p = this.buildParams([
-      ['disciplina_id', disciplinaId, 'disciplina'],
-      ['campus_id', campusId, 'campus'],
-    ]);
+  listarTurmas(disciplinaId?: number, campusId?: number, q?: string): Observable<Turma[]> {
+    const p = this.buildParams(
+      [
+        ['disciplina_id', disciplinaId, 'disciplina'],
+        ['campus_id', campusId, 'campus'],
+      ],
+      q,
+    );
     return this.reqGet('/api/v1/turmas', p, (d) => this._turmas.set(d));
   }
 

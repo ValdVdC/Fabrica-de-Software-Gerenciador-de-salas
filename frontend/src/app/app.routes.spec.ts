@@ -9,7 +9,17 @@ describe('Rotas Principais', () => {
     ['admin', 'secretaria', 'professor', 'aluno'].forEach((role) => {
       expect(children.find((r) => r.path === role)?.data?.['role']).toBe(role);
     });
+    expect(children.find((r) => r.path === 'dashboard')?.data?.['roles']).toEqual([
+      'admin',
+      'coordenador',
+      'secretaria',
+    ]);
     expect(children.find((r) => r.path === 'relatorios')?.data?.['roles']).toEqual([
+      'admin',
+      'coordenador',
+      'secretaria',
+    ]);
+    expect(children.find((r) => r.path === 'historico')?.data?.['roles']).toEqual([
       'admin',
       'coordenador',
       'secretaria',
