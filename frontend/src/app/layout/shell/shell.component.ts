@@ -100,6 +100,30 @@ import { AuthService, UserRole } from '../../services/auth.service';
               Grade Horaria
             </a>
           }
+          @if (
+            authService.currentRole() === 'admin' ||
+            authService.currentRole() === 'coordenador' ||
+            authService.currentRole() === 'secretaria'
+          ) {
+            <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+              Dashboard
+            </a>
+          }
         </nav>
 
         <div class="header-user">

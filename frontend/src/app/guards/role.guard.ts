@@ -10,15 +10,20 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
     return router.createUrlTree(['/login']);
   }
 
-  const expectedRole = route.data?.['role'] as string | undefined;
-  if (!expectedRole) {
+  const expectedRole = route.data?.['role'] as string | string[] | undefined;
+  const expectedRoles = route.data?.['roles'] as string[] | undefined;
+  const roles =
+    expectedRoles ??
+    (Array.isArray(expectedRole) ? expectedRole : expectedRole ? [expectedRole] : []);
+  if (roles.length === 0) {
     return router.createUrlTree(['/login']);
   }
 
-  if (authService.hasRole(expectedRole)) {
+  if (roles.some((r) => authService.hasRole(r))) {
     return true;
   }
 
   const userRole = authService.currentRole();
-  return router.createUrlTree(userRole ? [`/${userRole}`] : ['/login']);
+  const fallbackPath = userRole === 'coordenador' ? '/admin' : userRole ? `/${userRole}` : '/login';
+  return router.createUrlTree([fallbackPath]);
 };
