@@ -38,7 +38,7 @@ describe('Guards de Autenticacao e Perfil', () => {
     );
     expect(router.createUrlTree).toHaveBeenCalledWith(['/login']);
   });
-  it('roleGuard permite role correspondente ou coordenador', () => {
+  it('roleGuard permite role correspondente, coordenador ou array de roles', () => {
     const route = { data: { role: 'admin' } } as unknown as ActivatedRouteSnapshot;
     auth.setRole('admin');
     expect(
@@ -47,6 +47,13 @@ describe('Guards de Autenticacao e Perfil', () => {
     auth.setRole('coordenador');
     expect(
       TestBed.runInInjectionContext(() => roleGuard(route, {} as RouterStateSnapshot)),
+    ).toBeTrue();
+    const multiRoute = {
+      data: { roles: ['admin', 'coordenador', 'secretaria'] },
+    } as unknown as ActivatedRouteSnapshot;
+    auth.setRole('secretaria');
+    expect(
+      TestBed.runInInjectionContext(() => roleGuard(multiRoute, {} as RouterStateSnapshot)),
     ).toBeTrue();
   });
   it('roleGuard redireciona quando divergente', () => {

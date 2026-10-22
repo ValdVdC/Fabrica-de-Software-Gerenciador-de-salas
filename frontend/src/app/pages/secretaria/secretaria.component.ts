@@ -1,6 +1,8 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import {
   SecretariaService,
   CursoCreate,
@@ -86,6 +88,15 @@ import { AuthService } from '../../services/auth.service';
             <button type="submit" [disabled]="secretariaService.isLoading() || campusId <= 0 || !formTurmaDiscId || !formTurmaPeriodo.trim()" class="btn-primary">Criar Turma</button>
           </form>
         </div>
+        <div class="panel-card">
+          <div class="form-row">
+            <input type="text" data-testid="busca-turmas-input" [(ngModel)]="buscaTurmas" (ngModelChange)="aoDigitarBuscaTurmas($event)" name="buscaTurmas" maxlength="100" placeholder="Pesquisar turma por periodo ou disciplina..." class="form-input flex-2" />
+            <select [(ngModel)]="filtroDiscTurmaId" (change)="filtrarTurmas()" name="filtroDiscTurma" class="form-input">
+              <option [ngValue]="null">Todas as Disciplinas</option>
+              @for (d of secretariaService.disciplinas(); track d.id) { <option [ngValue]="d.id">{{ d.nome }} ({{ d.codigo }})</option> }
+            </select>
+          </div>
+        </div>
         <div class="table-card"><table class="data-table">
           <thead><tr><th>ID</th><th>Disciplina</th><th>Periodo</th><th>Turno</th><th>Matriculados</th><th>Docente</th></tr></thead>
           <tbody>
@@ -146,6 +157,8 @@ import { AuthService } from '../../services/auth.service';
 export class SecretariaComponent implements OnInit {
   readonly secretariaService = inject(SecretariaService);
   private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly buscaTurmas$ = new Subject<string>();
 
   campusId = 0;
   // prettier-ignore
@@ -167,6 +180,8 @@ export class SecretariaComponent implements OnInit {
   formTurmaTurno: TurnoType = 'matutino';
   formMatTurmaId: number | null = null;
   formMatAlunoId: number | null = null;
+  buscaTurmas = '';
+  filtroDiscTurmaId: number | null = null;
 
   // prettier-ignore
   readonly totalCursos = computed(() => this.secretariaService.cursos().length);
@@ -180,12 +195,22 @@ export class SecretariaComponent implements OnInit {
   // prettier-ignore
   ngOnInit(): void {
     this.campusId = this.authService.currentUser()?.campus_id ?? 0;
+    this.buscaTurmas$.pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(() => this.filtrarTurmas());
     if (this.campusId > 0) {
       this.secretariaService.listarCursos(this.campusId).subscribe({ error: () => {} });
       this.secretariaService.listarDisciplinas(undefined, this.campusId).subscribe({ error: () => {} });
       this.secretariaService.listarTurmas(undefined, this.campusId).subscribe({ error: () => {} });
       this.secretariaService.listarMatriculas().subscribe({ error: () => {} });
     }
+  }
+
+  // prettier-ignore
+  aoDigitarBuscaTurmas(termo: string): void { this.buscaTurmas$.next(termo); }
+
+  // prettier-ignore
+  filtrarTurmas(): void {
+    if (this.campusId <= 0) return;
+    this.secretariaService.listarTurmas(this.filtroDiscTurmaId ?? undefined, this.campusId, this.buscaTurmas).subscribe({ error: () => {} });
   }
 
   // prettier-ignore

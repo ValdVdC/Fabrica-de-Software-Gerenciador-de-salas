@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { AdminComponent } from './admin.component';
 import { AdminService, Sala, Equipamento } from '../../services/admin.service';
 import { AuthService, UserSummary } from '../../services/auth.service';
@@ -493,4 +493,15 @@ describe('AdminComponent', () => {
     expect(el.innerHTML).not.toContain('#7c3aed');
     expect(el.innerHTML).not.toContain('#252ceb');
   });
+
+  it('deve aplicar debounce de 300ms ao pesquisar salas por texto', fakeAsync(() => {
+    adminServiceSpy.listarSalas.calls.reset();
+    component.aoDigitarBuscaSalas('la');
+    tick(150);
+    component.aoDigitarBuscaSalas('lab');
+    tick(150);
+    expect(adminServiceSpy.listarSalas).not.toHaveBeenCalled();
+    tick(150);
+    expect(adminServiceSpy.listarSalas).toHaveBeenCalledWith(2, 'lab');
+  }));
 });

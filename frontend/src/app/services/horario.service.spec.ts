@@ -245,4 +245,32 @@ describe('HorarioService', () => {
 
     expect(service.errorMessage()).toBe('Permissao insuficiente para realizar esta acao.');
   });
+
+  it('lista horarios com filtros combinados dia_semana, turno, sala_id e turma_id e valida dia_semana', () => {
+    expect(() => service.listarHorarios({ dia_semana: 9 })).toThrowError('Dia da semana invalido');
+    service
+      .listarHorarios({ campus_id: 1, dia_semana: 1, turno: 'noturno', sala_id: 5, turma_id: 10 })
+      .subscribe((res) => expect(res.length).toBe(1));
+    const req = httpMock.expectOne(
+      (r) =>
+        r.url === '/api/v1/horarios' &&
+        r.params.get('dia_semana') === '1' &&
+        r.params.get('turno') === 'noturno' &&
+        r.params.get('sala_id') === '5' &&
+        r.params.get('turma_id') === '10',
+    );
+    req.flush([
+      {
+        id: 1,
+        campus_id: 1,
+        turma_id: 10,
+        sala_id: 5,
+        dia_semana: 1,
+        hora_inicio: '18:30',
+        hora_fim: '20:10',
+        status: 'alocado',
+      },
+    ]);
+    expect(service.listaHorarios().length).toBe(1);
+  });
 });

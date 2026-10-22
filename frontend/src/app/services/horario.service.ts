@@ -22,6 +22,11 @@ export interface HorarioMeu {
   professor_nome?: string | null;
 }
 
+/* prettier-ignore */
+export interface HorarioRead { id: number; campus_id: number; turma_id: number; sala_id: number; dia_semana: number; hora_inicio: string; hora_fim: string; status: string; }
+/* prettier-ignore */
+export interface FiltroHorarios { campus_id?: number; dia_semana?: number; turno?: string; sala_id?: number; turma_id?: number; skip?: number; limit?: number; }
+
 export const DIAS_SEMANA_LABELS: Record<number, string> = {
   0: 'Segunda-feira',
   1: 'Terca-feira',
@@ -38,6 +43,9 @@ export class HorarioService {
 
   private readonly _horarios = signal<HorarioMeu[]>([]);
   readonly horarios = this._horarios.asReadonly();
+
+  private readonly _listaHorarios = signal<HorarioRead[]>([]);
+  readonly listaHorarios = this._listaHorarios.asReadonly();
 
   private readonly _activeRequests = signal<number>(0);
   readonly isLoading = computed(() => this._activeRequests() > 0);
@@ -70,6 +78,24 @@ export class HorarioService {
     }
     if (typeof det === 'string') return det;
     return err.message || 'Ocorreu um erro na comunicacao com o servidor.';
+  }
+
+  // prettier-ignore
+  listarHorarios(f: FiltroHorarios = {}): Observable<HorarioRead[]> {
+    if (f.dia_semana !== undefined && (!Number.isInteger(f.dia_semana) || f.dia_semana < 0 || f.dia_semana > 6)) throw new Error('Dia da semana invalido');
+    let p = new HttpParams();
+    for (const k of ['campus_id', 'sala_id', 'turma_id'] as const) { if (f[k] && f[k]! > 0) p = p.set(k, String(f[k])); }
+    if (f.dia_semana !== undefined) p = p.set('dia_semana', String(f.dia_semana));
+    if (f.turno?.trim()) p = p.set('turno', f.turno.trim());
+    if (f.skip !== undefined && f.skip >= 0) p = p.set('skip', String(f.skip));
+    if (f.limit !== undefined && f.limit >= 1) p = p.set('limit', String(f.limit));
+    return defer(() => {
+      const g = ++this._geracao; this._errorMessage.set(null); this._activeRequests.update((n) => n + 1);
+      return this.http.get<HorarioRead[]>('/api/v1/horarios', p.keys().length ? { params: p } : {}).pipe(
+        tap({ next: (d) => { if (this._geracao === g) this._listaHorarios.set(d); }, error: (err) => { if (this._geracao === g) this._errorMessage.set(this.extrairErro(err)); } }),
+        finalize(() => this._activeRequests.update((n) => Math.max(0, n - 1))),
+      );
+    });
   }
 
   carregarMeusHorarios(skip?: number, limit?: number): Observable<HorarioMeu[]> {
@@ -128,6 +154,7 @@ export class HorarioService {
   resetState(): void {
     this._geracao++;
     this._horarios.set([]);
+    this._listaHorarios.set([]);
     this._activeRequests.set(0);
     this._errorMessage.set(null);
   }

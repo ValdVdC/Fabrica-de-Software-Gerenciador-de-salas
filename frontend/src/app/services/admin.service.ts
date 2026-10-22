@@ -54,6 +54,9 @@ export interface SalaEquipamentoCreate {
   quantidade: number;
 }
 
+/* prettier-ignore */
+export interface UsuarioRead { id: number; campus_id: number | null; nome: string; email: string; perfil: string; ativo: boolean; }
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly http = inject(HttpClient);
@@ -64,22 +67,37 @@ export class AdminService {
   private readonly _equipamentos = signal<Equipamento[]>([]);
   readonly equipamentos = this._equipamentos.asReadonly();
 
+  private readonly _usuarios = signal<UsuarioRead[]>([]);
+  readonly usuarios = this._usuarios.asReadonly();
+
   private readonly _activeRequests = signal<number>(0);
   readonly isLoading = computed(() => this._activeRequests() > 0);
 
   private readonly _errorMessage = signal<string | null>(null);
   readonly errorMessage = this._errorMessage.asReadonly();
 
-  listarSalas(campusId?: number): Observable<Sala[]> {
-    let params: HttpParams | undefined;
+  // prettier-ignore
+  private montarParamsBusca(campusId?: number, q?: string): { params?: HttpParams } {
+    let p = new HttpParams();
     if (campusId !== undefined && campusId !== null) {
-      if (!Number.isInteger(campusId) || campusId <= 0) {
-        throw new Error('Identificador de campus invalido');
-      }
-      params = new HttpParams().set('campus_id', campusId.toString());
+      if (!Number.isInteger(campusId) || campusId <= 0) throw new Error('Identificador de campus invalido');
+      p = p.set('campus_id', campusId.toString());
     }
-    return this.executar(this.http.get<Sala[]>('/api/v1/salas', { params }), (dados) =>
-      this._salas.set(dados),
+    if (q?.trim()) p = p.set('q', q.trim());
+    return p.keys().length ? { params: p } : {};
+  }
+
+  listarSalas(campusId?: number, q?: string): Observable<Sala[]> {
+    return this.executar(
+      this.http.get<Sala[]>('/api/v1/salas', this.montarParamsBusca(campusId, q)),
+      (dados) => this._salas.set(dados),
+    );
+  }
+
+  listarUsuarios(campusId?: number, q?: string): Observable<UsuarioRead[]> {
+    return this.executar(
+      this.http.get<UsuarioRead[]>('/api/v1/usuarios', this.montarParamsBusca(campusId, q)),
+      (dados) => this._usuarios.set(dados),
     );
   }
 
@@ -132,6 +150,7 @@ export class AdminService {
   resetState(): void {
     this._salas.set([]);
     this._equipamentos.set([]);
+    this._usuarios.set([]);
     this._errorMessage.set(null);
     this._activeRequests.set(0);
   }

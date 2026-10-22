@@ -9,6 +9,11 @@ describe('Rotas Principais', () => {
     ['admin', 'secretaria', 'professor', 'aluno'].forEach((role) => {
       expect(children.find((r) => r.path === role)?.data?.['role']).toBe(role);
     });
+    expect(children.find((r) => r.path === 'historico')?.data?.['roles']).toEqual([
+      'admin',
+      'coordenador',
+      'secretaria',
+    ]);
     expect(routes.find((r) => r.path === '**')?.redirectTo).toBe('login');
   });
 });

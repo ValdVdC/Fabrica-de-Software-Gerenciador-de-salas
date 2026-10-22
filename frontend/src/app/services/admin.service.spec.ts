@@ -187,4 +187,27 @@ describe('AdminService', () => {
     );
     expect(() => service.excluirSala(-1)).toThrowError('Identificador de sala invalido');
   });
+
+  it('filtra salas e usuarios por termo textual q', () => {
+    service.listarSalas(1, 'lab').subscribe();
+    const reqSala = httpMock.expectOne(
+      (r) =>
+        r.url === '/api/v1/salas' &&
+        r.params.get('campus_id') === '1' &&
+        r.params.get('q') === 'lab',
+    );
+    reqSala.flush([]);
+
+    service.listarUsuarios(1, 'maria').subscribe((u) => expect(u.length).toBe(1));
+    const reqUser = httpMock.expectOne(
+      (r) =>
+        r.url === '/api/v1/usuarios' &&
+        r.params.get('campus_id') === '1' &&
+        r.params.get('q') === 'maria',
+    );
+    reqUser.flush([
+      { id: 7, campus_id: 1, nome: 'Maria', email: 'm@ufma.br', perfil: 'professor', ativo: true },
+    ]);
+    expect(service.usuarios().length).toBe(1);
+  });
 });
