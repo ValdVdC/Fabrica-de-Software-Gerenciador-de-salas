@@ -1,4 +1,6 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import {
@@ -75,6 +77,8 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
             </form>
           </div>
         }
+
+        <div class="panel-card"><div class="form-row"><input type="text" data-testid="busca-salas-input" [(ngModel)]="buscaSalas" (ngModelChange)="aoDigitarBuscaSalas($event)" name="buscaSalas" maxlength="100" placeholder="Pesquisar sala por bloco ou numero..." class="form-input flex-2" /></div></div>
 
         <div class="table-card">
           <table class="data-table">
@@ -208,7 +212,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
         }
 
         @if (alocacaoService.alocacoes().length > 0) {
-          <div class="table-card">
+        <div class="table-card">
             <table class="data-table">
               <thead>
                 <tr>
@@ -394,6 +398,9 @@ export class AdminComponent implements OnInit {
   readonly authService = inject(AuthService);
   readonly alocacaoService = inject(AlocacaoService);
   readonly iaService = inject(IaService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly buscaSalas$ = new Subject<string>();
+  buscaSalas = '';
 
   readonly abaAtiva = signal<'salas' | 'equipamentos' | 'alocacao' | 'remanejamento' | 'resumo'>(
     'salas',
@@ -450,12 +457,21 @@ export class AdminComponent implements OnInit {
   ngOnInit(): void {
     const user = this.authService.currentUser();
     this.campusId = user?.campus_id && user.campus_id > 0 ? user.campus_id : 0;
+    this.buscaSalas$
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe((q) => {
+        if (this.campusId > 0)
+          this.adminService.listarSalas(this.campusId, q).subscribe({ error: () => {} });
+      });
     if (this.campusId > 0) {
       this.adminService.listarSalas(this.campusId).subscribe({ error: () => {} });
       this.iaService.obterSugestoes('pendente', this.campusId).subscribe({ error: () => {} });
     }
     this.adminService.listarEquipamentos().subscribe({ error: () => {} });
   }
+
+  // prettier-ignore
+  aoDigitarBuscaSalas(termo: string): void { this.buscaSalas$.next(termo); }
 
   selecionarAba(aba: 'salas' | 'equipamentos' | 'alocacao' | 'remanejamento' | 'resumo'): void {
     this.abaAtiva.set(aba);

@@ -197,4 +197,18 @@ describe('SecretariaService', () => {
     expect(service.cursos().length).toBe(0);
     expect(service.isLoading()).toBeFalse();
   });
+
+  it('filtra turmas por termo textual q', () => {
+    service.listarTurmas(1, 2, 'alg').subscribe();
+    const req = httpMock.expectOne(
+      (r) =>
+        r.url === '/api/v1/turmas' &&
+        r.params.get('disciplina_id') === '1' &&
+        r.params.get('campus_id') === '2' &&
+        r.params.get('q') === 'alg',
+    );
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('q')).toBe('alg');
+    req.flush([]);
+  });
 });

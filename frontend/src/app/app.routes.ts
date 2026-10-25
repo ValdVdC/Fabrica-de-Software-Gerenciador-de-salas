@@ -7,6 +7,7 @@ import { ProfessorComponent } from './pages/professor/professor.component';
 import { AlunoComponent } from './pages/aluno/aluno.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { RelatoriosComponent } from './pages/relatorios/relatorios.component';
+import { HistoricoComponent } from './pages/historico/historico.component';
 import { authGuard } from './guards/auth.guard';
 import { roleGuard } from './guards/role.guard';
 
@@ -26,6 +27,12 @@ export const routes: Routes = [
       {
         path: 'relatorios',
         component: RelatoriosComponent,
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'coordenador', 'secretaria'] },
+      },
+      {
+        path: 'historico',
+        component: HistoricoComponent,
         canActivate: [roleGuard],
         data: { roles: ['admin', 'coordenador', 'secretaria'] },
       },
