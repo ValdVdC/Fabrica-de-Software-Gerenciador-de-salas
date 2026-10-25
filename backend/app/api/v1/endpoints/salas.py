@@ -16,7 +16,7 @@ from app.models.usuario import Usuario
 from app.schemas.sala import SalaCreate, SalaRead, SalaUpdate
 from app.schemas.equipamento import SalaEquipamentoCreate, SalaEquipamentoRead
 from app.services.log_service import registrar_evento
-from app.api.deps import get_current_user, montar_padrao_ilike, require_role
+from app.api.deps import get_current_user, montar_padrao_ilike, require_campus_access, require_role
 
 router = APIRouter()
 
@@ -105,8 +105,9 @@ def obter_sala(
 ):
     """Obtem dados de uma sala especifica garantindo isolamento tenant."""
     sala = db.get(Sala, sala_id)
-    if not sala or (current_user.perfil != PerfilUsuario.ADMIN and sala.campus_id != current_user.campus_id):
+    if not sala:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sala nao encontrada")
+    require_campus_access(sala.campus_id, current_user)
     return sala
 
 
@@ -119,8 +120,9 @@ def associar_equipamento(
 ):
     """Vincula equipamento a uma sala com quantidade especificada."""
     sala = db.get(Sala, sala_id)
-    if not sala or (current_user.perfil != PerfilUsuario.ADMIN and sala.campus_id != current_user.campus_id):
+    if not sala:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sala nao encontrada")
+    require_campus_access(sala.campus_id, current_user)
 
     equip = db.get(Equipamento, payload.equipamento_id)
     if not equip:
@@ -150,6 +152,7 @@ def associar_equipamento(
     return assoc
 
 
+@router.patch("/{sala_id}", response_model=SalaRead)
 @router.put("/{sala_id}", response_model=SalaRead)
 def atualizar_sala(
     sala_id: int,
@@ -159,8 +162,9 @@ def atualizar_sala(
 ):
     """Atualiza dados de uma sala com validacao de duplicidade e tenant."""
     sala = db.get(Sala, sala_id)
-    if not sala or (current_user.perfil != PerfilUsuario.ADMIN and sala.campus_id != current_user.campus_id):
+    if not sala:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sala nao encontrada")
+    require_campus_access(sala.campus_id, current_user)
 
     novo_bloco = payload.bloco if payload.bloco is not None else sala.bloco
     novo_numero = payload.numero if payload.numero is not None else sala.numero

@@ -11,9 +11,9 @@ from app.db.session import get_db
 from app.models.campus import Campus
 from app.models.usuario import Usuario
 from app.models.enums import PerfilUsuario, TipoEventoLog
-from app.schemas.usuario import UsuarioCreate, UsuarioRead
+from app.schemas.usuario import UsuarioCreate, UsuarioRead, UsuarioUpdate
 from app.core.security import get_password_hash
-from app.api.deps import get_current_user, montar_padrao_ilike, require_role
+from app.api.deps import get_current_user, montar_padrao_ilike, require_campus_access, require_role
 from app.services.log_service import registrar_evento
 
 router = APIRouter()
@@ -94,14 +94,15 @@ def criar_usuario(
     if not campus:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campus nao encontrado")
 
-    stmt = select(Usuario).where(Usuario.email == payload.email)
+    email_normalizado = str(payload.email).strip().lower()
+    stmt = select(Usuario).where(Usuario.email == email_normalizado)
     if db.scalar(stmt):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email ja cadastrado no sistema")
 
     usuario = Usuario(
         campus_id=payload.campus_id,
         nome=payload.nome,
-        email=payload.email,
+        email=email_normalizado,
         senha_hash=get_password_hash(payload.senha),
         perfil=payload.perfil,
         ativo=True,
@@ -122,5 +123,89 @@ def criar_usuario(
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Conflito de unicidade ao cadastrar usuario")
+    db.refresh(usuario)
+    return usuario
+
+
+@router.patch("/{usuario_id}", response_model=UsuarioRead)
+def atualizar_usuario(
+    usuario_id: int,
+    payload: UsuarioUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(
+        require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR, PerfilUsuario.SECRETARIA)
+    ),
+):
+    """Atualiza dados cadastrais basicos ou alterna status ativo/inativo respeitando RBAC."""
+    usuario = db.get(Usuario, usuario_id)
+    if not usuario:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario nao encontrado")
+
+    require_campus_access(usuario.campus_id, current_user)
+
+    if current_user.id == usuario.id:
+        if payload.perfil is not None and payload.perfil != current_user.perfil:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Privilegio insuficiente para alterar o proprio perfil",
+            )
+        if payload.ativo is not None and not payload.ativo:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Nao e permitido inativar o proprio usuario",
+            )
+    elif current_user.perfil == PerfilUsuario.SECRETARIA:
+        if usuario.perfil in (PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR, PerfilUsuario.SECRETARIA):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Privilegio insuficiente para alterar este usuario",
+            )
+        if payload.perfil in (PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR, PerfilUsuario.SECRETARIA):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Privilegio insuficiente para conceder este perfil",
+            )
+    elif current_user.perfil == PerfilUsuario.COORDENADOR:
+        if usuario.perfil in (PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Privilegio insuficiente para alterar este usuario",
+            )
+        if payload.perfil in (PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Privilegio insuficiente para conceder este perfil",
+            )
+
+    if payload.email is not None:
+        email_normalizado = str(payload.email).strip().lower()
+        if email_normalizado != usuario.email:
+            stmt = select(Usuario).where(Usuario.email == email_normalizado, Usuario.id != usuario_id)
+            if db.scalar(stmt):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email ja cadastrado no sistema")
+            usuario.email = email_normalizado
+
+    if payload.nome is not None:
+        usuario.nome = payload.nome
+    if payload.perfil is not None:
+        usuario.perfil = payload.perfil
+    if payload.ativo is not None:
+        usuario.ativo = payload.ativo
+
+    try:
+        registrar_evento(
+            db=db,
+            tipo=TipoEventoLog.ALTERACAO,
+            usuario=current_user,
+            campus_id=usuario.campus_id,
+            entidade="usuario",
+            entidade_id=usuario.id,
+            detalhes=f"Atualizacao do usuario {usuario.nome} ({usuario.email})",
+        )
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Conflito ao atualizar usuario")
+
     db.refresh(usuario)
     return usuario

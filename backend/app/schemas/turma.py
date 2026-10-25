@@ -1,4 +1,5 @@
 """Schemas Pydantic v2 para a entidade Turma."""
+from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from app.models.enums import Turno
 
@@ -24,8 +25,20 @@ class TurmaCreate(TurmaBase):
     model_config = ConfigDict(extra="forbid")
 
 
+class TurmaUpdate(BaseModel):
+    professor_id: Optional[int] = Field(default=None, description="ID do professor ou null para desvincular")
+    turno_preferido: Optional[Turno] = Field(default=None, description="Turno preferencial")
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("professor_id")
+    @classmethod
+    def validar_professor_id(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v <= 0:
+            raise ValueError("ID do professor deve ser positivo")
+        return v
+
+
 class TurmaRead(TurmaBase):
     id: int
     num_matriculados: int
     model_config = ConfigDict(from_attributes=True)
-
