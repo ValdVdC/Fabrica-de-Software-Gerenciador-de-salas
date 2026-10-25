@@ -4,12 +4,12 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, montar_padrao_ilike, require_role
+from app.api.deps import get_current_user, montar_padrao_ilike, require_campus_access, require_role
 from app.db.session import get_db
 from app.models.academico import Curso, Disciplina, Turma
 from app.models.enums import PerfilUsuario, TipoEventoLog
 from app.models.usuario import Usuario
-from app.schemas.turma import TurmaCreate, TurmaRead
+from app.schemas.turma import TurmaCreate, TurmaRead, TurmaUpdate
 from app.services.log_service import registrar_evento
 
 router = APIRouter()
@@ -52,8 +52,7 @@ def obter_turma(
     turma = db.get(Turma, turma_id)
     if not turma:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma nao encontrada")
-    if current_user.perfil != PerfilUsuario.ADMIN and turma.disciplina.curso.campus_id != current_user.campus_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma nao encontrada")
+    require_campus_access(turma.disciplina.curso.campus_id, current_user)
     return turma
 
 
@@ -104,3 +103,55 @@ def criar_turma(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Conflito ao criar turma")
     return turma
 
+
+@router.patch("/{turma_id}", response_model=TurmaRead)
+def atualizar_turma(
+    turma_id: int,
+    payload: TurmaUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(
+        require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR, PerfilUsuario.SECRETARIA)
+    ),
+):
+    """Atualiza professor responsavel ou turno da turma com validacao de campus."""
+    turma = db.get(Turma, turma_id)
+    if not turma:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Turma nao encontrada")
+
+    require_campus_access(turma.disciplina.curso.campus_id, current_user)
+
+    if "professor_id" in payload.model_fields_set:
+        if payload.professor_id is None:
+            turma.professor_id = None
+        else:
+            prof = db.get(Usuario, payload.professor_id)
+            if current_user.perfil != PerfilUsuario.ADMIN:
+                if not prof or prof.perfil != PerfilUsuario.PROFESSOR or not prof.ativo or prof.campus_id != current_user.campus_id:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Professor invalido, inativo ou inexistente")
+            else:
+                if not prof or prof.perfil != PerfilUsuario.PROFESSOR or not prof.ativo:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Professor invalido, inativo ou inexistente")
+                if prof.campus_id != turma.disciplina.curso.campus_id:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Professor pertence a campus diferente da disciplina")
+            turma.professor_id = payload.professor_id
+
+    if payload.turno_preferido is not None:
+        turma.turno_preferido = payload.turno_preferido
+
+    try:
+        registrar_evento(
+            db=db,
+            tipo=TipoEventoLog.ALTERACAO,
+            usuario=current_user,
+            campus_id=turma.disciplina.curso.campus_id,
+            entidade="turma",
+            entidade_id=turma.id,
+            detalhes=f"Atualizacao da turma {turma.id} da disciplina {turma.disciplina.codigo}",
+        )
+        db.commit()
+        db.refresh(turma)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Conflito ao atualizar turma")
+
+    return turma

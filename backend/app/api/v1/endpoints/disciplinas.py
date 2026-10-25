@@ -9,7 +9,7 @@ from app.models.academico import Disciplina, Curso
 from app.models.usuario import Usuario
 from app.models.enums import PerfilUsuario
 from app.schemas.academico import DisciplinaCreate, DisciplinaRead
-from app.api.deps import require_role, get_current_user
+from app.api.deps import get_current_user, require_campus_access, require_role
 
 router = APIRouter()
 
@@ -33,6 +33,20 @@ def listar_disciplinas(
         stmt = stmt.where(Disciplina.curso_id == curso_id)
     stmt = stmt.offset(skip).limit(limit)
     return db.scalars(stmt).all()
+
+
+@router.get("/{disciplina_id}", response_model=DisciplinaRead)
+def obter_disciplina(
+    disciplina_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Obtem disciplina por ID com isolamento de campus."""
+    disciplina = db.get(Disciplina, disciplina_id)
+    if not disciplina:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Disciplina nao encontrada")
+    require_campus_access(disciplina.curso.campus_id, current_user)
+    return disciplina
 
 
 @router.post("", response_model=DisciplinaRead, status_code=status.HTTP_201_CREATED)

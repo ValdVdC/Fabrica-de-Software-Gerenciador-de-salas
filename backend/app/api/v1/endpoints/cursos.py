@@ -10,7 +10,7 @@ from app.models.campus import Campus
 from app.models.usuario import Usuario
 from app.models.enums import PerfilUsuario
 from app.schemas.academico import CursoCreate, CursoRead
-from app.api.deps import require_role, get_current_user
+from app.api.deps import get_current_user, require_campus_access, require_role
 
 router = APIRouter()
 
@@ -30,6 +30,20 @@ def listar_cursos(
         stmt = stmt.where(Curso.campus_id == filtro_campus)
     stmt = stmt.offset(skip).limit(limit)
     return db.scalars(stmt).all()
+
+
+@router.get("/{curso_id}", response_model=CursoRead)
+def obter_curso(
+    curso_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Obtem curso por ID com isolamento de campus."""
+    curso = db.get(Curso, curso_id)
+    if not curso:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Curso nao encontrado")
+    require_campus_access(curso.campus_id, current_user)
+    return curso
 
 
 @router.post("", response_model=CursoRead, status_code=status.HTTP_201_CREATED)
