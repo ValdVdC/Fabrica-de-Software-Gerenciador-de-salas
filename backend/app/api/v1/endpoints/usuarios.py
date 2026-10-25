@@ -71,12 +71,28 @@ def criar_usuario(
     current_user: Usuario = Depends(require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR, PerfilUsuario.SECRETARIA)),
 ):
     """Cadastra novo usuario institucional com hash de senha Bcrypt e validacoes de unicidade."""
+    # 1. Validacao hierarquica contra escalacao de privilegios (BFLA)
+    if current_user.perfil == PerfilUsuario.SECRETARIA:
+        if payload.perfil in (PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR, PerfilUsuario.SECRETARIA):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Privilegio insuficiente para conceder este perfil",
+            )
+    elif current_user.perfil == PerfilUsuario.COORDENADOR:
+        if payload.perfil in (PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Privilegio insuficiente para conceder este perfil",
+            )
+
+    # 2. Validacao de escopo de campus do solicitante (previne oraculo de enumeracao e queries desnecessarias)
+    if current_user.perfil != PerfilUsuario.ADMIN and payload.campus_id != current_user.campus_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado: restrito ao seu campus")
+
+    # 3. Verificacao de existencia do campus no banco
     campus = db.get(Campus, payload.campus_id)
     if not campus:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campus nao encontrado")
-
-    if current_user.perfil != PerfilUsuario.ADMIN and payload.campus_id != current_user.campus_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado: restrito ao seu campus")
 
     stmt = select(Usuario).where(Usuario.email == payload.email)
     if db.scalar(stmt):
@@ -108,4 +124,3 @@ def criar_usuario(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Conflito de unicidade ao cadastrar usuario")
     db.refresh(usuario)
     return usuario
-

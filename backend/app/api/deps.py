@@ -62,6 +62,29 @@ def require_role(*roles: PerfilUsuario):
     return role_checker
 
 
+def require_campus_access(resource_campus_id: int | None, current_user: Usuario) -> None:
+    """Valida permissao de acesso ao campus do recurso para prevencao de BOLA/IDOR.
+
+    Perfil ADMIN possui autorizacao global.
+    Demais perfis exigem correspondencia com current_user.campus_id com fail-closed estrito.
+    Retorna 404 Not Found em divergencia ou invalidade para mitigar vazamento de existencia.
+    """
+    if current_user.perfil == PerfilUsuario.ADMIN:
+        return
+    if (
+        resource_campus_id is None
+        or current_user.campus_id is None
+        or isinstance(resource_campus_id, bool)
+        or not isinstance(resource_campus_id, int)
+        or resource_campus_id <= 0
+        or resource_campus_id != current_user.campus_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recurso nao encontrado",
+        )
+
+
 def montar_padrao_ilike(q: str | None) -> str | None:
     """Normaliza e escapa curingas SQL (\\, % e _) para busca textual literal via ilike."""
     if q is None:
@@ -71,4 +94,3 @@ def montar_padrao_ilike(q: str | None) -> str | None:
         return None
     escapado = termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     return f"%{escapado}%"
-
