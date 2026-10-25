@@ -207,6 +207,8 @@ describe('SecretariaService', () => {
         r.params.get('campus_id') === '2' &&
         r.params.get('q') === 'alg',
     );
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('q')).toBe('alg');
     req.flush([]);
   });
 });
