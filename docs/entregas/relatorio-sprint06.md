@@ -1120,12 +1120,12 @@ A arquitetura do SIGAAS garante a coesão integrada entre todas as suas camadas:
 
 ## 6.4 Melhorias na Interface do Sistema (Novo Design System)
 
-A interface passou por uma profunda reformulação profissional na Sprint 06:
-- **Identidade Institucional Anti-Vibe Coding**: Paleta corporativa sóbria — Azul Institucional (<code>#252CEB</code>), Índigo de Ação (<code>#4F46E5</code>), Roxo IA (<code>#7C3AED</code>) e Superfícies Claras (<code>#F8FAFC</code> e <code>#FFFFFF</code>).
-- **Acessibilidade e Contraste**: Tipografia em cinza profundo (<code>#0F172A</code>) com contraste superior a 12:1 (excedendo os 4.5:1 exigidos pelo padrão WCAG AA).
-- **Componentes Ergonômicos**: Inputs com altura de toque de 48px, ícones vetoriais SVG de segurança (cadeado, carta e alternador de visibilidade de senha).
-- **Cards de Acesso Rápido na Tela de Login**: Botões diretos para acesso rápido com credenciais institucionais pré-carregadas para todos os 5 perfis (Admin, Coordenador, Secretaria, Professor e Aluno), facilitando a auditoria e demonstrações na banca.
-- **Zero Emojis**: Proibição terminante de emojis em código, documentação e interface, utilizando exclusivamente ícones vetoriais SVG profissionais.
+A interface passou por uma profunda reformulacao profissional na Sprint 06 e consolidacao normativa:
+- **Identidade Institucional Anti-Vibe Coding**: Paleta corporativa sobria baseada em Slate/Navy (<code>#0F172A</code>, <code>#1E293B</code>, <code>#334155</code>), superficies neutras (<code>#F8FAFC</code> e <code>#FFFFFF</code>) e tokens neutros de design system sem elementos neon.
+- **Acessibilidade e Contraste**: Tipografia em cinza profundo (<code>#0F172A</code>) com contraste superior a 12:1 (excedendo os 4.5:1 exigidos pelo padrao WCAG AA).
+- **Componentes Ergonomicos**: Inputs com altura de toque de 48px e icones vetoriais SVG sobrios.
+- **Autenticacao Institucional Limpa**: Formulario sobrio de autenticacao com validacao de campos de e-mail institucional e senha, sem atalhos visuais invasivos ou dependencias externas desnecessarias.
+- **Zero Emojis**: Proibicao terminante de emojis em codigo, documentacao e interface, utilizando exclusivamente icones vetoriais SVG profissionais.
 
 ---
 
@@ -1145,7 +1145,7 @@ A interface passou por uma profunda reformulação profissional na Sprint 06:
 ## 6.6 Evidências Visuais das Funcionalidades em Operação
 
 ![Figura 11 — Tela de Login Institucional Reformulada](images/print_11_login_design_system.png)
-*Figura 11 — Nova interface de autenticação do SIGAAS com design corporativo, tipografia Inter, ícones vetoriais SVG e cards de acesso rápido aos 5 perfis.*
+*Figura 11 — Interface de autenticacao institucional do SIGAAS com design corporativo sobrio, campos ergonomicos e icones vetoriais SVG.*
 
 ![Figura 12 — Painel Operacional de Remanejamento IA (Sugestões Pendentes)](images/print_12_remanejamento_ia_pendente.png)
 *Figura 12 — Aba de Remanejamento IA com cards comparativos: Sala Atual (Auditorio) vs. Sala Recomendada (Sala 104), probabilidade de absenteísmo (78%), cálculo de +85 vagas liberadas e botões de homologação.*
