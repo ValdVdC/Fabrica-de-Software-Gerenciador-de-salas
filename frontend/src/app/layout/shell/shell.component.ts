@@ -142,6 +142,10 @@ import { AuthService, UserRole } from '../../services/auth.service';
               </svg>
               Relatorios
             </a>
+          }
+          @if (
+            authService.currentRole() === 'admin' || authService.currentRole() === 'coordenador'
+          ) {
             <a routerLink="/historico" routerLinkActive="active" class="nav-link">
               <svg
                 width="15"
@@ -189,6 +193,24 @@ import { AuthService, UserRole } from '../../services/auth.service';
         </div>
       </header>
       <main class="shell-content">
+        @if (authService.accessDeniedMessage(); as avisoRestrito) {
+          <div
+            class="alert alert-error"
+            role="alert"
+            data-testid="access-denied-banner"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;"
+          >
+            <span>{{ avisoRestrito }}</span>
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="authService.clearAccessDenied()"
+              style="padding: 0.2rem 0.6rem; font-size: 0.75rem;"
+            >
+              Fechar
+            </button>
+          </div>
+        }
         <router-outlet />
       </main>
     </div>

@@ -18,6 +18,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.status === 401 && !req.url.startsWith('/api/v1/auth/login')) {
         authService.logout();
         router.navigate(['/login']);
+      } else if (error.status === 403) {
+        const detail = typeof error.error?.detail === 'string' ? error.error.detail : undefined;
+        authService.notifyAccessDenied(detail);
       }
       return throwError(() => error);
     }),

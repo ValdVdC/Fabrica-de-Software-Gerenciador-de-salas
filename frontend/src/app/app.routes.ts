@@ -34,7 +34,7 @@ export const routes: Routes = [
         path: 'historico',
         component: HistoricoComponent,
         canActivate: [roleGuard],
-        data: { roles: ['admin', 'coordenador', 'secretaria'] },
+        data: { roles: ['admin', 'coordenador'] },
       },
       {
         path: 'admin',

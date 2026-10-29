@@ -66,4 +66,30 @@ describe('authInterceptor', () => {
     expect(authService.logout).toHaveBeenCalled();
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
   });
+
+  it('nao deve deslogar nem redirecionar em caso de status 403 Forbidden e deve notificar acesso restrito', () => {
+    spyOn(authService, 'getToken').and.returnValue('mock_jwt_token_123');
+    spyOn(authService, 'logout');
+    http.post('/api/v1/usuarios', {}).subscribe({ error: () => {} });
+    const req = httpMock.expectOne('/api/v1/usuarios');
+    req.flush(
+      { detail: 'Privilegio insuficiente para conceder este perfil' },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    expect(authService.logout).not.toHaveBeenCalled();
+    expect(routerSpy.navigate).not.toHaveBeenCalled();
+    expect(authService.accessDeniedMessage()).toBe(
+      'Privilegio insuficiente para conceder este perfil',
+    );
+  });
+
+  it('deve registrar mensagem padrao de acesso restrito quando status 403 nao possuir detail textual', () => {
+    spyOn(authService, 'getToken').and.returnValue('mock_jwt_token_123');
+    spyOn(authService, 'logout');
+    http.patch('/api/v1/salas/1', {}).subscribe({ error: () => {} });
+    const req = httpMock.expectOne('/api/v1/salas/1');
+    req.flush('Forbidden', { status: 403, statusText: 'Forbidden' });
+    expect(authService.logout).not.toHaveBeenCalled();
+    expect(authService.accessDeniedMessage()).toContain('Acesso restrito');
+  });
 });

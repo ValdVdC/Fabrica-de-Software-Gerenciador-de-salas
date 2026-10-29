@@ -22,7 +22,6 @@ describe('Rotas Principais', () => {
     expect(children.find((r) => r.path === 'historico')?.data?.['roles']).toEqual([
       'admin',
       'coordenador',
-      'secretaria',
     ]);
     expect(routes.find((r) => r.path === '**')?.redirectTo).toBe('login');
   });
