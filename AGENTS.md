@@ -51,6 +51,14 @@ Equipe com papéis fixos:
 5. Toda funcionalidade deve ter testes automatizados cobrindo os critérios de aceite antes de ser concluída.
 6. Commits e PRs devem seguir rigorosamente o padrão Conventional Commits: `<tipo>(<escopo>): <descrição curta no imperativo>` (ex.: `feat(schema): adicionar models postgres e migrations alembic`). Tipos válidos: `feat`, `fix`, `docs`, `test`, `perf`, `refactor`, `chore`, `ci`.
 7. Valide integrações de alto risco primeiro: a integração FastAPI ↔ C via `ctypes` deve ser validada com prova de conceito antes do algoritmo de alocação completo.
+8. **Proibição Absoluta de Alucinação Institucional e Metadados**:
+   - É expressa e terminantemente proibido inventar, presumir, inferir ou alucinar nomes de instituições de ensino, faculdades, universidades, centros universitários, cidades, estados, campi não documentados ou quaisquer entidades externas.
+   - Todo relatório, especificação, documentação, capa ou script gerador de PDF deve utilizar EXCLUSIVAMENTE os dados oficiais validados em `docs/projeto-gestao-salas-escalas.md` ou instruídos categoricamente pelo usuário:
+     * Disciplina: Fábrica de Software & Tópicos Avançados em Computação
+     * Curso e Turma: Curso de Bacharelado em Ciência da Computação — Turma 8MB - CC
+     * Equipe: Grupo 31 — SIGAAS
+     * Integrantes e Matrículas: Ewerton Thyago Tavares da Silva (01573977), Wesclei Batista Da Cruz Júnior (01606772), Osvaldo Vasconcelos de Carvalho (01614171), Gabriel Porfírio dos Santos (01591399), Flávio Vecch de Brito Farias (01600988).
+   - Se uma informação institucional (como nome de faculdade ou cidade) não constar expressamente nos requisitos, NUNCA a invente nem interpole. Restrinja a identificação estritamente à disciplina, curso, turma e grupo.
 
 ---
 
