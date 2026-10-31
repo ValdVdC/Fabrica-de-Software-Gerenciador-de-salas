@@ -27,7 +27,7 @@
 
 ## 8.1 Contexto e Objetivos
 
-A conclusão funcional da Sprint 08 está condicionada ao merge dos PRs #96 e #97. Uma vez integrados, o ciclo de implementação funcional do SIGAAS estará encerrado. As Sprints 01 a 07 entregaram a base multi-campus, o motor de alocação em C/OpenMP, a IA preditiva de faltas, a auditoria, o dashboard e os relatórios. A Sprint 08 concentrou o esforço naquilo que sustenta a operação real do sistema em ambiente institucional: a **governança de permissões**, o **isolamento estrito entre campi** e a **consolidação do ciclo de vida das entidades acadêmicas**.
+Com os PRs #96 e #97 mesclados na `main`, o ciclo de implementação funcional do SIGAAS está encerrado. O fechamento definitivo depende do Gate 2 e da publicação da tag `v0.8.0-sprint08`. As Sprints 01 a 07 entregaram a base multi-campus, o motor de alocação em C/OpenMP, a IA preditiva de faltas, a auditoria, o dashboard e os relatórios. A Sprint 08 concentrou o esforço naquilo que sustenta a operação real do sistema em ambiente institucional: a **governança de permissões**, o **isolamento estrito entre campi** e a **consolidação do ciclo de vida das entidades acadêmicas**.
 
 O objetivo central foi eliminar vetores de escalada de privilégio e de vazamento de dados entre tenants, alinhando a API aos riscos do OWASP API Security Top 10, com destaque para:
 
@@ -35,7 +35,7 @@ O objetivo central foi eliminar vetores de escalada de privilégio e de vazament
 - **BOLA/IDOR (Broken Object Level Authorization):** impedir acesso a recursos de outro campus por manipulação de identificadores.
 - **TOCTOU (Time-of-Check to Time-of-Use):** impedir cancelamentos concorrentes de matrícula que gerem decremento duplo de vagas.
 
-A especificação normativa da sprint está em `docs/specs/sprint8-rbac-multicampus.md` (`SPEC-008`), aprovada no Gate 1 em 24 de Outubro de 2026. O backend foi entregue nos PRs #94 e #95, ambos mesclados na `main`. O frontend correspondente está nos PRs #96 e #97, ainda **abertos e em revisão (Gate 2)**. Por esse motivo, o status desta entrega é **Praticamente Concluído**, condicionado à revisão e ao merge dos PRs #96 e #97.
+A especificação normativa da sprint está em `docs/specs/sprint8-rbac-multicampus.md` (`SPEC-008`), aprovada no Gate 1 em 24 de Outubro de 2026. O backend foi entregue nos PRs #94 e #95, ambos mesclados na `main`. O frontend foi entregue nos PRs #96 (commit `c4fc5b5`) e #97 (commit `a7c4b06`), também mesclados. O status desta entrega é **Praticamente Concluído**; o fechamento definitivo depende do Gate 2 e da tag `v0.8.0-sprint08`.
 
 ### 8.1.1 Diagnóstico e Ações Corretivas
 
@@ -46,8 +46,11 @@ A especificação normativa da sprint está em `docs/specs/sprint8-rbac-multicam
 | Ausência de ciclo de vida de salas e turmas | `PATCH /salas/{id}` e `PATCH /turmas/{id}` com isolamento de campus | Implementado no PR #95 (mesclado) |
 | Matrícula sem cancelamento e sem tratamento de concorrência | `DELETE /matriculas/{id}` com update atômico e rematrícula | Implementado no PR #95 (mesclado) |
 | Consultas unitárias de cursos e disciplinas sem isolamento | `GET /cursos/{id}` e `GET /disciplinas/{id}` com `require_campus_access` | Implementado no PR #95 (mesclado) |
-| Tratamento de HTTP 403 ausente no frontend | Interceptor e guards de perfil | Em revisão no PR #96 (aberto) |
-| Navegação por perfil incompleta na UI | Menu e rotas condicionados ao perfil autenticado | Em revisão no PR #97 (aberto) |
+| Tratamento de HTTP 403 ausente no frontend | Interceptor e guards de perfil | Implementado no PR #96 (mesclado em `c4fc5b5`) |
+| Ausência de banner para HTTP 403 | Banner de acesso restrito no Shell | Implementado no PR #96 (mesclado em `c4fc5b5`) |
+| Navegação por perfil incompleta na UI | Menu e rotas condicionados ao perfil autenticado | Implementado no PR #97 (mesclado em `a7c4b06`) |
+| Ações administrativas visíveis para perfis sem permissão | Ocultação de formulários e ações em Admin e Secretaria | Implementado no PR #97 (mesclado em `a7c4b06`) |
+| Cancelamento de matrícula sem ação no frontend | Botão de cancelamento em Minhas Matrículas e na Secretaria | Implementado no PR #97 (mesclado em `a7c4b06`) |
 
 ---
 
@@ -142,107 +145,111 @@ Consequências:
 
 ## 8.4 Frontend
 
-O frontend da Sprint 08 está dividido em dois PRs ainda abertos:
+O frontend da Sprint 08 foi entregue nos PRs #96 (commit `c4fc5b5`) e #97 (commit `a7c4b06`), ambos mesclados na `main`. O estado do CI do frontend está registrado na seção 8.6.
 
-- **PR #96:** tratamento centralizado de `HTTP 403`, guards e interceptor de autorização.
-- **PR #97:** navegação e componentes condicionados ao perfil autenticado.
+### 8.4.1 Guards e Redirecionamento por Perfil
 
-Como ambos permanecem em revisão (Gate 2), esta seção registra o escopo planejado e **não** afirma que a camada visual da Sprint 08 está concluída na `main`.
+- `role.guard.ts` notifica acesso restrito com a mensagem `Acesso restrito: rota exclusiva para perfis autorizados.` e redireciona para `authService.getHomeRoute()`.
+- `auth.service.ts` adiciona `getHomeRoute()`, que mapeia `admin` e `coordenador` para `/admin`, `secretaria`, `professor` e `aluno` para `/{role}`, e o fallback para `/login`.
+- `hasRole(role)` retorna verdadeiro quando o perfil atual é igual ao solicitado ou quando o perfil solicitado é `admin` e o atual é `coordenador`.
+- `app.routes.ts` restringe a rota `/historico` a `admin` e `coordenador`.
 
-O que já existe na `main`, herdado das sprints anteriores:
+### 8.4.2 Interceptor HTTP 403
 
-- SPA Angular 20 com rotas protegidas por `RoleGuard`.
-- `authInterceptor` para inclusão do token JWT.
-- Telas de administração, secretaria, professor e aluno.
-- Dashboard, relatórios, filtros, busca textual e exportação CSV.
+- `auth.interceptor.ts` trata `403` sem executar `logout` e sem redirecionar para o login.
+- O interceptor extrai `error.error.detail` quando é string e chama `authService.notifyAccessDenied(detail)`.
+- Sem `detail` textual, `notifyAccessDenied` aplica a mensagem padrão `Acesso restrito: seu perfil nao possui permissao para esta operacao.`
 
-O que depende dos PRs #96 e #97:
+### 8.4.3 Banner de Acesso Restrito no Shell
 
-- Redirecionamento e mensagem amigável em respostas `403`.
-- Menu lateral e ações condicionados ao perfil.
-- Ocultação de controles administrativos para perfis sem permissão.
+- `auth.service.ts` mantém o signal `_accessDeniedMessage`, exposto como `accessDeniedMessage`, com `notifyAccessDenied()` e `clearAccessDenied()`.
+- A mensagem é limpa no login e no logout.
+- `shell.component.ts` renderiza o banner com `data-testid="access-denied-banner"`, `role="alert"`, a mensagem e o botão `Fechar`, que chama `clearAccessDenied()`.
+- O mesmo shell oculta o link `Historico` para perfis diferentes de `admin` e `coordenador`.
 
-Os 150 testes de frontend foram executados na `main` atual, **sem** os PRs #96 e #97. Após o merge, a suíte deve ser reexecutada.
+### 8.4.4 Visibilidade de Ações por Perfil
 
-`[PREENCHER: reexecutar testes do frontend apos o merge de #96 e #97]`
+- `admin.component.ts` define `podeGerenciar` como `computed(() => authService.hasRole('admin'))`; como `hasRole` inclui o Coordenador, Admin e Coordenador compartilham a gestão.
+- Com `podeGerenciar` falso, o AdminComponent oculta formulários e ações de salas, equipamentos, alocação e decisão de remanejamento, exibindo `-` nas ações indisponíveis.
+- Os métodos de escrita do AdminComponent também verificam `podeGerenciar` antes de executar.
+- `secretaria.component.ts` define `podeEditar` para `admin`, `coordenador` e `secretaria`; sem permissão, os formulários de cursos, disciplinas, turmas e matrículas não são renderizados.
+- A Secretaria exibe a ação `Cancelar Matricula` apenas para matrícula ativa e apenas quando `podeEditar` é verdadeiro.
+- `aluno.component.ts` exibe a seção `Minhas Matriculas`, lista as matrículas via `SecretariaService.listarMatriculas()` e oferece o botão de cancelamento para matrícula ativa.
+- Após o cancelamento, o AlunoComponent recarrega os horários e exibe a mensagem `Matricula #<id> cancelada com sucesso.`
+- `secretaria.service.ts` implementa `cancelarMatricula()` com `DELETE /api/v1/matriculas/{id}`, atualização reativa da lista e prevenção de underflow com `Math.max(0, num_matriculados - 1)`.
+- `matricularAluno()` substitui a matrícula existente na lista em vez de duplicá-la.
 
 ---
 
 ## 8.5 Evidências Visuais
 
-As figuras abaixo devem ser capturadas da aplicação em execução, uma por perfil, demonstrando o isolamento de campus e as restrições de interface.
+As figuras abaixo devem ser capturadas da aplicação em execução, conforme os nomes e escopos definidos pelo dono do repositório.
 
-### 8.5.1 Administrador
+### 8.5.1 Painel Administrativo/Coordenador
 
-Acesso global a todos os campi, gestão de usuários de qualquer perfil, edição de salas e turmas, aprovação de sugestões e consulta à auditoria.
+Painel de gestão de espaços, com formulários e ações de salas, equipamentos, alocação e remanejamento disponíveis para Admin e Coordenador.
 
-![Figura 18 - Fluxo do Administrador](images/print_18_admin.png)
+![Figura 18 - Painel Administrativo/Coordenador - gestão de espaços](images/print_18_admin_gestao_espacos.png)
 
-*Figura 18 - [PREENCHER: print do fluxo do Administrador].*
+*Figura 18 - [PREENCHER: print do Painel Administrativo/Coordenador - gestão de espaços].*
 
-### 8.5.2 Coordenador
+### 8.5.2 Painel da Secretaria Acadêmica
 
-Acesso restrito ao próprio campus, gestão de secretarias, professores e alunos, edição de turmas e cancelamento de matrículas, sem permissão para conceder `ADMIN` ou `COORDENADOR`.
+Painel da Secretaria Acadêmica com as abas de matrículas e turmas, formulários de escrita e ação de cancelamento de matrícula ativa.
 
-![Figura 19 - Fluxo do Coordenador](images/print_19_coordenador.png)
+![Figura 19 - Painel da Secretaria Acadêmica - matrículas e turmas](images/print_19_secretaria_academica.png)
 
-*Figura 19 - [PREENCHER: print do fluxo do Coordenador].*
+*Figura 19 - [PREENCHER: print do Painel da Secretaria Acadêmica - matrículas e turmas].*
 
-### 8.5.3 Secretaria
+### 8.5.3 Painel do Docente
 
-Acesso restrito ao próprio campus, criação e edição de professores e alunos, cancelamento de matrículas, sem permissão para conceder perfis elevados nem editar salas.
+Painel do Docente com a grade horária semanal.
 
-![Figura 20 - Fluxo da Secretaria](images/print_20_secretaria.png)
+![Figura 20 - Painel do Docente - grade horária semanal](images/print_20_docente_grade_horaria.png)
 
-*Figura 20 - [PREENCHER: print do fluxo da Secretaria].*
+*Figura 20 - [PREENCHER: print do Painel do Docente - grade horária semanal].*
 
-### 8.5.4 Professor
+### 8.5.4 Painel do Discente
 
-Consulta às próprias turmas e horários no campus, sem acesso a endpoints administrativos.
+Painel do Discente com a seção `Minhas Matriculas` e o botão de cancelamento de matrícula ativa.
 
-![Figura 21 - Fluxo do Professor](images/print_21_professor.png)
+![Figura 21 - Painel do Discente - Minhas Matrículas e cancelamento](images/print_21_discente_minhas_matriculas.png)
 
-*Figura 21 - [PREENCHER: print do fluxo do Professor].*
+*Figura 21 - [PREENCHER: print do Painel do Discente - Minhas Matrículas e cancelamento].*
 
-### 8.5.5 Aluno
+### 8.5.5 Banner de Acesso Restrito HTTP 403
 
-Consulta aos próprios dados e matrículas, com cancelamento exclusivo da própria matrícula e bloqueio de acesso a dados de terceiros.
+Banner de acesso restrito exibido no Shell após uma resposta HTTP 403.
 
-![Figura 22 - Fluxo do Aluno](images/print_22_aluno.png)
+![Figura 22 - Banner de acesso restrito HTTP 403 no Shell](images/print_22_banner_acesso_restrito.png)
 
-*Figura 22 - [PREENCHER: print do fluxo do Aluno].*
+*Figura 22 - [PREENCHER: print do banner de acesso restrito HTTP 403 no Shell].*
 
 ---
 
 ## 8.6 Testes TDD e Métricas
 
-Os comandos de backend foram executados a partir de `backend/`, com o interpretador do venv temporário `C:\Users\Usuario\AppData\Local\Temp\opencode\sigaas-venv\Scripts\python.exe`. O comando de frontend foi executado a partir de `frontend/`.
-
 ### 8.6.1 Backend (Pytest)
+
+Resultado oficial do CI: execução #164 da `main`, commit `a7c4b06`, job `Backend Tests & Coverage (Pytest)`, Ubuntu, Python 3.12: **255 passed, 9 warnings, 68,85 s**.
+
+Linha de cobertura do CI:
+
+```text
+Required test coverage of 85% reached. Total coverage: 91.18%
+```
+
+Comando da suíte:
 
 ```bash
 python -m pytest tests -v --cov=app --cov-config=.coveragerc --cov-report=term-missing --cov-fail-under=85
 ```
 
-(trecho)
-
-```text
-================ 15 failed, 240 passed, 21 warnings in 57.41s =================
-Required test coverage of 85% reached. Total coverage: 88.33%
-```
-
-As 15 falhas são exclusivamente de ambiente do motor C, que não foi compilado nesta máquina por ausência de compilador C e da biblioteca `motor_alocacao.so`:
-
-| Arquivo | Falhas | Causa |
-| :--- | :---: | :--- |
-| `backend/tests/test_api_alocacao.py` | 4 | Biblioteca do motor C não carregada |
-| `backend/tests/test_api_motor.py` | 2 | Biblioteca do motor C não carregada |
-| `backend/tests/test_motor_c.py` | 7 | `RuntimeError: Biblioteca do motor C nao esta carregada` |
-| `backend/tests/test_motor_service.py` | 2 | Biblioteca do motor C não carregada |
-
-Não houve falha em testes de RBAC, isolamento multi-campus ou ciclo de vida de matrículas.
+A execução local no Windows, sem o motor C compilado, teve 15 falhas de ambiente e cobertura de 88,33%; o CI (Ubuntu) executou a suíte completa.
 
 ### 8.6.2 Testes Dedicados da Sprint 08
+
+Execução local a partir de `backend/`, com o interpretador do venv temporário:
 
 ```bash
 python -m pytest tests/test_rbac_security.py tests/test_multicampus_isolation.py tests/test_matriculas_lifecycle.py -q --no-cov
@@ -258,6 +265,12 @@ A execução com `-v` foi usada apenas para extrair os nomes reais das funções
 
 ### 8.6.3 Frontend (Karma/Jasmine)
 
+Execução #164 do CI, job `Frontend Tests & Build (Angular)`: **FALHOU** com erro de compilação `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167). Os testes não chegaram a rodar e o passo de build de produção foi pulado.
+
+`[PREENCHER: numeros oficiais do frontend apos a correcao do CI]`
+
+Execução local anterior ao merge de #96 e #97:
+
 ```bash
 npx ng test --no-watch --browsers=ChromeHeadless
 ```
@@ -268,8 +281,6 @@ npx ng test --no-watch --browsers=ChromeHeadless
 Chrome Headless 156.0.0.0 (Windows 10): Executed 150 of 150 SUCCESS (0.553 secs / 0.48 secs)
 TOTAL: 150 SUCCESS
 ```
-
-A execução ocorreu na `main` atual, sem os PRs #96 e #97.
 
 ### 8.6.4 Matriz de Testes Executados
 
@@ -331,12 +342,13 @@ A execução ocorreu na `main` atual, sem os PRs #96 e #97.
 
 ### 8.6.5 Resultado Geral da Suíte
 
-| Camada | Resultado real | Observação |
+| Camada | Resultado | Observação |
 | :--- | :--- | :--- |
-| Backend | 255 coletados, 240 aprovados, 15 falhas, cobertura 88,33% | Falhas exclusivas do motor C não compilado no Windows |
-| Testes Sprint 08 | 53 aprovados | 21 RBAC + 16 multi-campus + 16 matrículas |
-| Frontend | 150 de 150 aprovados | Executado sem os PRs #96 e #97 |
-| CI | Workflow CI concluído com sucesso na main (execuções #158 e #160, merges de #94 e #95); PRs #96 e #97 com CI concluído nas branches, ainda sem merge | PR somente de documentação não dispara o CI (`paths-ignore`) |
+| Backend (CI oficial) | 255 passed, 9 warnings, 68,85 s; cobertura 91,18% | Execução #164, commit `a7c4b06`, Ubuntu, Python 3.12 |
+| Backend (local, Windows) | 240 passed, 15 falhas de ambiente; cobertura 88,33% | Sem motor C compilado; nota de ambiente |
+| Testes Sprint 08 (local) | 53 aprovados | 21 RBAC + 16 multi-campus + 16 matrículas |
+| Frontend (CI #164) | Job `Frontend Tests & Build (Angular)` falhou com `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167); testes não executaram; build de produção pulado | `[PREENCHER: numeros oficiais do frontend apos a correcao do CI]` |
+| Frontend (local, antes de #96/#97) | 150 de 150 aprovados | Execução local anterior ao merge |
 
 ---
 
@@ -354,13 +366,13 @@ A execução ocorreu na `main` atual, sem os PRs #96 e #97.
 | :---: | :--- | :--- |
 | #94 | RBAC, BFLA e `require_campus_access` | Mesclado |
 | #95 | Ciclo de vida de usuários, salas, turmas e matrículas | Mesclado |
-| #96 | Frontend: guards, interceptor e tratamento de 403 | Aberto, CI concluído na branch, em revisão (Gate 2) |
-| #97 | Frontend: navegação e UI por perfil | Aberto, CI concluído na branch, em revisão (Gate 2) |
-| PR 5 | Documentação da Sprint 08 | Em elaboração |
+| #96 | Frontend: guards, interceptor e banner de 403 | Mesclado (`c4fc5b5`) |
+| #97 | Frontend: visibilidade de ações por perfil e matrículas | Mesclado (`a7c4b06`) |
+| #98 | Documentação da Sprint 08 | Em ajustes |
 
 ### 8.7.3 CI e Limite de Diff
 
-- Workflow CI concluído com sucesso na main (execuções #158 e #160, merges de #94 e #95); PRs #96 e #97 com CI concluído nas branches, ainda sem merge.
+- Execução #164 da `main` (commit `a7c4b06`): job de backend concluído com sucesso; job de frontend falhou com `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167).
 - O workflow `.github/workflows/ci.yml` possui `paths-ignore` para `docs/**` e `*.md`; PRs exclusivamente de documentação não disparam a esteira de código.
 - O script `scripts/check_pr_size.py` ignora `^docs/` e `^.*\.md$`, portanto o relatório não é contabilizado no limite de diff de código.
 - O limite de 400 linhas permanece aplicável aos PRs de código.
@@ -369,13 +381,13 @@ A execução ocorreu na `main` atual, sem os PRs #96 e #97.
 
 ## 8.8 Conclusão e Próximos Passos
 
-O backend da Sprint 08 está concluído e mesclado, com isolamento multi-campus centralizado, proteção contra BFLA e BOLA/IDOR, ciclo de vida completo de usuários, salas, turmas e matrículas, cancelamento concorrente seguro e auditoria persistida. O sistema encontra-se em status **Praticamente Concluído**, condicionado à revisão e ao merge dos PRs #96 e #97, que finalizam a experiência de navegação por perfil no frontend.
+O backend da Sprint 08 está concluído e mesclado, com isolamento multi-campus centralizado, proteção contra BFLA e BOLA/IDOR, ciclo de vida completo de usuários, salas, turmas e matrículas, cancelamento concorrente seguro e auditoria persistida. O frontend foi mesclado nos PRs #96 e #97, com guards, interceptor de 403, banner de acesso restrito e visibilidade de ações por perfil; entretanto, o job de frontend do CI falhou na execução #164 com `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167), e a correção está pendente. O sistema encontra-se em status **Praticamente Concluído**; o fechamento definitivo depende do Gate 2 e da tag `v0.8.0-sprint08`.
 
 Próximos passos:
 
-1. Concluir a revisão e o merge dos PRs #96 e #97.
-2. Reexecutar a suíte de frontend após o merge.
-3. Confirmar o resultado do CI na aba Actions.
-4. Inserir os prints dos cinco perfis.
-5. Publicar a tag `v0.8.0-sprint08` após o Gate 2 humano.
+1. Corrigir o erro `TS2304` em `src/app/pages/components.spec.ts` (linhas 166 e 167).
+2. Reexecutar o CI e obter os números oficiais do frontend.
+3. Inserir os prints das cinco figuras.
+4. Aprovar o Gate 2.
+5. Publicar a tag `v0.8.0-sprint08`.
 6. Gerar o PDF consolidado da entrega.
