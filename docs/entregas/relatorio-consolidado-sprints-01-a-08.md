@@ -1655,21 +1655,14 @@ A execução com `-v` foi usada apenas para extrair os nomes reais das funções
 
 ### 8.6.3 Frontend (Karma/Jasmine)
 
-Execução #164 do CI, job `Frontend Tests & Build (Angular)`: **FALHOU** com erro de compilação `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167). Os testes não chegaram a rodar e o passo de build de produção foi pulado.
+Resultado oficial do CI: execução #166 da `main`, commit `3beed5f`, job `Frontend Tests & Build (Angular)`: **160 de 160 testes aprovados** (Karma + ChromeHeadless) e **build de produção Angular concluído com sucesso**.
 
-`[PREENCHER: numeros oficiais do frontend apos a correcao do CI]`
+Histórico: a execução #164 (commit `a7c4b06`) falhou com erro de compilação `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167); os testes não chegaram a rodar e o passo de build de produção foi pulado. A falha foi corrigida pelo PR #99 (commit `3beed5f`), e a execução #166 passou com 160 de 160.
 
-Execução local anterior ao merge de #96 e #97:
+Comando da suíte no CI:
 
 ```bash
 npx ng test --no-watch --browsers=ChromeHeadless
-```
-
-(trecho)
-
-```text
-Chrome Headless 156.0.0.0 (Windows 10): Executed 150 of 150 SUCCESS (0.553 secs / 0.48 secs)
-TOTAL: 150 SUCCESS
 ```
 
 ### 8.6.4 Matriz de Testes Executados
@@ -1737,8 +1730,8 @@ TOTAL: 150 SUCCESS
 | Backend (CI oficial) | 255 passed, 9 warnings, 68,85 s; cobertura 91,18% | Execução #164, commit `a7c4b06`, Ubuntu, Python 3.12 |
 | Backend (local, Windows) | 240 passed, 15 falhas de ambiente; cobertura 88,33% | Sem motor C compilado; nota de ambiente |
 | Testes Sprint 08 (local) | 53 aprovados | 21 RBAC + 16 multi-campus + 16 matrículas |
-| Frontend (CI #164) | Job `Frontend Tests & Build (Angular)` falhou com `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167); testes não executaram; build de produção pulado | `[PREENCHER: numeros oficiais do frontend apos a correcao do CI]` |
-| Frontend (local, antes de #96/#97) | 150 de 150 aprovados | Execução local anterior ao merge |
+| Frontend (CI oficial) | 160 de 160 aprovados (Karma + ChromeHeadless); build de produção Angular concluído com sucesso | Execução #166, commit `3beed5f`, job `Frontend Tests & Build (Angular)` |
+| Frontend (CI #164, histórico) | Job `Frontend Tests & Build (Angular)` falhou com `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167); testes não executaram; build de produção pulado | Falha corrigida pelo PR #99 (commit `3beed5f`) |
 
 ---
 
@@ -1763,6 +1756,7 @@ TOTAL: 150 SUCCESS
 ### 8.7.3 CI e Limite de Diff
 
 - Execução #164 da `main` (commit `a7c4b06`): job de backend concluído com sucesso; job de frontend falhou com `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167).
+- Execução #166 da `main` (commit `3beed5f`): job de backend mantido em 255 passed com cobertura 91,18%; job de frontend concluído com 160 de 160 testes aprovados e build de produção Angular bem-sucedido. A falha do #164 foi corrigida pelo PR #99.
 - O workflow `.github/workflows/ci.yml` possui `paths-ignore` para `docs/**` e `*.md`; PRs exclusivamente de documentação não disparam a esteira de código.
 - O script `scripts/check_pr_size.py` ignora `^docs/` e `^.*\.md$`, portanto o relatório não é contabilizado no limite de diff de código.
 - O limite de 400 linhas permanece aplicável aos PRs de código.
@@ -1771,13 +1765,10 @@ TOTAL: 150 SUCCESS
 
 ## 8.8 Conclusão e Próximos Passos
 
-O backend da Sprint 08 está concluído e mesclado, com isolamento multi-campus centralizado, proteção contra BFLA e BOLA/IDOR, ciclo de vida completo de usuários, salas, turmas e matrículas, cancelamento concorrente seguro e auditoria persistida. O frontend foi mesclado nos PRs #96 e #97, com guards, interceptor de 403, banner de acesso restrito e visibilidade de ações por perfil; entretanto, o job de frontend do CI falhou na execução #164 com `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167), e a correção está pendente. O sistema encontra-se em status **Praticamente Concluído**; o fechamento definitivo depende do Gate 2 e da tag `v0.8.0-sprint08`.
+O backend da Sprint 08 está concluído e mesclado, com isolamento multi-campus centralizado, proteção contra BFLA e BOLA/IDOR, ciclo de vida completo de usuários, salas, turmas e matrículas, cancelamento concorrente seguro e auditoria persistida. O frontend foi concluído e mesclado nos PRs #96 e #97, com guards, interceptor de 403, banner de acesso restrito e visibilidade de ações por perfil; o job de frontend do CI falhou na execução #164 com `TS2304: Cannot find name 'auth'` em `src/app/pages/components.spec.ts` (linhas 166 e 167), falha corrigida pelo PR #99 (commit `3beed5f`), e a execução #166 passou com 160 de 160 testes aprovados e build de produção Angular concluído. O sistema encontra-se em status **Praticamente Concluído**; o fechamento definitivo depende do Gate 2 e da tag `v0.8.0-sprint08`.
 
 Próximos passos:
 
-1. Corrigir o erro `TS2304` em `src/app/pages/components.spec.ts` (linhas 166 e 167).
-2. Reexecutar o CI e obter os números oficiais do frontend.
-3. Inserir os prints das cinco figuras.
-4. Aprovar o Gate 2.
-5. Publicar a tag `v0.8.0-sprint08`.
-6. Gerar o PDF consolidado da entrega.
+1. Aprovar o Gate 2.
+2. Publicar a tag `v0.8.0-sprint08`.
+3. Gerar o PDF consolidado da entrega.
