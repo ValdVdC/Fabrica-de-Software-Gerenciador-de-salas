@@ -9,7 +9,7 @@ import {
 } from '../../services/secretaria.service';
 import { AuthService, UserSummary } from '../../services/auth.service';
 import { of, throwError } from 'rxjs';
-import { signal } from '@angular/core';
+import { signal, computed } from '@angular/core';
 
 describe('SecretariaComponent', () => {
   let component: SecretariaComponent;
@@ -33,15 +33,19 @@ describe('SecretariaComponent', () => {
   // prettier-ignore
   beforeEach(async () => {
     mockLoading.set(false); mockError.set(null);
+    mockCurrentUser.set({ id: 1, nome: 'Secretaria Geral', email: 'sec@ufma.br', perfil: 'secretaria', campus_id: 2 });
     secretariaServiceSpy = jasmine.createSpyObj('SecretariaService', [
       'listarCursos', 'criarCurso', 'listarDisciplinas', 'criarDisciplina',
-      'listarTurmas', 'criarTurma', 'listarMatriculas', 'matricularAluno', 'limparErro',
+      'listarTurmas', 'criarTurma', 'listarMatriculas', 'matricularAluno', 'cancelarMatricula', 'limparErro',
     ], {
       cursos: mockCursos.asReadonly(), disciplinas: mockDisciplinas.asReadonly(),
       turmas: mockTurmas.asReadonly(), matriculas: mockMatriculas.asReadonly(),
       errorMessage: mockError.asReadonly(), isLoading: mockLoading.asReadonly(),
     });
-    authServiceSpy = jasmine.createSpyObj('AuthService', [], { currentUser: mockCurrentUser.asReadonly() });
+    authServiceSpy = jasmine.createSpyObj('AuthService', [], {
+      currentUser: mockCurrentUser.asReadonly(),
+      currentRole: computed(() => mockCurrentUser()?.perfil ?? null),
+    });
     secretariaServiceSpy.listarCursos.and.returnValue(of(mockCursos()));
     secretariaServiceSpy.listarDisciplinas.and.returnValue(of(mockDisciplinas()));
     secretariaServiceSpy.listarTurmas.and.returnValue(of(mockTurmas()));
@@ -73,7 +77,10 @@ describe('SecretariaComponent', () => {
 
   // prettier-ignore
   it('nao deve carregar dados se usuario nao possuir campus valido', () => {
-    const semCampus = jasmine.createSpyObj('AuthService', [], { currentUser: signal<UserSummary | null>(null).asReadonly() });
+    const semCampus = jasmine.createSpyObj('AuthService', [], {
+      currentUser: signal<UserSummary | null>(null).asReadonly(),
+      currentRole: signal(null).asReadonly(),
+    });
     const loc = TestBed.createComponent(SecretariaComponent);
     (loc.componentInstance as any).authService = semCampus;
     secretariaServiceSpy.listarCursos.calls.reset();
@@ -161,4 +168,41 @@ describe('SecretariaComponent', () => {
     tick(100);
     expect(secretariaServiceSpy.listarTurmas).toHaveBeenCalledWith(undefined, 2, '2026');
   }));
+
+  it('deve cancelar matricula ativa na secretaria e exibir feedback visual de confirmacao', () => {
+    const matAtiva = mockMatriculas()[0];
+    secretariaServiceSpy.cancelarMatricula.and.returnValue(
+      of({ ...matAtiva, status: 'cancelada' }),
+    );
+    component.selecionarAba('matriculas');
+    fixture.detectChanges();
+
+    const btnCancelar = fixture.nativeElement.querySelector(
+      '[data-testid="btn-cancelar-matricula-50"]',
+    ) as HTMLButtonElement;
+    expect(btnCancelar).not.toBeNull();
+    btnCancelar.click();
+
+    expect(secretariaServiceSpy.cancelarMatricula).toHaveBeenCalledWith(50);
+    expect(component.mensagemSucesso()).toContain('Matricula #50 cancelada com sucesso.');
+  });
+
+  it('deve ocultar formularios de escrita e acoes de cancelamento para perfis sem permissao de escrita', () => {
+    mockCurrentUser.set({
+      id: 9,
+      nome: 'Prof Consulta',
+      email: 'prof@ufma.br',
+      perfil: 'professor',
+      campus_id: 2,
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('form')).toBeNull();
+
+    component.selecionarAba('matriculas');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('form')).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="btn-cancelar-matricula-50"]'),
+    ).toBeNull();
+  });
 });

@@ -88,7 +88,7 @@ describe('SecretariaService', () => {
     expect(service.turmas().some((t) => t.id === 11)).toBeTrue();
   });
 
-  it('sincroniza matricula e incrementa num_matriculados na turma reativamente', () => {
+  it('sincroniza matricula, cancelamento e previne underflow em num_matriculados na turma', () => {
     service.listarTurmas().subscribe();
     /* prettier-ignore */
     httpMock.expectOne('/api/v1/turmas').flush([{ id: 10, disciplina_id: 1, professor_id: null, periodo_letivo: '2026.1', turno_preferido: 'matutino', num_matriculados: 0 }]);
@@ -105,6 +105,31 @@ describe('SecretariaService', () => {
 
     expect(service.matriculas().some((m) => m.id === 1)).toBeTrue();
     expect(service.turmas().find((t) => t.id === 10)?.num_matriculados).toBe(1);
+
+    service.cancelarMatricula(1).subscribe((r) => expect(r.status).toBe('cancelada'));
+    const delReq = httpMock.expectOne('/api/v1/matriculas/1');
+    expect(delReq.request.method).toBe('DELETE');
+    delReq.flush({
+      id: 1,
+      aluno_id: 5,
+      turma_id: 10,
+      data_matricula: '2026-09-09',
+      status: 'cancelada',
+    });
+
+    expect(service.matriculas().find((m) => m.id === 1)?.status).toBe('cancelada');
+    expect(service.turmas().find((t) => t.id === 10)?.num_matriculados).toBe(0);
+
+    // Segunda chamada quando ja cancelada nao deve reduzir num_matriculados abaixo de 0
+    service.cancelarMatricula(1).subscribe();
+    httpMock.expectOne('/api/v1/matriculas/1').flush({
+      id: 1,
+      aluno_id: 5,
+      turma_id: 10,
+      data_matricula: '2026-09-09',
+      status: 'cancelada',
+    });
+    expect(service.turmas().find((t) => t.id === 10)?.num_matriculados).toBe(0);
   });
 
   it('nao ativa isLoading antes da subscricao devido ao defer', () => {
@@ -122,6 +147,8 @@ describe('SecretariaService', () => {
       () => service.criarDisciplina({ curso_id: 0, nome: '', codigo: '', carga_horaria: 0 }),
       () => service.criarTurma({ disciplina_id: 0, periodo_letivo: '', turno_preferido: 'matutino' }),
       () => service.matricularAluno({ aluno_id: 0, turma_id: 0 }),
+      () => service.cancelarMatricula(0),
+      () => service.cancelarMatricula(-3),
     ];
     invalidFns.forEach((fn) => expect(fn).toThrow());
   });

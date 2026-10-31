@@ -5,7 +5,7 @@ import { AuthService, UserSummary } from '../../services/auth.service';
 import { AlocacaoService, MetricasAlocacao, AlocacaoItem } from '../../services/alocacao.service';
 import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
 import { of, throwError } from 'rxjs';
-import { signal } from '@angular/core';
+import { signal, computed } from '@angular/core';
 
 describe('AdminComponent', () => {
   let component: AdminComponent;
@@ -102,8 +102,13 @@ describe('AdminComponent', () => {
       },
     );
 
-    authServiceSpy = jasmine.createSpyObj('AuthService', [], {
+    authServiceSpy = jasmine.createSpyObj('AuthService', ['hasRole'], {
       currentUser: mockCurrentUser.asReadonly(),
+      currentRole: computed(() => mockCurrentUser()?.perfil ?? null),
+    });
+    authServiceSpy.hasRole.and.callFake((r: string) => {
+      const p = mockCurrentUser()?.perfil;
+      return p === r || (r === 'admin' && p === 'coordenador');
     });
 
     alocacaoServiceSpy = jasmine.createSpyObj(
@@ -415,7 +420,7 @@ describe('AdminComponent', () => {
 
   it('deve calcular a economia de vagas corretamente entre sala atual e sugerida', () => {
     const economia = component.calcularEconomiaVagas(mockSugestao);
-    expect(economia).toBe(35); // 60 - 25 = 35
+    expect(economia).toBe(35);
 
     const semEconomia: SugestaoRemanejamento = {
       ...mockSugestao,
@@ -504,4 +509,28 @@ describe('AdminComponent', () => {
     tick(150);
     expect(adminServiceSpy.listarSalas).toHaveBeenCalledWith(2, 'lab');
   }));
+
+  it('deve ocultar controles de escrita, alocacao e decisao de remanejamento para perfis sem permissao de administracao', () => {
+    mockCurrentUser.set({
+      id: 10,
+      nome: 'Visitante Leitura',
+      email: 'leitura@ufma.br',
+      perfil: 'professor',
+      campus_id: 2,
+    });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+
+    expect(el.querySelector('form')).toBeNull();
+    expect(el.querySelector('.btn-edit')).toBeNull();
+    expect(el.querySelector('.btn-delete')).toBeNull();
+
+    component.selecionarAba('alocacao');
+    fixture.detectChanges();
+    expect(el.querySelector('.btn-primary')).toBeNull();
+
+    component.selecionarAba('remanejamento');
+    fixture.detectChanges();
+    expect(el.querySelector('.sugestao-decisao')).toBeNull();
+  });
 });
