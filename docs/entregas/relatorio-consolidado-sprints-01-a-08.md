@@ -1573,7 +1573,7 @@ O frontend da Sprint 08 foi entregue nos PRs #96 (commit `c4fc5b5`) e #97 (commi
 
 ## 8.5 Evidências Visuais
 
-As figuras abaixo devem ser capturadas da aplicação em execução, conforme os nomes e escopos definidos pelo dono do repositório.
+As figuras abaixo foram capturadas da aplicação em execução, conforme os nomes e escopos definidos pelo dono do repositório.
 
 ### 8.5.1 Painel Administrativo/Coordenador
 
@@ -1581,7 +1581,7 @@ Painel de gestão de espaços, com formulários e ações de salas, equipamentos
 
 ![Figura 18 - Painel Administrativo/Coordenador - gestão de espaços](images/print_18_admin_gestao_espacos.png)
 
-*Figura 18 - Painel Administrativo, aba Salas & Espaços, logado como Admin (Admin Central, Campus #1), com cadastro de sala e ações Editar/Excluir disponíveis.*
+*Figura 18 - Painel Administrativo, aba Salas & Espaços, logado como Admin (Admin Central, Campus #1), com cadastro de sala e ações Editar/Excluir disponíveis. O perfil Coordenador acessa o mesmo painel, pois `hasRole('admin')` também retorna verdadeiro para o Coordenador, conforme descrito na seção 8.4.*
 
 ### 8.5.2 Painel da Secretaria Acadêmica
 
