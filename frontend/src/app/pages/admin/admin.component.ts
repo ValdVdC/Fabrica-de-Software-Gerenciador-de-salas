@@ -48,6 +48,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
       @if (iaService.sucessoMessage()) { <div class="alert alert-success">{{ iaService.sucessoMessage() }}</div> }
 
       @if (abaAtiva() === 'salas') {
+        @if (podeGerenciar()) {
         @if (salaEmEdicao(); as editando) {
           <div class="panel-card edit-card">
             <h3>Editar Sala {{ editando.bloco }} - {{ editando.numero }}</h3>
@@ -77,6 +78,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
             </form>
           </div>
         }
+        }
 
         <div class="panel-card"><div class="form-row"><input type="text" data-testid="busca-salas-input" [(ngModel)]="buscaSalas" (ngModelChange)="aoDigitarBuscaSalas($event)" name="buscaSalas" maxlength="100" placeholder="Pesquisar sala por bloco ou numero..." class="form-input flex-2" /></div></div>
 
@@ -91,10 +93,12 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
                   <td class="tabular-nums">{{ sala.capacidade }} alunos</td>
                   <td>{{ (sala.turnos_disponiveis || []).join(', ') || 'Nenhum' }}</td>
                   <td>
+                    @if (podeGerenciar()) {
                     <div class="actions-cell">
                       <button type="button" class="btn-action btn-edit" (click)="iniciarEdicao(sala)" [disabled]="adminService.isLoading()">Editar</button>
                       <button type="button" class="btn-action btn-delete" (click)="excluirSala(sala)" [disabled]="adminService.isLoading()">Excluir</button>
                     </div>
+                    } @else { <span>-</span> }
                   </td>
                 </tr>
               } @empty {
@@ -106,6 +110,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
       }
 
       @if (abaAtiva() === 'equipamentos') {
+        @if (podeGerenciar()) {
         <div class="panel-card">
           <h3>Novo Equipamento no Catalogo</h3>
           <form (ngSubmit)="cadastrarEquipamento()" class="form-row">
@@ -130,6 +135,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
             <button type="submit" [disabled]="adminService.isLoading() || !formAssocSalaId || !formAssocEquipId" class="btn-primary">Vincular</button>
           </form>
         </div>
+        }
 
         <div class="table-card">
           <table class="data-table">
@@ -146,6 +152,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
       }
 
       @if (abaAtiva() === 'alocacao') {
+        @if (podeGerenciar()) {
         <div class="panel-card">
           <h3>Motor de Alocacao Paralelo OpenMP (Sprint 05)</h3>
           <p class="section-desc">Otimizacao combinatoria de salas com heuristica Best-Fit, medicao cientifica de Speedup e persistencia de horarios.</p>
@@ -177,6 +184,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
             </button>
           </div>
         </div>
+        }
 
         @if (alocacaoService.errorMessage()) { <div class="alert alert-error">{{ alocacaoService.errorMessage() }}</div> }
         @if (alocacaoService.sucessoMessage()) { <div class="alert alert-success">{{ alocacaoService.sucessoMessage() }}</div> }
@@ -259,9 +267,11 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
                 <option value="rejeitado">Rejeitadas</option>
                 <option value="">Todas</option>
               </select>
+              @if (podeGerenciar()) {
               <button type="button" (click)="executarAnaliseIA()" [disabled]="iaService.isLoading() || campusId <= 0" class="btn-secondary">
                 {{ iaService.isLoading() ? 'Processando...' : 'Executar Analise IA' }}
               </button>
+              }
               <button type="button" (click)="carregarSugestoes()" [disabled]="iaService.isLoading()" class="btn-secondary">
                 Atualizar Lista
               </button>
@@ -348,7 +358,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
                 </div>
               </div>
 
-              @if (sug.status === 'pendente') {
+              @if (sug.status === 'pendente' && podeGerenciar()) {
                 <div class="sugestao-decisao">
                   <div class="input-container">
                     <label class="decision-label" [for]="'justificativa-' + sug.id">Parecer da Gestao Academica (Aprovacao Humana):</label>
@@ -365,7 +375,7 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
                     </button>
                   </div>
                 </div>
-              } @else {
+              } @else if (sug.status !== 'pendente') {
                 <div class="sugestao-finalizada">
                   <span class="finalized-label">Decisao homologada por gestor academico:</span>
                   <span class="finalized-text">Justificativa: {{ sug.justificativa || 'Nenhuma informada.' }}</span>
@@ -406,6 +416,7 @@ export class AdminComponent implements OnInit {
     'salas',
   );
   readonly mensagemSucesso = signal<string | null>(null);
+  readonly podeGerenciar = computed(() => this.authService.hasRole('admin'));
 
   campusId = 0;
   formBloco = '';
@@ -491,7 +502,7 @@ export class AdminComponent implements OnInit {
   }
 
   executarAnaliseIA(): void {
-    if (this.campusId <= 0 || this.iaService.isLoading()) return;
+    if (!this.podeGerenciar() || this.campusId <= 0 || this.iaService.isLoading()) return;
     this.iaService.dispararAnalise(this.campusId, this.formPeriodoLetivo, 0.4).subscribe({
       next: () => {
         this.filtroStatusRemanejamento = 'pendente';
@@ -502,7 +513,7 @@ export class AdminComponent implements OnInit {
   }
 
   aprovarSugestao(sug: SugestaoRemanejamento): void {
-    if (this.iaService.isLoading()) return;
+    if (!this.podeGerenciar() || this.iaService.isLoading()) return;
     const just = this.justificativas[sug.id];
     this.iaService.aprovarSugestao(sug.id, just).subscribe({
       next: () => {
@@ -513,7 +524,7 @@ export class AdminComponent implements OnInit {
   }
 
   rejeitarSugestao(sug: SugestaoRemanejamento): void {
-    if (this.iaService.isLoading()) return;
+    if (!this.podeGerenciar() || this.iaService.isLoading()) return;
     const just = this.justificativas[sug.id]?.trim();
     if (!just) {
       this.iaService.definirErro('Justificativa e obrigatoria para rejeitar a sugestao.');
@@ -534,6 +545,7 @@ export class AdminComponent implements OnInit {
   }
 
   iniciarEdicao(sala: Sala): void {
+    if (!this.podeGerenciar()) return;
     this.salaEmEdicao.set(sala);
     this.formEditBloco = sala.bloco;
     this.formEditNumero = sala.numero;
@@ -548,7 +560,7 @@ export class AdminComponent implements OnInit {
 
   salvarEdicao(): void {
     const salaAtual = this.salaEmEdicao();
-    if (!salaAtual || this.adminService.isLoading()) return;
+    if (!this.podeGerenciar() || !salaAtual || this.adminService.isLoading()) return;
 
     const bloco = this.formEditBloco.trim();
     const numero = this.formEditNumero.trim();
@@ -574,7 +586,7 @@ export class AdminComponent implements OnInit {
   }
 
   cadastrarSala(): void {
-    if (this.adminService.isLoading() || this.campusId <= 0) return;
+    if (!this.podeGerenciar() || this.adminService.isLoading() || this.campusId <= 0) return;
 
     const bloco = this.formBloco.trim();
     const numero = this.formNumero.trim();
@@ -607,7 +619,7 @@ export class AdminComponent implements OnInit {
   }
 
   excluirSala(sala: Sala): void {
-    if (this.adminService.isLoading()) return;
+    if (!this.podeGerenciar() || this.adminService.isLoading()) return;
     this.adminService.excluirSala(sala.id).subscribe({
       next: () => {
         this.mensagemSucesso.set(`Sala ${sala.bloco} - ${sala.numero} excluida com sucesso.`);
@@ -620,7 +632,7 @@ export class AdminComponent implements OnInit {
   }
 
   cadastrarEquipamento(): void {
-    if (this.adminService.isLoading()) return;
+    if (!this.podeGerenciar() || this.adminService.isLoading()) return;
 
     const nome = this.formEquipNome.trim();
     if (!nome) return;
@@ -641,7 +653,13 @@ export class AdminComponent implements OnInit {
   }
 
   vincularEquipamento(): void {
-    if (this.adminService.isLoading() || !this.formAssocSalaId || !this.formAssocEquipId) return;
+    if (
+      !this.podeGerenciar() ||
+      this.adminService.isLoading() ||
+      !this.formAssocSalaId ||
+      !this.formAssocEquipId
+    )
+      return;
 
     const qtdNum = Math.floor(Number(this.formAssocQtd));
     if (isNaN(qtdNum) || qtdNum < 1 || qtdNum > 1000) return;
@@ -679,7 +697,7 @@ export class AdminComponent implements OnInit {
   }
 
   executarAlocacao(): void {
-    if (this.campusId <= 0 || this.alocacaoService.isLoading()) return;
+    if (!this.podeGerenciar() || this.campusId <= 0 || this.alocacaoService.isLoading()) return;
     this.alocacaoService
       .otimizarAlocacao({
         periodo_letivo: this.formPeriodoLetivo.trim() || '2026.1',
@@ -698,7 +716,7 @@ export class AdminComponent implements OnInit {
   }
 
   executarBenchmark(cenario: string = 'medio'): void {
-    if (this.alocacaoService.isLoading()) return;
+    if (!this.podeGerenciar() || this.alocacaoService.isLoading()) return;
     this.alocacaoService
       .executarBenchmark({
         cenario,

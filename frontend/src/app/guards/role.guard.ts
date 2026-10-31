@@ -23,7 +23,6 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
     return true;
   }
 
-  const userRole = authService.currentRole();
-  const fallbackPath = userRole === 'coordenador' ? '/admin' : userRole ? `/${userRole}` : '/login';
-  return router.createUrlTree([fallbackPath]);
+  authService.notifyAccessDenied('Acesso restrito: rota exclusiva para perfis autorizados.');
+  return router.createUrlTree([authService.getHomeRoute()]);
 };

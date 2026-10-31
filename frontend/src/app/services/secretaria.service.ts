@@ -140,13 +140,35 @@ export class SecretariaService {
     this.validarId(payload?.aluno_id, 'Dados de matricula invalidos');
     this.validarId(payload?.turma_id, 'Dados de matricula invalidos');
     return this.executar(this.http.post<Matricula>('/api/v1/matriculas', payload), (n) => {
-      this._matriculas.update((l) => [...l, n]);
+      this._matriculas.update((l) =>
+        l.some((m) => m.id === n.id) ? l.map((m) => (m.id === n.id ? n : m)) : [...l, n],
+      );
       this._turmas.update((l) =>
         l.map((t) =>
           t.id === n.turma_id ? { ...t, num_matriculados: t.num_matriculados + 1 } : t,
         ),
       );
     });
+  }
+
+  cancelarMatricula(matriculaId: number): Observable<Matricula> {
+    this.validarId(matriculaId, 'Identificador de matricula invalido');
+    return this.executar(
+      this.http.delete<Matricula>(`/api/v1/matriculas/${matriculaId}`),
+      (res) => {
+        const eraAtiva = this._matriculas().find((m) => m.id === res.id)?.status !== 'cancelada';
+        this._matriculas.update((l) => l.map((m) => (m.id === res.id ? res : m)));
+        if (eraAtiva) {
+          this._turmas.update((l) =>
+            l.map((t) =>
+              t.id === res.turma_id
+                ? { ...t, num_matriculados: Math.max(0, t.num_matriculados - 1) }
+                : t,
+            ),
+          );
+        }
+      },
+    );
   }
 
   limparErro(): void {

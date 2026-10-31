@@ -8,6 +8,7 @@ import {
   CursoCreate,
   DisciplinaCreate,
   TurmaCreate,
+  Matricula,
   MatriculaCreate,
   TurnoType,
 } from '../../services/secretaria.service';
@@ -33,6 +34,7 @@ import { AuthService } from '../../services/auth.service';
       @if (mensagemSucesso()) { <div class="alert alert-success">{{ mensagemSucesso() }}</div> }
 
       @if (abaAtiva() === 'cursos') {
+        @if (podeEditar()) {
         <div class="panel-card"><h3>Cadastrar Novo Curso</h3>
           <form (ngSubmit)="cadastrarCurso()" class="form-row">
             <input type="text" [(ngModel)]="formCursoNome" name="cursoNome" required maxlength="100" placeholder="Nome do Curso (Ex: Engenharia)" class="form-input flex-2" />
@@ -40,6 +42,7 @@ import { AuthService } from '../../services/auth.service';
             <button type="submit" [disabled]="secretariaService.isLoading() || campusId <= 0 || !formCursoNome.trim() || !formCursoCodigo.trim()" class="btn-primary">Salvar Curso</button>
           </form>
         </div>
+        }
         <div class="table-card"><table class="data-table">
           <thead><tr><th>ID</th><th>Nome do Curso</th><th>Codigo</th></tr></thead>
           <tbody>
@@ -51,6 +54,7 @@ import { AuthService } from '../../services/auth.service';
       }
 
       @if (abaAtiva() === 'disciplinas') {
+        @if (podeEditar()) {
         <div class="panel-card"><h3>Nova Disciplina</h3>
           <form (ngSubmit)="cadastrarDisciplina()" class="form-row">
             <select [(ngModel)]="formDiscCursoId" name="discCurso" required class="form-input">
@@ -63,6 +67,7 @@ import { AuthService } from '../../services/auth.service';
             <button type="submit" [disabled]="secretariaService.isLoading() || campusId <= 0 || !formDiscCursoId || !formDiscNome.trim() || !formDiscCodigo.trim()" class="btn-primary">Salvar Disciplina</button>
           </form>
         </div>
+        }
         <div class="table-card"><table class="data-table">
           <thead><tr><th>ID</th><th>Disciplina</th><th>Codigo</th><th>Carga Horaria</th><th>Curso</th></tr></thead>
           <tbody>
@@ -74,6 +79,7 @@ import { AuthService } from '../../services/auth.service';
       }
 
       @if (abaAtiva() === 'turmas') {
+        @if (podeEditar()) {
         <div class="panel-card"><h3>Nova Turma Semestral</h3>
           <form (ngSubmit)="cadastrarTurma()" class="form-row">
             <select [(ngModel)]="formTurmaDiscId" name="turmaDisc" required class="form-input">
@@ -88,6 +94,7 @@ import { AuthService } from '../../services/auth.service';
             <button type="submit" [disabled]="secretariaService.isLoading() || campusId <= 0 || !formTurmaDiscId || !formTurmaPeriodo.trim()" class="btn-primary">Criar Turma</button>
           </form>
         </div>
+        }
         <div class="panel-card">
           <div class="form-row">
             <input type="text" data-testid="busca-turmas-input" [(ngModel)]="buscaTurmas" (ngModelChange)="aoDigitarBuscaTurmas($event)" name="buscaTurmas" maxlength="100" placeholder="Pesquisar turma por periodo ou disciplina..." class="form-input flex-2" />
@@ -108,6 +115,7 @@ import { AuthService } from '../../services/auth.service';
       }
 
       @if (abaAtiva() === 'matriculas') {
+        @if (podeEditar()) {
         <div class="panel-card"><h3>Matricular Aluno em Turma</h3>
           <form (ngSubmit)="matricularAluno()" class="form-row">
             <select [(ngModel)]="formMatTurmaId" name="matTurma" required class="form-input">
@@ -118,12 +126,13 @@ import { AuthService } from '../../services/auth.service';
             <button type="submit" [disabled]="secretariaService.isLoading() || campusId <= 0 || !formMatTurmaId || !formMatAlunoId" class="btn-primary">Confirmar Matricula</button>
           </form>
         </div>
+        }
         <div class="table-card"><table class="data-table">
-          <thead><tr><th>ID</th><th>Aluno</th><th>Turma</th><th>Status</th><th>Data</th></tr></thead>
+          <thead><tr><th>ID</th><th>Aluno</th><th>Turma</th><th>Status</th><th>Data</th><th>Acoes</th></tr></thead>
           <tbody>
             @for (m of secretariaService.matriculas(); track m.id) {
-              <tr><td class="tabular-nums">#{{ m.id }}</td><td class="tabular-nums">Aluno #{{ m.aluno_id }}</td><td class="tabular-nums">Turma #{{ m.turma_id }}</td><td><span class="badge">{{ m.status }}</span></td><td class="tabular-nums">{{ m.data_matricula | date:'shortDate' }}</td></tr>
-            } @empty { <tr><td colspan="5" class="empty-msg">Nenhuma matricula registrada.</td></tr> }
+              <tr><td class="tabular-nums">#{{ m.id }}</td><td class="tabular-nums">Aluno #{{ m.aluno_id }}</td><td class="tabular-nums">Turma #{{ m.turma_id }}</td><td><span class="badge" [class.badge-success]="m.status === 'ativa'" [class.badge-danger]="m.status === 'cancelada'">{{ m.status }}</span></td><td class="tabular-nums">{{ m.data_matricula | date:'shortDate' }}</td><td>@if (podeEditar() && m.status === 'ativa') { <button type="button" [attr.data-testid]="'btn-cancelar-matricula-' + m.id" class="btn-danger-sm" [disabled]="secretariaService.isLoading()" (click)="cancelarMatricula(m)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Cancelar Matricula</button> } @else { <span>-</span> }</td></tr>
+            } @empty { <tr><td colspan="6" class="empty-msg">Nenhuma matricula registrada.</td></tr> }
           </tbody>
         </table></div>
       }
@@ -147,8 +156,9 @@ import { AuthService } from '../../services/auth.service';
     .panel-card, .table-card, .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 1rem; } .panel-card h3 { margin: 0 0 0.75rem; font-size: 1rem; color: #0f172a; font-weight: 600; }
     .form-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; } .form-input { padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.875rem; color: #1e293b; background: #fff; } .form-input.flex-2 { flex: 2; min-width: 180px; }
     .btn-primary { background: #0f172a; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem; font-weight: 500; cursor: pointer; } .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-danger-sm { display: inline-flex; align-items: center; gap: 0.25rem; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; cursor: pointer; } .btn-danger-sm:disabled { opacity: 0.5; cursor: not-allowed; }
     .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; text-align: left; } .data-table th, .data-table td { padding: 0.75rem; border-bottom: 1px solid #f1f5f9; color: #334155; } .data-table th { background: #f8fafc; border-bottom-color: #e2e8f0; color: #475569; font-weight: 600; }
-    .font-bold { font-weight: 600; color: #0f172a; } .badge { display: inline-block; padding: 0.125rem 0.375rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #f1f5f9; color: #334155; text-transform: uppercase; }
+    .font-bold { font-weight: 600; color: #0f172a; } .badge { display: inline-block; padding: 0.125rem 0.375rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #f1f5f9; color: #334155; text-transform: uppercase; } .badge-success { background: #dcfce7; color: #15803d; } .badge-danger { background: #fee2e2; color: #b91c1c; }
     .empty-msg { text-align: center; color: #94a3b8; padding: 2rem 1rem; } .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
     .stat-card { display: flex; flex-direction: column; gap: 0.25rem; } .stat-label { font-size: 0.8125rem; color: #64748b; font-weight: 500; } .stat-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; } .stat-card small { font-size: 0.75rem; color: #94a3b8; }
     .tabular-nums { font-variant-numeric: tabular-nums; }
@@ -164,6 +174,8 @@ export class SecretariaComponent implements OnInit {
   // prettier-ignore
   readonly abaAtiva = signal<'cursos' | 'disciplinas' | 'turmas' | 'matriculas' | 'resumo'>('cursos');
   readonly mensagemSucesso = signal<string | null>(null);
+  // prettier-ignore
+  readonly podeEditar = computed(() => ['admin', 'coordenador', 'secretaria'].includes(this.authService.currentRole() ?? ''));
 
   // prettier-ignore
   formCursoNome = '';
@@ -220,7 +232,7 @@ export class SecretariaComponent implements OnInit {
 
   // prettier-ignore
   cadastrarCurso(): void {
-    if (this.campusId <= 0 || !this.formCursoNome.trim() || !this.formCursoCodigo.trim()) return;
+    if (!this.podeEditar() || this.campusId <= 0 || !this.formCursoNome.trim() || !this.formCursoCodigo.trim()) return;
     this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     const payload: CursoCreate = { campus_id: this.campusId, nome: this.formCursoNome.trim(), codigo: this.formCursoCodigo.trim().toUpperCase() };
     this.secretariaService.criarCurso(payload).subscribe({
@@ -231,7 +243,7 @@ export class SecretariaComponent implements OnInit {
 
   // prettier-ignore
   cadastrarDisciplina(): void {
-    if (this.campusId <= 0 || !this.formDiscCursoId || !this.formDiscNome.trim() || !this.formDiscCodigo.trim()) return;
+    if (!this.podeEditar() || this.campusId <= 0 || !this.formDiscCursoId || !this.formDiscNome.trim() || !this.formDiscCodigo.trim()) return;
     const carga = Number(this.formDiscCarga);
     this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     const payload: DisciplinaCreate = { curso_id: this.formDiscCursoId, nome: this.formDiscNome.trim(), codigo: this.formDiscCodigo.trim().toUpperCase(), carga_horaria: Number.isInteger(carga) && carga > 0 ? carga : 60 };
@@ -243,7 +255,7 @@ export class SecretariaComponent implements OnInit {
 
   // prettier-ignore
   cadastrarTurma(): void {
-    if (this.campusId <= 0 || !this.formTurmaDiscId || !this.formTurmaPeriodo.trim()) return;
+    if (!this.podeEditar() || this.campusId <= 0 || !this.formTurmaDiscId || !this.formTurmaPeriodo.trim()) return;
     let profId: number | null = null;
     if (this.formTurmaProfId !== null && this.formTurmaProfId !== undefined && String(this.formTurmaProfId).trim() !== '') {
       const p = Number(this.formTurmaProfId); if (!Number.isInteger(p) || p <= 0) return; profId = p;
@@ -258,13 +270,23 @@ export class SecretariaComponent implements OnInit {
 
   // prettier-ignore
   matricularAluno(): void {
-    if (this.campusId <= 0 || !this.formMatTurmaId) return;
+    if (!this.podeEditar() || this.campusId <= 0 || !this.formMatTurmaId) return;
     const alunoId = Number(this.formMatAlunoId);
     if (!Number.isInteger(alunoId) || alunoId <= 0) return;
     this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
     const payload: MatriculaCreate = { aluno_id: alunoId, turma_id: this.formMatTurmaId };
     this.secretariaService.matricularAluno(payload).subscribe({
       next: () => { this.mensagemSucesso.set(`Matricula do aluno #${payload.aluno_id} confirmada.`); this.formMatAlunoId = null; },
+      error: () => {},
+    });
+  }
+
+  // prettier-ignore
+  cancelarMatricula(m: Matricula): void {
+    if (!this.podeEditar() || m.status !== 'ativa' || this.secretariaService.isLoading()) return;
+    this.secretariaService.limparErro(); this.mensagemSucesso.set(null);
+    this.secretariaService.cancelarMatricula(m.id).subscribe({
+      next: () => this.mensagemSucesso.set(`Matricula #${m.id} cancelada com sucesso.`),
       error: () => {},
     });
   }
