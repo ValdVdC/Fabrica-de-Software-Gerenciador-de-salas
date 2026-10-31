@@ -1581,7 +1581,7 @@ Painel de gestão de espaços, com formulários e ações de salas, equipamentos
 
 ![Figura 18 - Painel Administrativo/Coordenador - gestão de espaços](images/print_18_admin_gestao_espacos.png)
 
-*Figura 18 - [PREENCHER: print do Painel Administrativo/Coordenador - gestão de espaços].*
+*Figura 18 - Painel Administrativo, aba Salas & Espaços, logado como Admin (Admin Central, Campus #1), com cadastro de sala e ações Editar/Excluir disponíveis.*
 
 ### 8.5.2 Painel da Secretaria Acadêmica
 
@@ -1589,7 +1589,7 @@ Painel da Secretaria Acadêmica com as abas de matrículas e turmas, formulário
 
 ![Figura 19 - Painel da Secretaria Acadêmica - matrículas e turmas](images/print_19_secretaria_academica.png)
 
-*Figura 19 - [PREENCHER: print do Painel da Secretaria Acadêmica - matrículas e turmas].*
+*Figura 19 - Painel da Secretaria Acadêmica, aba Matrículas, logado como Secretaria, com matrículas ativas e a ação Cancelar Matrícula.*
 
 ### 8.5.3 Painel do Docente
 
@@ -1597,7 +1597,7 @@ Painel do Docente com a grade horária semanal.
 
 ![Figura 20 - Painel do Docente - grade horária semanal](images/print_20_docente_grade_horaria.png)
 
-*Figura 20 - [PREENCHER: print do Painel do Docente - grade horária semanal].*
+*Figura 20 - Painel do Docente, grade semanal do Prof. Alan Turing, com CC-101 (segunda, 08:00-10:00, sala A-101) e CC-201 (quarta, 14:00-16:00, sala B-201).*
 
 ### 8.5.4 Painel do Discente
 
@@ -1605,15 +1605,15 @@ Painel do Discente com a seção `Minhas Matriculas` e o botão de cancelamento 
 
 ![Figura 21 - Painel do Discente - Minhas Matrículas e cancelamento](images/print_21_discente_minhas_matriculas.png)
 
-*Figura 21 - [PREENCHER: print do Painel do Discente - Minhas Matrículas e cancelamento].*
+*Figura 21 - Painel do Discente, logado como Aluno Padrão, com a grade semanal e a seção Minhas Matrículas (3 matrículas ativas e o botão Cancelar Matrícula).*
 
 ### 8.5.5 Banner de Acesso Restrito HTTP 403
 
-Banner de acesso restrito exibido no Shell após uma resposta HTTP 403.
+Banner de acesso restrito exibido no Shell quando o RoleGuard bloqueia uma rota por perfil. O mesmo banner também é acionado pelo interceptor quando a API responde 403 (seção 8.4); esta captura, porém, mostra o bloqueio de rota.
 
 ![Figura 22 - Banner de acesso restrito HTTP 403 no Shell](images/print_22_banner_acesso_restrito.png)
 
-*Figura 22 - [PREENCHER: print do banner de acesso restrito HTTP 403 no Shell].*
+*Figura 22 - Banner de acesso restrito exibido no Shell quando o RoleGuard bloqueia uma rota por perfil: logado como aluno, ao acessar /admin o usuário volta ao próprio painel com a mensagem "Acesso restrito: rota exclusiva para perfis autorizados." e o botão Fechar.*
 
 ---
 
