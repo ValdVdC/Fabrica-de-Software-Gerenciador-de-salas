@@ -60,4 +60,19 @@ describe('Componentes Shell e Login', () => {
     expect(el.querySelector('.nav-link')?.textContent?.trim()).toBe('Grade Horaria');
     expect(el.querySelector('.nav-link svg')).not.toBeNull();
   });
+  it('deve exibir e limpar banner de notificacao de acesso restrito no shell', () => {
+    auth.setRole('secretaria');
+    auth.notifyAccessDenied('Acesso restrito ao perfil');
+    const fixture = TestBed.createComponent(ShellComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const banner = el.querySelector('[data-testid="access-denied-banner"]');
+    expect(banner).not.toBeNull();
+    expect(banner?.textContent).toContain('Acesso restrito ao perfil');
+
+    const closeBtn = banner?.querySelector('button') as HTMLButtonElement;
+    closeBtn.click();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="access-denied-banner"]')).toBeNull();
+  });
 });

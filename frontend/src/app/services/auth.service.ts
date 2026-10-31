@@ -29,10 +29,12 @@ export class AuthService {
   private readonly _currentRole = signal<UserRole | null>(null);
   private readonly _currentUser = signal<UserSummary | null>(null);
   private readonly _token = signal<string | null>(null);
+  private readonly _accessDeniedMessage = signal<string | null>(null);
 
   readonly currentRole = this._currentRole.asReadonly();
   readonly currentUser = this._currentUser.asReadonly();
   readonly token = this._token.asReadonly();
+  readonly accessDeniedMessage = this._accessDeniedMessage.asReadonly();
 
   constructor() {
     this.restoreSession();
@@ -64,6 +66,7 @@ export class AuthService {
         this._token.set(res.access_token);
         this._currentUser.set(res.usuario);
         this._currentRole.set(res.usuario.perfil);
+        this._accessDeniedMessage.set(null);
         try {
           if (typeof localStorage !== 'undefined') {
             localStorage.setItem('sigaas_token', res.access_token);
@@ -89,6 +92,32 @@ export class AuthService {
     return curr === role || (role === 'admin' && curr === 'coordenador');
   }
 
+  getHomeRoute(): string {
+    const role = this._currentRole();
+    switch (role) {
+      case 'admin':
+      case 'coordenador':
+        return '/admin';
+      case 'secretaria':
+      case 'professor':
+      case 'aluno':
+        return `/${role}`;
+      default:
+        return '/login';
+    }
+  }
+
+  notifyAccessDenied(message?: string): void {
+    const cleanMsg = message?.trim();
+    this._accessDeniedMessage.set(
+      cleanMsg || 'Acesso restrito: seu perfil nao possui permissao para esta operacao.',
+    );
+  }
+
+  clearAccessDenied(): void {
+    this._accessDeniedMessage.set(null);
+  }
+
   setRole(role: UserRole | null): void {
     this._currentRole.set(role);
     if (role && !this._token()) {
@@ -102,6 +131,7 @@ export class AuthService {
     this._token.set(null);
     this._currentUser.set(null);
     this._currentRole.set(null);
+    this._accessDeniedMessage.set(null);
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('sigaas_token');

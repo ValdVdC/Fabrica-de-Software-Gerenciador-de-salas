@@ -56,7 +56,7 @@ describe('Guards de Autenticacao e Perfil', () => {
       TestBed.runInInjectionContext(() => roleGuard(multiRoute, {} as RouterStateSnapshot)),
     ).toBeTrue();
   });
-  it('roleGuard redireciona quando divergente', () => {
+  it('roleGuard redireciona quando divergente e registra aviso de acesso restrito', () => {
     auth.setRole('professor');
     TestBed.runInInjectionContext(() =>
       roleGuard(
@@ -65,5 +65,37 @@ describe('Guards de Autenticacao e Perfil', () => {
       ),
     );
     expect(router.createUrlTree).toHaveBeenCalledWith(['/professor']);
+    expect(auth.accessDeniedMessage()).toContain('Acesso restrito');
+  });
+  it('roleGuard redireciona aluno tentando acessar /admin diretamente para /aluno', () => {
+    auth.setRole('aluno');
+    TestBed.runInInjectionContext(() =>
+      roleGuard(
+        { data: { role: 'admin' } } as unknown as ActivatedRouteSnapshot,
+        {} as RouterStateSnapshot,
+      ),
+    );
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/aluno']);
+    expect(auth.accessDeniedMessage()).toContain('Acesso restrito');
+  });
+  it('roleGuard redireciona secretaria tentando acessar /historico restrito para /secretaria', () => {
+    auth.setRole('secretaria');
+    TestBed.runInInjectionContext(() =>
+      roleGuard(
+        { data: { roles: ['admin', 'coordenador'] } } as unknown as ActivatedRouteSnapshot,
+        {} as RouterStateSnapshot,
+      ),
+    );
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/secretaria']);
+  });
+  it('roleGuard redireciona coordenador para /admin quando rota exige apenas secretaria', () => {
+    auth.setRole('coordenador');
+    TestBed.runInInjectionContext(() =>
+      roleGuard(
+        { data: { role: 'secretaria' } } as unknown as ActivatedRouteSnapshot,
+        {} as RouterStateSnapshot,
+      ),
+    );
+    expect(router.createUrlTree).toHaveBeenCalledWith(['/admin']);
   });
 });
