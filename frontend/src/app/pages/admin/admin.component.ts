@@ -32,8 +32,8 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
         <button type="button" [class.active]="abaAtiva() === 'alocacao'" (click)="selecionarAba('alocacao')">Alocacao Inteligente</button>
         <button type="button" [class.active]="abaAtiva() === 'remanejamento'" (click)="selecionarAba('remanejamento')">
           Remanejamento IA
-          @if (iaService.sugestoes().length > 0) {
-            <span class="tab-badge">{{ iaService.sugestoes().length }}</span>
+          @if (sugestoesPendentesCount() > 0) {
+            <span class="tab-badge" data-testid="remanejamento-badge">{{ sugestoesPendentesCount() }}</span>
           }
         </button>
         <button type="button" [class.active]="abaAtiva() === 'resumo'" (click)="selecionarAba('resumo')">Resumo &amp; Metricas</button>
@@ -186,30 +186,33 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
         </div>
         }
 
-        @if (alocacaoService.errorMessage()) { <div class="alert alert-error">{{ alocacaoService.errorMessage() }}</div> }
-        @if (alocacaoService.sucessoMessage()) { <div class="alert alert-success">{{ alocacaoService.sucessoMessage() }}</div> }
+        @if (alocacaoService.isLoading()) {
+          <div class="panel-card loading-state" role="status">Processando alocacao inteligente em C/OpenMP...</div>
+        } @else if (!alocacaoService.metricas() && alocacaoService.alocacoes().length === 0) {
+          <div class="panel-card empty-msg">Nenhuma execucao de alocacao ou benchmark registrada nesta sessao.</div>
+        }
 
         @if (alocacaoService.metricas(); as m) {
           <div class="stats-grid">
             <div class="stat-card">
               <span class="stat-label">Speedup OpenMP</span>
-              <span class="stat-value tabular-nums">{{ m.speedup.toFixed(2) }}x</span>
+              <span class="stat-value tabular-nums">{{ (m.speedup || 0).toFixed(2) }}x</span>
               <small>{{ m.threads }} threads utilizadas</small>
             </div>
             <div class="stat-card">
               <span class="stat-label">Eficiencia Computacional</span>
-              <span class="stat-value tabular-nums">{{ m.eficiencia_pct.toFixed(1) }}%</span>
+              <span class="stat-value tabular-nums">{{ (m.eficiencia_pct || 0).toFixed(1) }}%</span>
               <small>Speedup / {{ m.threads }} threads</small>
             </div>
             <div class="stat-card">
               <span class="stat-label">Fracao Amdahl (f)</span>
-              <span class="stat-value tabular-nums">{{ m.fracao_amdahl.toFixed(4) }}</span>
+              <span class="stat-value tabular-nums">{{ (m.fracao_amdahl || 0).toFixed(4) }}</span>
               <small>Parametro f teorico</small>
             </div>
             <div class="stat-card">
               <span class="stat-label">Tempos de Execucao</span>
-              <span class="stat-value tabular-nums" style="font-size: 1.25rem;">{{ m.tempo_paralelo_ms.toFixed(2) }} ms</span>
-              <small>Sequencial: {{ m.tempo_sequencial_ms.toFixed(2) }} ms</small>
+              <span class="stat-value tabular-nums" style="font-size: 1.25rem;">{{ (m.tempo_paralelo_ms || 0).toFixed(2) }} ms</span>
+              <small>Sequencial: {{ (m.tempo_sequencial_ms || 0).toFixed(2) }} ms</small>
             </div>
             <div class="stat-card">
               <span class="stat-label">Alocacoes Concluidas</span>
@@ -295,9 +298,6 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
             </div>
           }
         </div>
-
-        @if (iaService.errorMessage()) { <div class="alert alert-error">{{ iaService.errorMessage() }}</div> }
-        @if (iaService.sucessoMessage()) { <div class="alert alert-success">{{ iaService.sucessoMessage() }}</div> }
 
         <div class="sugestoes-grid">
           @for (sug of iaService.sugestoes(); track sug.id) {
@@ -397,6 +397,9 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
           <div class="stat-card"><span class="stat-label">Total de Salas</span><span class="stat-value tabular-nums">{{ totalSalas() }}</span><small>Espacos fisicos ativos</small></div>
           <div class="stat-card"><span class="stat-label">Capacidade Instalada</span><span class="stat-value tabular-nums">{{ capacidadeTotal() }}</span><small>Postos academicos</small></div>
           <div class="stat-card"><span class="stat-label">Itens no Catalogo</span><span class="stat-value tabular-nums">{{ totalEquipamentos() }}</span><small>Equipamentos cadastrados</small></div>
+          <div class="stat-card"><span class="stat-label">Speedup Motor C</span><span class="stat-value tabular-nums">{{ (alocacaoService.metricas()?.speedup || 0).toFixed(2) }}x</span><small>{{ alocacaoService.metricas()?.alocadas ?? 0 }}/{{ alocacaoService.metricas()?.total_turmas ?? 0 }} turmas alocadas</small></div>
+          <div class="stat-card"><span class="stat-label">Sugestoes Pendentes IA</span><span class="stat-value tabular-nums">{{ sugestoesPendentesCount() }}</span><small>Risco medio: {{ riscoMedioAbsenteismo() }}%</small></div>
+          <div class="stat-card"><span class="stat-label">Vagas Otimizadas IA</span><span class="stat-value tabular-nums">+{{ totalVagasOtimizadas() }}</span><small>Potencial de liberacao</small></div>
         </div>
       }
     </div>
@@ -462,7 +465,10 @@ export class AdminComponent implements OnInit {
     return Math.round((soma / list.length) * 100);
   });
   readonly totalVagasOtimizadas = computed(() => {
-    return this.iaService.sugestoes().reduce((acc, s) => acc + this.calcularEconomiaVagas(s), 0);
+    return this.iaService
+      .sugestoes()
+      .filter((s) => s.status !== 'rejeitado')
+      .reduce((acc, s) => acc + this.calcularEconomiaVagas(s), 0);
   });
 
   ngOnInit(): void {
