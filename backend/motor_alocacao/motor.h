@@ -1,4 +1,6 @@
 #ifndef MOTOR_ALOCACAO_H
+// Algoritmo: Heuristica Construtiva Gulosa Deterministica com Priorizacao de Restricoes Rigidas e Capacidade Minima Viavel.
+// Problema NP-dificil (Timetabling): busca solucoes viaveis em tempo polinomial O(T * S) sem garantia de otimo global.
 #define MOTOR_ALOCACAO_H
 
 #ifdef __cplusplus

@@ -31,6 +31,49 @@ TURNO_MASK_VESPERTINO = 1 << 1
 TURNO_MASK_NOTURNO = 1 << 2
 TURNO_MASK_INTEGRAL = 1 << 3
 
+CARACTERIZACAO_HEURISTICA: dict[str, Any] = {
+    "classificacao": (
+        "Heuristica Construtiva Gulosa Deterministica com Priorizacao de "
+        "Restricoes Rigidas e Capacidade Minima Viavel"
+    ),
+    "classe_complexidade": "NP-dificil",
+    "complexidade_temporal": "O(T * S)",
+    "garantia_otimo_global": False,
+    "justificativa_teorica": (
+        "Devido a natureza combinatorial NP-dificil do problema de Timetabling universitario, "
+        "a busca exata e intratavel em escala real. O motor utiliza ordenacao Best-Fit Decreasing "
+        "com multi-start perturbado deterministico em OpenMP, garantindo solucoes viaveis de alta "
+        "qualidade em tempo polinomial O(T * S) por tentativa sem garantia de otimo global."
+    ),
+}
+
+MATRIZ_REGRESSAO_BUGS: list[dict[str, str]] = [
+    {
+        "id_bug": "BUG-HPC-01",
+        "descricao": "Desalinhamento de 64-bit e ausencia de padding explicito na struct MetricasAlocacaoC via ctypes",
+        "commit_correcao": "2d9d8c9 (#67)",
+        "teste_regressao": "tests/test_motor_c.py::test_speedup_concorrente",
+    },
+    {
+        "id_bug": "BUG-HPC-02",
+        "descricao": "Canibalizacao de laboratorios especializados por turmas regulares sem penalidade heuristica",
+        "commit_correcao": "2d9d8c9 (#67)",
+        "teste_regressao": "tests/test_benchmark_estatistico.py::test_matriz_rastreabilidade_bugs_e_regressao",
+    },
+    {
+        "id_bug": "BUG-HPC-03",
+        "descricao": "Falso positivo de exigencia de laboratorio por correspondencia parcial de substring ('Elaboracao')",
+        "commit_correcao": "2d9d8c9 (#67)",
+        "teste_regressao": "tests/test_api_alocacao.py::test_endpoint_otimizar_sucesso",
+    },
+    {
+        "id_bug": "BUG-HPC-04",
+        "descricao": "Omissao de turmas sem sala disponivel no retorno FFI quando todas as salas estao lotadas",
+        "commit_correcao": "e06b008 / 2d9d8c9 (#67)",
+        "teste_regressao": "tests/test_api_alocacao.py::test_endpoint_retorna_turmas_sem_sala_com_sala_negativa",
+    },
+]
+
 
 class SalaC(ctypes.Structure):
     _fields_ = [
@@ -172,6 +215,7 @@ class MotorAlocacaoService:
             "versao": versao,
             "biblioteca": self.lib_path.name if self.lib_path else None,
             "openmp_ativo": "OpenMP" in versao,
+            "heuristica": CARACTERIZACAO_HEURISTICA["classificacao"],
         }
 
     def executar_teste(self, a: int, b: int) -> dict[str, Any]:

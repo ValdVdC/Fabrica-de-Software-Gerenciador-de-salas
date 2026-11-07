@@ -4,6 +4,9 @@
 #include <omp.h>
 #include "motor.h"
 
+// Heuristica Construtiva Gulosa Deterministica com Priorizacao de Restricoes Rigidas e Capacidade Minima Viavel.
+// Complexidade O(T * S) por tentativa em paralelo via OpenMP (problema NP-dificil sem garantia de otimo global).
+
 typedef struct {
     int dia_semana;
     int inicio_min;
@@ -309,7 +312,7 @@ int otimizar_alocacao_salas(
 
     int num_iteracoes = 800;
     if (num_turmas <= 20) {
-        num_iteracoes = 2500;
+        num_iteracoes = (num_turmas <= 15) ? 6000 : 2500;
     } else if (num_turmas >= 100) {
         num_iteracoes = 1200;
     }
