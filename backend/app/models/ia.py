@@ -4,7 +4,7 @@ Modelos de dados para Inteligencia Artificial: Frequencia, Previsao de Falta e S
 
 from datetime import date, datetime
 from typing import Optional, TYPE_CHECKING
-from sqlalchemy import String, Float, Boolean, Date, DateTime, ForeignKey, Text, func, Enum as SQLEnum
+from sqlalchemy import String, Float, Boolean, Date, DateTime, ForeignKey, Text, func, Enum as SQLEnum, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
 from app.models.enums import StatusSugestao
@@ -18,6 +18,9 @@ if TYPE_CHECKING:
 
 class Frequencia(Base):
     __tablename__ = "frequencia"
+    __table_args__ = (
+        Index("ix_frequencia_horario_data", "horario_id", "data"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     matricula_id: Mapped[int] = mapped_column(ForeignKey("matricula.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -32,6 +35,9 @@ class Frequencia(Base):
 
 class PrevisaoFalta(Base):
     __tablename__ = "previsao_falta"
+    __table_args__ = (
+        Index("ix_previsao_falta_horario_data", "horario_id", "data_prevista"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     turma_id: Mapped[int] = mapped_column(ForeignKey("turma.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -47,6 +53,9 @@ class PrevisaoFalta(Base):
 
 class SugestaoRemanejamento(Base):
     __tablename__ = "sugestao_remanejamento"
+    __table_args__ = (
+        Index("ix_sugestao_remanejamento_status_criado_em", "status", "criado_em"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     horario_id: Mapped[int] = mapped_column(ForeignKey("horario.id", ondelete="CASCADE"), nullable=False, index=True)

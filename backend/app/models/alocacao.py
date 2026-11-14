@@ -23,6 +23,9 @@ class Horario(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("hora_inicio < hora_fim", name="ck_horario_inicio_anterior_fim"),
         CheckConstraint("dia_semana >= 0 AND dia_semana <= 6", name="ck_horario_dia_semana_valido"),
+        Index("ix_horario_turma_dia_hora", "turma_id", "dia_semana", "hora_inicio"),
+        Index("ix_horario_sala_dia_hora", "sala_id", "dia_semana", "hora_inicio", "hora_fim"),
+        Index("ix_horario_campus_dia_hora", "campus_id", "dia_semana", "hora_inicio"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
