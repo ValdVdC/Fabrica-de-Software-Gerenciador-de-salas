@@ -213,10 +213,15 @@ import { AuthService, UserRole } from '../../services/auth.service';
         }
         <router-outlet />
       </main>
+      <footer class="shell-footer">
+        <span class="footer-brand">SIGAAS — Sistema Integrado de Gestao Academica</span
+        ><span class="version-tag tabular-nums" data-testid="app-version">{{ appVersion }}</span>
+      </footer>
     </div>
   `,
 })
 export class ShellComponent {
+  readonly appVersion = 'v1.0.0-rc.1';
   readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 

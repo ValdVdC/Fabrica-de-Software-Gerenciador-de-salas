@@ -59,8 +59,8 @@ import { AuthService } from '../../services/auth.service';
     .login-form, .form-group { display: flex; flex-direction: column; gap: 0.75rem; }
     .form-group { gap: 0.25rem; }
     .form-group label { font-size: 0.8125rem; font-weight: 600; color: #334155; }
-    .form-control { padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.875rem; }
-    .btn-submit { margin-top: 0.25rem; padding: 0.5rem; background: #0f172a; color: #fff; font-weight: 600; border: none; border-radius: 4px; cursor: pointer; }
+    .form-control { padding: 0.5rem 0.65rem; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.875rem; transition: border-color 0.15s ease; } .form-control:focus { border-color: #0f172a; outline: none; }
+    .btn-submit { margin-top: 0.25rem; padding: 0.55rem; background: #0f172a; color: #fff; font-weight: 600; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.15s ease; } .btn-submit:hover:not(:disabled) { background: #1e293b; }
     .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
   `],
 })
