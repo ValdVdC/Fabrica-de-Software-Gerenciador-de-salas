@@ -271,7 +271,7 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--card-radius);
   box-shadow: var(--card-shadow);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .data-table {
@@ -384,7 +384,7 @@ body {
 
 .stat-card small {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--color-muted-dark);
 }
 
 /* Shell Layout */
@@ -452,7 +452,7 @@ body {
 .nav-link.active {
   background: #1e293b;
   color: #fff;
-  border-color: var(--color-primary);
+  border-color: #334155;
   font-weight: 600;
 }
 
@@ -1066,7 +1066,7 @@ body {
 
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 1rem;
 }
 
@@ -1159,4 +1159,62 @@ body {
   font-size: 0.8125rem;
   color: var(--color-muted);
   font-weight: 500;
+}
+
+/* Shell Footer e Versao Release Candidate */
+.shell-header {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.header-nav,
+.header-user {
+  flex-wrap: wrap;
+}
+
+.shell-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  font-size: 0.75rem;
+  color: var(--color-muted-dark);
+}
+
+.footer-brand {
+  font-weight: 500;
+}
+
+.version-tag {
+  background: #f1f5f9;
+  color: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 768px) {
+  .shell-header,
+  .shell-footer {
+    padding: 0.75rem 1rem;
+  }
+
+  .shell-content {
+    padding: 1rem;
+  }
+
+  .login-box {
+    margin: 1.5rem 1rem;
+    padding: 1.5rem;
+  }
+
+  .bar-row {
+    grid-template-columns: 95px 1fr 36px;
+  }
 }

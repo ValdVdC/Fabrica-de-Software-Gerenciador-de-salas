@@ -50,11 +50,11 @@ import { HorarioService, HorarioMeu, DIAS_SEMANA_LABELS } from '../../services/h
   // prettier-ignore
   styles: [`
     .grade-container { display: flex; flex-direction: column; gap: 1rem; }
-    .grade-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; }
+    .grade-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; }
     .grade-actions .btn-secondary { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8125rem; cursor: pointer; }
     .grade-actions .btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
     .btn-secondary:disabled, .btn-retry:disabled { opacity: 0.6; cursor: not-allowed; }
-    .metrics-bar { display: flex; gap: 1.5rem; background: #fff; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid #e2e8f0; }
+    .metrics-bar { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; background: #fff; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid #e2e8f0; }
     .metric-item { display: flex; flex-direction: column; } .metric-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
     .metric-value { font-size: 1.125rem; font-weight: 700; color: #0f172a; } .tabular-nums { font-variant-numeric: tabular-nums; }
     .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 0.75rem 1rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
@@ -66,7 +66,7 @@ import { HorarioService, HorarioMeu, DIAS_SEMANA_LABELS } from '../../services/h
     .dia-header { background: #0f172a; color: #fff; padding: 0.5rem; text-align: center; }
     .dia-header h3 { font-size: 0.8125rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
     .dia-corpo { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; min-height: 120px; }
-    .sem-aula { color: #94a3b8; font-size: 0.75rem; text-align: center; margin: auto 0; font-style: italic; }
+    .sem-aula { color: #64748b; font-size: 0.75rem; text-align: center; margin: auto 0; font-style: italic; }
     .aula-card { background: #f8fafc; border: 1px solid #cbd5e1; border-left: 3px solid #0284c7; padding: 0.5rem; border-radius: 4px; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.75rem; }
     .aula-horario { font-weight: 700; color: #0284c7; } .aula-disciplina { display: flex; flex-direction: column; }
     .disciplina-nome { color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
