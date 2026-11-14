@@ -20,7 +20,19 @@ from app.services.dashboard_service import (
 router = APIRouter()
 
 
-@router.get("/resumo", response_model=DashboardResumoRead)
+@router.get(
+    "/resumo",
+    response_model=DashboardResumoRead,
+    summary="Obter resumo de indicadores do dashboard",
+    description=(
+        "Retorna contadores consolidados de salas ativas, turmas, horarios alocados, sugestoes pendentes, "
+        "vagas e logs recentes, respeitando o isolamento multi-campus por perfil RBAC."
+    ),
+    responses={
+        401: {"description": "Token JWT ausente, invalido ou expirado."},
+        403: {"description": "Acesso restrito a Admin, Coordenador ou Secretaria."},
+    },
+)
 def get_dashboard_resumo(
     campus_id: Optional[int] = Query(
         default=None, gt=0, description="Filtro de campus (exclusivo para admin)"
@@ -35,7 +47,19 @@ def get_dashboard_resumo(
     return obter_resumo_dashboard(db=db, campus_id=escopo_campus)
 
 
-@router.get("/ocupacao", response_model=DashboardOcupacaoRead)
+@router.get(
+    "/ocupacao",
+    response_model=DashboardOcupacaoRead,
+    summary="Obter distribuicao de ocupacao de salas",
+    description=(
+        "Retorna a distribuicao de horarios alocados por dia da semana (0 a 6) e por turno "
+        "(matutino, vespertino, noturno, integral) no escopo do campus autorizado."
+    ),
+    responses={
+        401: {"description": "Token JWT ausente, invalido ou expirado."},
+        403: {"description": "Acesso restrito a Admin, Coordenador ou Secretaria."},
+    },
+)
 def get_dashboard_ocupacao(
     campus_id: Optional[int] = Query(
         default=None, gt=0, description="Filtro de campus (exclusivo para admin)"

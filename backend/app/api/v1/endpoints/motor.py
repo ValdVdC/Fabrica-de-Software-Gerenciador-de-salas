@@ -28,12 +28,32 @@ class MotorTesteResponse(BaseModel):
     operacao: str
 
 
-@router.get("/status", response_model=MotorStatusResponse)
+@router.get(
+    "/status",
+    response_model=MotorStatusResponse,
+    summary="Consultar status do motor C/OpenMP",
+    description=(
+        "Verifica se a biblioteca compartilhada motor_alocacao.so esta carregada via ctypes "
+        "e se o suporte a paralelismo OpenMP esta ativo no processo FastAPI."
+    ),
+)
 def obter_status_motor():
     return motor_service.get_status()
 
 
-@router.post("/teste-integracao", response_model=MotorTesteResponse)
+@router.post(
+    "/teste-integracao",
+    response_model=MotorTesteResponse,
+    summary="Executar teste de integracao FFI com o motor C",
+    description=(
+        "Valida a ponte Python-C via ctypes enviando dois operandos inteiros dentro de limites seguros "
+        "para execucao nativa na biblioteca compartilhada."
+    ),
+    responses={
+        400: {"description": "Operandos fora dos limites permitidos ou overflow."},
+        503: {"description": "Biblioteca compartilhada do motor C indisponivel."},
+    },
+)
 def executar_teste_motor(payload: MotorTestePayload):
     try:
         return motor_service.executar_teste(payload.a, payload.b)

@@ -13,7 +13,19 @@ from app.api.deps import get_current_user
 router = APIRouter()
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    summary="Autenticar usuario e emitir token JWT",
+    description=(
+        "Autentica usuario via e-mail e senha com verificacao em tempo constante (mitigacao de timing attack) "
+        "e retorna token Bearer JWT contendo perfil RBAC e campus_id."
+    ),
+    responses={
+        401: {"description": "Credenciais invalidas (e-mail ou senha incorretos)."},
+        403: {"description": "Usuario inativo no sistema."},
+    },
+)
 def login(login_in: LoginRequest, db: Session = Depends(get_db)):
     """Autentica usuario via email e senha em tempo constante, retornando token JWT e perfil."""
     email_normalizado = login_in.email.strip().lower()
@@ -53,7 +65,16 @@ def login(login_in: LoginRequest, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/me", response_model=UsuarioRead)
+@router.get(
+    "/me",
+    response_model=UsuarioRead,
+    summary="Obter perfil do usuario autenticado",
+    description="Decodifica o token Bearer JWT e retorna os dados cadastrais, perfil RBAC e campus do usuario ativo.",
+    responses={
+        401: {"description": "Token JWT ausente, invalido ou expirado."},
+        403: {"description": "Usuario associado ao token esta inativo."},
+    },
+)
 def obter_usuario_logado(current_user: Usuario = Depends(get_current_user)):
     """Retorna dados do usuario autenticado pelo token JWT."""
     return current_user
