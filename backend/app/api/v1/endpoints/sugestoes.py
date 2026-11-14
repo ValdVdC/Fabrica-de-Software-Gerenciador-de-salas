@@ -31,7 +31,19 @@ router = APIRouter()
 ia_router = APIRouter()
 
 
-@router.get("", response_model=List[SugestaoRemanejamentoRead])
+@router.get(
+    "",
+    response_model=List[SugestaoRemanejamentoRead],
+    summary="Listar sugestoes de remanejamento por risco de absenteismo",
+    description=(
+        "Lista sugestoes de remanejamento ordenadas pela probabilidade de absenteismo decrescente "
+        "e data de criacao, respeitando o isolamento multi-campus."
+    ),
+    responses={
+        401: {"description": "Token JWT ausente, invalido ou expirado."},
+        403: {"description": "Acesso restrito a Admin ou Coordenador."},
+    },
+)
 def listar_sugestoes(
     status_filtro: Optional[StatusSugestao] = Query(None, alias="status", description="Filtrar por status"),
     campus_id: Optional[int] = Query(None, gt=0, description="Filtrar por campus (restrito a admin)"),
@@ -79,7 +91,22 @@ def listar_sugestoes(
     return [converter_sugestao_para_read(s) for s in sugestoes]
 
 
-@router.patch("/{sugestao_id}", response_model=SugestaoRemanejamentoRead)
+@router.patch(
+    "/{sugestao_id}",
+    response_model=SugestaoRemanejamentoRead,
+    summary="Aprovar ou rejeitar sugestao de remanejamento (Human-in-the-Loop)",
+    description=(
+        "Decide sobre uma sugestao pendente gerada pela IA. Em caso de aprovacao, valida conflito "
+        "com lock pessimista (SELECT FOR UPDATE), atualiza atomicamente a sala do horario e grava auditoria."
+    ),
+    responses={
+        400: {"description": "Sugestao ja foi processada anteriormente."},
+        401: {"description": "Token JWT ausente, invalido ou expirado."},
+        403: {"description": "Acesso restrito a Admin ou Coordenador."},
+        404: {"description": "Sugestao nao encontrada ou pertencente a outro campus."},
+        409: {"description": "Sala sugerida nao esta mais disponivel no horario especificado."},
+    },
+)
 def aprovar_ou_rejeitar_sugestao(
     sugestao_id: int,
     payload: SugestaoAprovacaoUpdate,
@@ -218,7 +245,19 @@ def _executar_analise(
     )
 
 
-@router.post("/analisar", response_model=AnaliseIAResponse)
+@router.post(
+    "/analisar",
+    response_model=AnaliseIAResponse,
+    summary="Disparar analise preditiva de absenteismo (/sugestoes/analisar)",
+    description=(
+        "Executa o pipeline scikit-learn sobre os horarios alocados do campus/periodo e gera "
+        "sugestoes de remanejamento com status pendente para revisao humana."
+    ),
+    responses={
+        401: {"description": "Token JWT ausente, invalido ou expirado."},
+        403: {"description": "Acesso restrito a Admin ou Coordenador."},
+    },
+)
 def disparar_analise_ia_sugestoes(
     payload: Optional[AnaliseIARequest] = None,
     current_user: Usuario = Depends(require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR)),
@@ -228,7 +267,19 @@ def disparar_analise_ia_sugestoes(
     return _executar_analise(payload, current_user, db)
 
 
-@ia_router.post("/analisar", response_model=AnaliseIAResponse)
+@ia_router.post(
+    "/analisar",
+    response_model=AnaliseIAResponse,
+    summary="Executar inferencia de IA preditiva de absenteismo (/ia/analisar)",
+    description=(
+        "Dispara a inferencia do modelo RandomForest/scikit-learn para detectar turmas com alto "
+        "risco de ociosidade e registrar sugestoes pendentes de remanejamento sem alterar horarios diretamente."
+    ),
+    responses={
+        401: {"description": "Token JWT ausente, invalido ou expirado."},
+        403: {"description": "Acesso restrito a Admin ou Coordenador."},
+    },
+)
 def disparar_analise_ia(
     payload: Optional[AnaliseIARequest] = None,
     current_user: Usuario = Depends(require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR)),

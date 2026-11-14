@@ -95,6 +95,18 @@ def _converter_tipo_sala(tipo: TipoSala | str) -> int:
     response_model=AlocacaoOtimizarResponse,
     status_code=status.HTTP_200_OK,
     summary="Executar alocacao inteligente de salas com motor C e paralelismo OpenMP",
+    description=(
+        "Executa o algoritmo combinatorio de alocacao de salas no motor nativo C/OpenMP via ctypes, "
+        "calculando metricas cientificas (speedup, eficiencia e fracao de Amdahl) e persistindo os horarios "
+        "de forma atomica e idempotente no PostgreSQL quando salvar_no_banco=True."
+    ),
+    responses={
+        400: {"description": "Nenhuma sala ativa cadastrada no campus selecionado."},
+        401: {"description": "Token JWT ausente, invalido ou expirado."},
+        403: {"description": "Acesso negado por perfil RBAC ou tentativa de acesso a outro campus."},
+        500: {"description": "Falha ao persistir transacao de alocacao no PostgreSQL."},
+        503: {"description": "Motor de alocacao C/OpenMP indisponivel."},
+    },
 )
 def otimizar_alocacao_endpoint(
     payload: AlocacaoOtimizarRequest,
@@ -334,6 +346,15 @@ def otimizar_alocacao_endpoint(
     response_model=AlocacaoBenchmarkResponse,
     status_code=status.HTTP_200_OK,
     summary="Executar benchmark cientifico de alocacao com metricas OpenMP (Admin Exclusivo)",
+    description=(
+        "Executa bateria controlada de benchmark no motor C/OpenMP nos cenarios Pequeno (20 turmas/10 salas), "
+        "Medio (100/40) ou Stress (500/150), comparando tempo sequencial versus paralelo."
+    ),
+    responses={
+        401: {"description": "Token JWT ausente, invalido ou expirado."},
+        403: {"description": "Acesso exclusivo ao perfil Admin."},
+        503: {"description": "Motor de benchmark C/OpenMP indisponivel."},
+    },
 )
 def benchmark_alocacao_endpoint(
     payload: AlocacaoBenchmarkRequest,
