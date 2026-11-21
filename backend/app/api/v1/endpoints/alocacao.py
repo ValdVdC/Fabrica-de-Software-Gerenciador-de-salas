@@ -2,6 +2,7 @@
 Endpoints para Alocacao Inteligente de Salas via Motor C com OpenMP (Sprint 05).
 """
 
+import logging
 import re
 from datetime import time
 from typing import Dict, List
@@ -41,6 +42,8 @@ from app.services.motor_service import (
     TurmaC,
     motor_service,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -224,10 +227,11 @@ def otimizar_alocacao_endpoint(
             max_threads=payload.max_threads,
         )
     except RuntimeError as exc:
+        logger.error("Motor de alocacao C indisponivel: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Motor de alocacao C indisponivel: {exc}",
-        )
+            detail="Motor de alocacao C indisponivel no momento.",
+        ) from exc
 
     horarios_novos: List[Horario] = []
     itens_resposta: List[AlocacaoItemResponse] = []
@@ -316,10 +320,11 @@ def otimizar_alocacao_endpoint(
             db.commit()
         except Exception as exc:
             db.rollback()
+            logger.exception("Erro ao persistir transacao de alocacao no PostgreSQL")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Erro ao persistir transacao de alocacao no PostgreSQL: {exc}",
-            )
+                detail="Erro interno ao persistir transacao de alocacao no banco de dados.",
+            ) from exc
 
     metricas_resp = MetricasAlocacaoResponse(
         tempo_sequencial_ms=metricas_c["tempo_sequencial_ms"],
@@ -378,10 +383,11 @@ def benchmark_alocacao_endpoint(
             num_threads=payload.threads,
         )
     except RuntimeError as exc:
+        logger.error("Motor de benchmark C indisponivel: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Motor de benchmark C indisponivel: {exc}",
-        )
+            detail="Motor de benchmark C indisponivel no momento.",
+        ) from exc
 
     return AlocacaoBenchmarkResponse(
         cenario=cenario_lower,

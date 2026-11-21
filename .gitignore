@@ -69,6 +69,7 @@ venv/
 .coverage.*
 htmlcov/
 .pytest_cache/
+.ruff_cache/
 
 # Node / Angular
 node_modules/
@@ -78,8 +79,6 @@ dist/
 *.pkl
 *.joblib
 *.db
-/ia_previsao/dados/*
-!/ia_previsao/dados/.gitkeep
 
 # Editor / SO
 .vscode/

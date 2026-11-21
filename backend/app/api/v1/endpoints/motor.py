@@ -2,11 +2,14 @@
 Endpoints para integracao e teste do Motor C (OpenMP).
 """
 
+import logging
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.services.motor_service import motor_service
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -58,6 +61,14 @@ def executar_teste_motor(payload: MotorTestePayload):
     try:
         return motor_service.executar_teste(payload.a, payload.b)
     except RuntimeError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        logger.error("Motor de alocacao C indisponivel no teste de integracao: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Motor de alocacao C indisponivel no momento.",
+        ) from e
     except (OverflowError, ValueError) as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning("Operandos invalidos no teste de integracao do motor C: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Operandos invalidos ou fora dos limites permitidos.",
+        ) from e
