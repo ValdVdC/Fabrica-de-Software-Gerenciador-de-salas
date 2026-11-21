@@ -125,3 +125,19 @@ Para atender ao critério de rigor científico da disciplina de Tópicos Avança
 - **Dado de treino da IA:** decisão de usar dado real + público + sintético ainda está em aberto — definir isso até a Sprint 5 o mais tardar, para não travar o treino do modelo.
 - **Integração FastAPI↔C:** validem o `ctypes` funcionando com um exemplo simples antes de implementar o algoritmo completo (é o maior risco técnico do projeto).
 - **Job de IA sem infraestrutura extra:** se o `APScheduler` embutido se mostrar limitado mais pra frente, a saída é rodar o script de previsão via cron do sistema operacional — evitem migrar pra Celery/Redis a menos que seja estritamente necessário.
+
+---
+
+## 6. Notas de Consolidacao Tecnica (v1.0.0-rc.1 — Sprint 11)
+
+As secoes 1 a 5 preservam o documento normativo de partida definido na Sprint 01. A tabela abaixo registra os refinamentos consolidados no codigo-fonte real da versao `v1.0.0-rc.1`, garantindo ausencia de contradicoes com a entrega final (detalhes completos em `docs/manuais/manual-tecnico.md`):
+
+| Topico | Estado no Documento de Partida (Sprint 01) | Estado Consolidado em `v1.0.0-rc.1` |
+| :--- | :--- | :--- |
+| **Perfis de Acesso (RBAC)** | 4 perfis agrupados (`Admin/Coordenacao`, `Professor`, `Aluno`, `Secretaria`) | **5 perfis distintos** em `PerfilUsuario`: `admin`, `coordenador`, `secretaria`, `professor`, `aluno`. |
+| **Rotas Principais da API v1** | `GET /turmas/minhas`, `POST /alocacao/gerar`, `PATCH /sugestoes/{id}` | Prefixo `/api/v1`: `GET /api/v1/horarios/meus`, `POST /api/v1/alocacao/otimizar`, `POST /api/v1/alocacao/benchmark`, `POST /api/v1/ia/analisar` e `PATCH /api/v1/sugestoes/{sugestao_id}`. Documentacao OpenAPI em `/api/v1/docs` e `/api/v1/redoc`. |
+| **Implantacao Docker** | 2 servicos (`app` e `db`) | **4 servicos** em `docker/compose/docker-compose.{local,homolog,prod}.yml`: `db` (PostgreSQL 16), `backend` (FastAPI + motor C/OpenMP), `frontend` (Angular 20 + Nginx 1.27) e `cron`. |
+| **Modelo de Dados (14 Tabelas)** | 13 entidades listadas na tabela resumo (`Sala_Equipamento` citada em relacionamento) | **14 tabelas** versionadas nas migrations Alembic `001_initial_schema`, `002_add_campus_id_to_log_alocacao` (`campus_id` + indice composto em `log_alocacao`) e `003_release_candidate_indexes` (6 indices compostos em `horario`, `frequencia`, `previsao_falta` e `sugestao_remanejamento`). |
+| **Cenarios de Benchmark C/OpenMP** | 3 cenarios planejados (`20x10`, `100x40`, `500x150`) | **4 cenarios executados** com N=10 repeticoes e 4 threads OpenMP (`10x5`, `50x20`, `100x40`, `500x150`), registrados em `backend/app/motor/relatorio_benchmark_c.md` (speedup de ate `3.74x` em `100x40`). |
+| **Status dos Riscos (Secao 5)** | Riscos em aberto (integracao `ctypes`, dados de treino da IA, job em background) | **Mitigados e validados:** integracao `ctypes` blindada por testes e structs 64-bit (`test_motor_c.py`); pipeline `scikit-learn` (`HistGradientBoosting` + `CalibratedClassifierCV`, limiar 40%) com priors sinteticos e dados de `Frequencia` (`test_ia_service.py`); container `cron` e endpoint `/api/v1/ia/analisar` operacionais sem Celery/Redis. |
+
