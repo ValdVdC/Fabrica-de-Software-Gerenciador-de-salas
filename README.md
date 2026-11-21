@@ -219,11 +219,10 @@ O classificador probabilistico calibrado utiliza o limiar operacional de **40% (
 ## Estrutura do Repositorio
 
 ```text
-/backend            FastAPI (routers, models, services, alembic migrations)
+/backend            FastAPI (routers, models, services/IA scikit-learn, alembic migrations)
   /motor_alocacao   Codigo C + OpenMP + bindings ctypes + Makefile
   /tests            Testes unitarios, integracao, schema e ML (Pytest)
 /frontend           Aplicacao Angular 20 (SPA) e testes Karma/Jasmine
-/ia_previsao        Scripts de dataset, treino e serving do modelo scikit-learn
 /docs               Documentacao tecnica, requisitos normativos, specs e entregas
   /specs            Especificacoes SDD de cada sprint / feature
   /entregas         Relatorios tecnicos por sprint, consolidado e PDFs oficiais

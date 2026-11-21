@@ -159,8 +159,8 @@ class MotorAlocacaoService:
             if gcc_path:
                 try:
                     os.add_dll_directory(str(Path(gcc_path).resolve().parent))
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Nao foi possivel adicionar diretorio DLL do gcc: %s", exc)
 
         try:
             self._compilar_se_necessario(self.lib_path, dir_motor)

@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, input, computed, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HorarioService, HorarioMeu, DIAS_SEMANA_LABELS } from '../../services/horario.service';
+import { HorarioService, DIAS_SEMANA_LABELS } from '../../services/horario.service';
 
 @Component({
   selector: 'app-grade-horaria',

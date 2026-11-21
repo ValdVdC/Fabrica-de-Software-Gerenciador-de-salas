@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal, WritableSignal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 import { GradeHorariaComponent } from './grade-horaria.component';
 import { HorarioService, HorarioMeu } from '../../services/horario.service';
 

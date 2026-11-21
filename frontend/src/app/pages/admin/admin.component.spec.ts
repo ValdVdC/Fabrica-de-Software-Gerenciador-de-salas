@@ -4,7 +4,7 @@ import { AdminService, Sala, Equipamento } from '../../services/admin.service';
 import { AuthService, UserSummary } from '../../services/auth.service';
 import { AlocacaoService, MetricasAlocacao, AlocacaoItem } from '../../services/alocacao.service';
 import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 import { signal, computed } from '@angular/core';
 
 describe('AdminComponent', () => {

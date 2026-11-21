@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { AdminService, Sala, Equipamento, SalaCreate, SalaUpdate } from './admin.service';
+import { AdminService, Sala, SalaCreate, SalaUpdate } from './admin.service';
 
 describe('AdminService', () => {
   let service: AdminService;

@@ -4,6 +4,7 @@ Contem o pipeline scikit-learn, prevencao de vazamento temporal, calibracao de p
 e heuristica de recomendacao de salas menores livres.
 """
 
+import logging
 import math
 from datetime import date, datetime
 from pathlib import Path
@@ -29,6 +30,7 @@ from app.models.ia import Frequencia, PrevisaoFalta, SugestaoRemanejamento
 from app.models.sala import Sala
 from app.schemas.ia import SugestaoRemanejamentoRead
 
+logger = logging.getLogger(__name__)
 ARTEFATO_DIR = Path(__file__).resolve().parent.parent / "ml"
 MODELO_ARTEFATO_PATH = ARTEFATO_DIR / "modelo_absenteismo.joblib"
 VERSAO_MODELO = "v1.0-histgb"
@@ -208,8 +210,8 @@ def carregar_ou_inicializar_modelo(db: Session) -> Pipeline:
     if MODELO_ARTEFATO_PATH.is_file():
         try:
             return joblib.load(MODELO_ARTEFATO_PATH)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Falha ao carregar artefato joblib existente; retreinando modelo: %s", exc)
 
     treinar_modelo_absenteismo(db)
     return joblib.load(MODELO_ARTEFATO_PATH)
@@ -439,8 +441,8 @@ def converter_sugestao_para_read(sugestao: SugestaoRemanejamento) -> SugestaoRem
         try:
             part = sugestao.motivo.split("absenteismo:")[1].split("%")[0].strip()
             prob_aus = round(float(part) / 100.0, 4)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Nao foi possivel extrair probabilidade de absenteismo do motivo: %s", exc)
 
     return SugestaoRemanejamentoRead(
         id=sugestao.id,
