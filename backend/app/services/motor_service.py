@@ -77,33 +77,34 @@ MATRIZ_REGRESSAO_BUGS: list[dict[str, str]] = [
 
 class SalaC(ctypes.Structure):
     _fields_ = [
-        ("id", ctypes.c_int),
-        ("capacidade", ctypes.c_int),
-        ("tipo", ctypes.c_int),
-        ("turnos_mask", ctypes.c_int),
+        ("id", ctypes.c_int32),
+        ("capacidade", ctypes.c_int32),
+        ("tipo", ctypes.c_int32),
+        ("turnos_mask", ctypes.c_int32),
     ]
 
 
 class TurmaC(ctypes.Structure):
     _fields_ = [
-        ("id", ctypes.c_int),
-        ("num_matriculados", ctypes.c_int),
-        ("tipo_exigido", ctypes.c_int),
-        ("turno", ctypes.c_int),
-        ("dia_semana_sugerido", ctypes.c_int),
-        ("hora_inicio_min", ctypes.c_int),
-        ("hora_fim_min", ctypes.c_int),
+        ("id", ctypes.c_int32),
+        ("num_matriculados", ctypes.c_int32),
+        ("tipo_exigido", ctypes.c_int32),
+        ("turno", ctypes.c_int32),
+        ("dia_semana_sugerido", ctypes.c_int32),
+        ("hora_inicio_min", ctypes.c_int32),
+        ("hora_fim_min", ctypes.c_int32),
+        ("professor_id", ctypes.c_int32),
     ]
 
 
 class AlocacaoItemC(ctypes.Structure):
     _fields_ = [
-        ("turma_id", ctypes.c_int),
-        ("sala_id", ctypes.c_int),
-        ("dia_semana", ctypes.c_int),
-        ("hora_inicio_min", ctypes.c_int),
-        ("hora_fim_min", ctypes.c_int),
-        ("score_desperdicio", ctypes.c_int),
+        ("turma_id", ctypes.c_int32),
+        ("sala_id", ctypes.c_int32),
+        ("dia_semana", ctypes.c_int32),
+        ("hora_inicio_min", ctypes.c_int32),
+        ("hora_fim_min", ctypes.c_int32),
+        ("score_desperdicio", ctypes.c_int32),
     ]
 
 
@@ -114,11 +115,16 @@ class MetricasAlocacaoC(ctypes.Structure):
         ("speedup", ctypes.c_double),
         ("eficiencia", ctypes.c_double),
         ("fracao_amdahl", ctypes.c_double),
-        ("threads_utilizadas", ctypes.c_int),
-        ("total_alocado", ctypes.c_int),
-        ("total_pendente", ctypes.c_int),
-        ("padding", ctypes.c_int),
+        ("threads_utilizadas", ctypes.c_int32),
+        ("total_alocado", ctypes.c_int32),
+        ("total_pendente", ctypes.c_int32),
+        ("padding", ctypes.c_int32),
     ]
+
+
+for _cls, _expected in ((SalaC, 16), (TurmaC, 32), (AlocacaoItemC, 24), (MetricasAlocacaoC, 56)):
+    if ctypes.sizeof(_cls) != _expected:
+        raise RuntimeError(f"ABI invalida: sizeof({_cls.__name__}) esperado {_expected}, obtido {ctypes.sizeof(_cls)}")
 
 
 class MotorAlocacaoService:
@@ -131,7 +137,11 @@ class MotorAlocacaoService:
         return Path(__file__).resolve().parent.parent.parent / "motor_alocacao"
 
     def _compilar_se_necessario(self, destino: Path, dir_motor: Path):
-        if not destino.exists() and shutil.which("gcc"):
+        fontes = (dir_motor / "motor.c", dir_motor / "motor.h")
+        desatualizado = not destino.exists() or any(
+            f.exists() and f.stat().st_mtime > destino.stat().st_mtime for f in fontes
+        )
+        if desatualizado and shutil.which("gcc"):
             cmd = [
                 "gcc",
                 "-Wall",
