@@ -202,6 +202,7 @@ def otimizar_alocacao_endpoint(
                 dia_semana_sugerido=dia_sugerido,
                 hora_inicio_min=ini_min,
                 hora_fim_min=fim_min,
+                professor_id=t.professor_id or 0,
             )
         )
 

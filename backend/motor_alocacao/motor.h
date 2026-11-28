@@ -3,6 +3,8 @@
 // Problema NP-dificil (Timetabling): busca solucoes viaveis em tempo polinomial O(T * S) sem garantia de otimo global.
 #define MOTOR_ALOCACAO_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -23,29 +25,30 @@ extern "C" {
 #define TURNO_MASK_INTEGRAL   (1 << 3)
 
 typedef struct {
-    int id;
-    int capacidade;
-    int tipo;
-    int turnos_mask;
+    int32_t id;
+    int32_t capacidade;
+    int32_t tipo;
+    int32_t turnos_mask;
 } SalaC;
 
 typedef struct {
-    int id;
-    int num_matriculados;
-    int tipo_exigido;
-    int turno;
-    int dia_semana_sugerido;
-    int hora_inicio_min;
-    int hora_fim_min;
+    int32_t id;
+    int32_t num_matriculados;
+    int32_t tipo_exigido;
+    int32_t turno;
+    int32_t dia_semana_sugerido;
+    int32_t hora_inicio_min;
+    int32_t hora_fim_min;
+    int32_t professor_id; // 0 = sem docente atribuido; >0 = id valido
 } TurmaC;
 
 typedef struct {
-    int turma_id;
-    int sala_id;
-    int dia_semana;
-    int hora_inicio_min;
-    int hora_fim_min;
-    int score_desperdicio;
+    int32_t turma_id;
+    int32_t sala_id;
+    int32_t dia_semana;
+    int32_t hora_inicio_min;
+    int32_t hora_fim_min;
+    int32_t score_desperdicio;
 } AlocacaoItemC;
 
 typedef struct {
@@ -54,11 +57,18 @@ typedef struct {
     double speedup;
     double eficiencia;
     double fracao_amdahl;
-    int threads_utilizadas;
-    int total_alocado;
-    int total_pendente;
-    int padding;
+    int32_t threads_utilizadas;
+    int32_t total_alocado;
+    int32_t total_pendente;
+    int32_t padding;
 } MetricasAlocacaoC;
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(SalaC) == 16, "SalaC deve ter 16 bytes");
+_Static_assert(sizeof(TurmaC) == 32, "TurmaC deve ter 32 bytes");
+_Static_assert(sizeof(AlocacaoItemC) == 24, "AlocacaoItemC deve ter 24 bytes");
+_Static_assert(sizeof(MetricasAlocacaoC) == 56, "MetricasAlocacaoC deve ter 56 bytes");
+#endif
 
 int otimizar_alocacao_salas(
     const TurmaC* turmas,
