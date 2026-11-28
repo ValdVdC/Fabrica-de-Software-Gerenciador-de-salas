@@ -124,7 +124,11 @@ def test_endpoint_otimizar_sucesso(client, test_db, setup_cenario):
     assert data["sucesso"] is True
     assert "Alocacao executada" in data["mensagem"]
     assert "metricas" in data
-    assert data["metricas"]["threads"] == 4
+    assert data["metricas"]["backend_usado"] in ("opencl", "openmp")
+    if data["metricas"]["backend_usado"] == "openmp":
+        assert data["metricas"]["threads"] == 4
+    else:
+        assert data["metricas"]["threads"] >= 1
     assert data["metricas"]["total_turmas"] == 3
     assert data["metricas"]["alocadas"] == 3
     assert data["metricas"]["conflitos"] == 0
@@ -268,3 +272,47 @@ def test_endpoint_retorna_turmas_sem_sala_com_sala_negativa(client, test_db, set
     turmas_conflito = [a for a in data["alocacoes"] if a["sala_id"] == -1]
     assert len(turmas_conflito) >= 1
     assert turmas_conflito[0]["turma_id"] == turma_gigante.id
+
+
+def test_endpoint_otimizar_selecao_backend_e_campos_opencl(client, setup_cenario):
+    token = setup_cenario["token_admin"]
+    campus_id = setup_cenario["campus1"].id
+
+    for backend in ("openmp", "cpu_sequencial", "auto"):
+        resp = client.post(
+            "/api/v1/alocacao/otimizar",
+            json={
+                "periodo_letivo": "2026.1",
+                "campus_id": campus_id,
+                "max_threads": 2,
+                "salvar_no_banco": False,
+                "backend": backend,
+                "executar_baseline_sequencial": False,
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200
+        m = resp.json()["metricas"]
+        assert "backend_usado" in m
+        assert "dispositivo_opencl" in m
+        assert m["tempo_kernel_ms"] >= 0.0
+        assert m["tempo_transferencia_ms"] >= 0.0
+        if backend != "auto":
+            assert m["backend_usado"] == backend
+        if backend != "cpu_sequencial":
+            assert m["tempo_sequencial_ms"] == 0.0
+
+
+def test_endpoint_benchmark_expoe_campos_opencl(client, setup_cenario):
+    token_admin = setup_cenario["token_admin"]
+    resp = client.post(
+        "/api/v1/alocacao/benchmark",
+        json={"cenario": "pequeno", "threads": 2, "backend": "auto"},
+        headers={"Authorization": f"Bearer {token_admin}"},
+    )
+    assert resp.status_code == 200
+    m = resp.json()["metricas"]
+    assert m["backend_usado"] in ("opencl", "openmp")
+    assert "dispositivo_opencl" in m
+    assert m["tempo_kernel_ms"] >= 0.0
+    assert m["tempo_transferencia_ms"] >= 0.0

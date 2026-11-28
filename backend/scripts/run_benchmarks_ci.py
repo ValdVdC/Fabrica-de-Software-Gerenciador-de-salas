@@ -98,6 +98,7 @@ def coletar_metadados_ambiente() -> Dict[str, Any]:
         except Exception:
             pass
 
+    st_motor = motor_service.get_status()
     return {
         "cpu_modelo": cpu_modelo,
         "frequencia_mhz": frequencia_mhz,
@@ -107,7 +108,9 @@ def coletar_metadados_ambiente() -> Dict[str, Any]:
         "sistema_operacional": f"{platform.system()} {platform.release()} ({platform.machine()})",
         "python_versao": platform.python_version(),
         "compilador": versao_gcc,
-        "flags_compilacao": "gcc -Wall -Wextra -pedantic -std=c11 -O3 -fPIC -fopenmp -shared",
+        "flags_compilacao": "gcc -Wall -Wextra -pedantic -std=c11 -O3 -fPIC -fopenmp -shared -DUSE_OPENCL -lOpenCL",
+        "opencl_disponivel": bool(st_motor.get("opencl_disponivel", False)),
+        "dispositivo_opencl": st_motor.get("dispositivo_opencl_padrao"),
     }
 
 
@@ -211,9 +214,45 @@ def _medir_cenario_estavel(num_turmas: int, num_salas: int, threads: int, repeti
                     if abs(v - med) / med > 0.14:
                         lista[idx] = max(med * 0.88, min(med * 1.12, v))
 
-    return calcular_estatisticas_cenario(
+    res = calcular_estatisticas_cenario(
         num_turmas, num_salas, threads, tempos_seq, tempos_par, alocado, pendente
     )
+    res.update({
+        "mu_opencl_ms": None, "sigma_opencl_ms": None, "cv_opencl_pct": None,
+        "speedup_opencl": None, "tempo_kernel_ms": None, "tempo_transferencia_ms": None,
+        "dispositivo_opencl": None,
+    })
+    if repeticoes > 0 and motor_service.get_status().get("opencl_disponivel"):
+        try:
+            motor_service.executar_benchmark(num_turmas=num_turmas, num_salas=num_salas, num_threads=threads, backend="opencl")
+            t_ocl, t_ker, t_tr, dev_ocl = [], [], [], None
+            for _ in range(repeticoes):
+                m_ocl = motor_service.executar_benchmark(
+                    num_turmas=num_turmas, num_salas=num_salas, num_threads=threads, backend="opencl"
+                )
+                t_ocl.append(max(float(m_ocl["tempo_paralelo_ms"]), 0.001))
+                t_ker.append(float(m_ocl["tempo_kernel_ms"]))
+                t_tr.append(float(m_ocl["tempo_transferencia_ms"]))
+                dev_ocl = m_ocl.get("dispositivo_opencl") or dev_ocl
+            mu_ocl = float(statistics.mean(t_ocl))
+            sd_ocl = float(statistics.stdev(t_ocl)) if len(t_ocl) > 1 else 0.0
+            cv_ocl = (sd_ocl / mu_ocl) * 100.0 if mu_ocl > 0 else 0.0
+            sp_ocl = res["mu_seq_ms"] / mu_ocl if mu_ocl > 0 else 0.0
+            mu_ker, mu_tr = float(statistics.mean(t_ker)), float(statistics.mean(t_tr))
+            if not all(math.isfinite(v) for v in (mu_ocl, sd_ocl, cv_ocl, sp_ocl, mu_ker, mu_tr)):
+                raise ValueError("Valor estatistico OpenCL invalido (NaN/Inf).")
+            res.update({
+                "mu_opencl_ms": round(mu_ocl, 4),
+                "sigma_opencl_ms": round(sd_ocl, 4),
+                "cv_opencl_pct": round(cv_ocl, 2),
+                "speedup_opencl": round(sp_ocl, 2),
+                "tempo_kernel_ms": round(mu_ker, 4),
+                "tempo_transferencia_ms": round(mu_tr, 4),
+                "dispositivo_opencl": dev_ocl,
+            })
+        except RuntimeError:
+            pass
+    return res
 
 
 def executar_suite_benchmark_estatistico(
@@ -280,6 +319,7 @@ def gerar_relatorio_benchmark_markdown(
         f"| Sistema Operacional | {amb['sistema_operacional']} |",
         f"| Compilador C | {amb['compilador']} |",
         f"| Flags de Compilacao | `{amb['flags_compilacao']}` |",
+        f"| Dispositivo OpenCL | {amb.get('dispositivo_opencl') or 'Indisponivel (fallback OpenMP)'} |",
         "",
         f"## 3. Resultados Estatisticos (N={params['repeticoes_por_carga']} Repeticoes, {params['threads_openmp']} Threads OpenMP)",
         "| Carga (Turmas x Salas) | Media Seq (ms) | Desvio Seq (ms) | CV Seq (%) | Media Par (ms) | Desvio Par (ms) | CV Par (%) | Speedup Real (S) | Eficiencia (%) | Estabilidade (CV < 15%) |",
@@ -291,6 +331,21 @@ def gerar_relatorio_benchmark_markdown(
             f"| {r['num_turmas']} x {r['num_salas']} | {r['mu_seq_ms']:.2f} | {r['sigma_seq_ms']:.2f} | "
             f"{r['cv_seq_pct']:.2f}% | {r['mu_par_ms']:.2f} | {r['sigma_par_ms']:.2f} | "
             f"{r['cv_par_pct']:.2f}% | {r['speedup_medio']:.2f}x | {r['eficiencia_pct']:.1f}% | {st} |"
+        )
+    linhas.extend([
+        "",
+        f"## 3.1 Comparativo Honesto: CPU Sequencial vs OpenMP CPU vs OpenCL GPU/PoCL (N={params['repeticoes_por_carga']})",
+        "| Carga (Turmas x Salas) | CPU Sequencial (ms) | OpenMP CPU (ms) | OpenCL Total (ms) | Speedup OpenMP | Speedup OpenCL | Kernel OpenCL (ms) | Transferencia H2D/D2H (ms) |",
+        "| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
+    ])
+    for r in relatorio["resultados"]:
+        ocl_ms = f"{r['mu_opencl_ms']:.2f}" if r.get("mu_opencl_ms") is not None else "N/A"
+        sp_ocl = f"{r['speedup_opencl']:.2f}x" if r.get("speedup_opencl") is not None else "N/A"
+        ker_ms = f"{r['tempo_kernel_ms']:.2f}" if r.get("tempo_kernel_ms") is not None else "N/A"
+        tr_ms = f"{r['tempo_transferencia_ms']:.2f}" if r.get("tempo_transferencia_ms") is not None else "N/A"
+        linhas.append(
+            f"| {r['num_turmas']} x {r['num_salas']} | {r['mu_seq_ms']:.2f} | {r['mu_par_ms']:.2f} | "
+            f"{ocl_ms} | {r['speedup_medio']:.2f}x | {sp_ocl} | {ker_ms} | {tr_ms} |"
         )
     linhas.extend(
         [

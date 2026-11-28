@@ -226,6 +226,8 @@ def otimizar_alocacao_endpoint(
             turmas=turmas_c,
             salas=salas_c,
             max_threads=payload.max_threads,
+            backend=payload.backend,
+            executar_baseline_sequencial=payload.executar_baseline_sequencial,
         )
     except RuntimeError as exc:
         logger.error("Motor de alocacao C indisponivel: %s", exc)
@@ -337,6 +339,11 @@ def otimizar_alocacao_endpoint(
         total_turmas=len(turmas_c),
         alocadas=metricas_c["total_alocado"],
         conflitos=metricas_c["total_pendente"],
+        backend_usado=metricas_c["backend_usado"],
+        fallback_ativado=metricas_c["fallback_ativado"],
+        dispositivo_opencl=metricas_c["dispositivo_opencl"],
+        tempo_kernel_ms=metricas_c["tempo_kernel_ms"],
+        tempo_transferencia_ms=metricas_c["tempo_transferencia_ms"],
     )
 
     return AlocacaoOtimizarResponse(
@@ -382,6 +389,7 @@ def benchmark_alocacao_endpoint(
             num_turmas=num_turmas,
             num_salas=num_salas,
             num_threads=payload.threads,
+            backend=payload.backend,
         )
     except RuntimeError as exc:
         logger.error("Motor de benchmark C indisponivel: %s", exc)
@@ -404,5 +412,10 @@ def benchmark_alocacao_endpoint(
             total_turmas=num_turmas,
             alocadas=metricas["total_alocado"],
             conflitos=metricas["total_pendente"],
+            backend_usado=metricas["backend_usado"],
+            fallback_ativado=metricas["fallback_ativado"],
+            dispositivo_opencl=metricas["dispositivo_opencl"],
+            tempo_kernel_ms=metricas["tempo_kernel_ms"],
+            tempo_transferencia_ms=metricas["tempo_transferencia_ms"],
         ),
     )
