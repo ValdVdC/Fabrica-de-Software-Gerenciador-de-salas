@@ -1,47 +1,70 @@
 """
-Endpoints para integracao e teste do Motor C (OpenMP).
+Endpoints para integracao, status e descoberta de dispositivos do Motor C (OpenMP/OpenCL).
 """
 
 import logging
 
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.api.deps import require_role
+from app.models.enums import PerfilUsuario
+from app.models.usuario import Usuario
+from app.schemas.motor import (
+    MotorDispositivosResponse,
+    MotorStatusResponse,
+    MotorTestePayload,
+    MotorTesteResponse,
+)
 from app.services.motor_service import motor_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-class MotorTestePayload(BaseModel):
-    a: int = Field(..., ge=-1_000_000, le=1_000_000, description="Primeiro operando inteiro")
-    b: int = Field(..., ge=-1_000_000, le=1_000_000, description="Segundo operando inteiro")
-
-
-class MotorStatusResponse(BaseModel):
-    status: str
-    versao: str | None
-    biblioteca: str | None
-    openmp_ativo: bool
-
-
-class MotorTesteResponse(BaseModel):
-    resultado: int
-    ctypes_ok: bool
-    operacao: str
-
-
 @router.get(
     "/status",
     response_model=MotorStatusResponse,
-    summary="Consultar status do motor C/OpenMP",
+    summary="Consultar status do motor C/OpenMP/OpenCL",
     description=(
-        "Verifica se a biblioteca compartilhada motor_alocacao.so esta carregada via ctypes "
-        "e se o suporte a paralelismo OpenMP esta ativo no processo FastAPI."
+        "Verifica se a biblioteca compartilhada do motor C esta carregada via ctypes, "
+        "expondo a heuristica ativa, suporte OpenMP e disponibilidade OpenCL."
     ),
 )
 def obter_status_motor():
     return motor_service.get_status()
+
+
+@router.get(
+    "/dispositivos",
+    response_model=MotorDispositivosResponse,
+    summary="Listar dispositivos OpenCL detectados pelo motor C",
+    description=(
+        "Consulta os dispositivos OpenCL (GPU, aceleradores ou CPU/PoCL) detectados pela biblioteca "
+        "nativa do motor de alocacao. Requer autenticacao JWT com perfil Admin ou Coordenador."
+    ),
+    responses={
+        401: {"description": "Token JWT ausente, invalido ou expirado."},
+        403: {"description": "Acesso negado por perfil RBAC."},
+        503: {"description": "Biblioteca compartilhada do motor C indisponivel."},
+    },
+)
+def listar_dispositivos_opencl(
+    current_user: Usuario = Depends(require_role(PerfilUsuario.ADMIN, PerfilUsuario.COORDENADOR)),
+):
+    _ = current_user
+    try:
+        dispositivos = motor_service.obter_dispositivos_opencl()
+    except RuntimeError as e:
+        logger.error("Motor de alocacao C indisponivel ao listar dispositivos OpenCL: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Motor de alocacao C indisponivel no momento.",
+        ) from e
+    return {
+        "opencl_disponivel": len(dispositivos) > 0,
+        "total": len(dispositivos),
+        "dispositivos": dispositivos,
+    }
 
 
 @router.post(

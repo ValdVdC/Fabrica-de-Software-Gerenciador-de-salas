@@ -16,11 +16,17 @@ class AlocacaoOtimizarRequest(BaseModel):
     campus_id: int = Field(..., ge=1, description="Identificador do campus")
     max_threads: int = Field(default=4, ge=1, le=64, description="Numero de threads OpenMP")
     salvar_no_banco: bool = Field(default=True, description="Indica se os horarios serao persistidos")
+    backend: Literal["auto", "opencl", "openmp", "cpu_sequencial"] = Field(
+        default="auto", description="Backend de execucao do motor C"
+    )
+    executar_baseline_sequencial: bool = Field(
+        default=False, description="Executa baseline sequencial para calculo de speedup"
+    )
 
 
 class MetricasAlocacaoResponse(BaseModel):
     tempo_sequencial_ms: float = Field(..., description="Tempo de execucao sequencial (1 thread)")
-    tempo_paralelo_ms: float = Field(..., description="Tempo de execucao paralelo com OpenMP")
+    tempo_paralelo_ms: float = Field(..., description="Tempo de execucao paralelo")
     speedup: float = Field(..., description="Speedup alcancado (T_seq / T_par)")
     eficiencia_pct: float = Field(..., description="Eficiencia computacional percentual (Speedup / k)")
     fracao_amdahl: float = Field(..., description="Fracao paralelizavel teorica pela Lei de Amdahl")
@@ -28,6 +34,11 @@ class MetricasAlocacaoResponse(BaseModel):
     total_turmas: int = Field(..., description="Total de turmas processadas")
     alocadas: int = Field(..., description="Total de turmas alocadas com sucesso")
     conflitos: int = Field(..., description="Total de turmas sem sala compativel disponivel")
+    backend_usado: str = Field(default="openmp", description="Backend efetivamente utilizado")
+    fallback_ativado: bool = Field(default=False, description="Indica fallback de OpenCL para OpenMP")
+    dispositivo_opencl: Optional[str] = Field(default=None, description="Dispositivo OpenCL utilizado")
+    tempo_kernel_ms: float = Field(default=0.0, description="Tempo de execucao do kernel OpenCL em ms")
+    tempo_transferencia_ms: float = Field(default=0.0, description="Tempo de transferencia H2D/D2H em ms")
 
 
 class AlocacaoItemResponse(BaseModel):
@@ -55,6 +66,9 @@ class AlocacaoBenchmarkRequest(BaseModel):
         default="medio", description="Cenario sintetico: pequeno, medio ou stress"
     )
     threads: int = Field(default=4, ge=1, le=64, description="Numero de threads OpenMP")
+    backend: Literal["auto", "opencl", "openmp", "cpu_sequencial"] = Field(
+        default="openmp", description="Backend de execucao do benchmark"
+    )
 
 
 class AlocacaoBenchmarkResponse(BaseModel):
