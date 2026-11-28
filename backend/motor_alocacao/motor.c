@@ -439,6 +439,7 @@ int otimizar_alocacao_salas(
     if (rc_par != 0) return rc_par;
 
     if (metricas_out) {
+        memset(metricas_out, 0, sizeof(*metricas_out));
         if (t_seq_ms < 0.01) t_seq_ms = 0.01;
         if (t_par_ms < 0.01) t_par_ms = 0.01;
 
@@ -449,6 +450,8 @@ int otimizar_alocacao_salas(
         metricas_out->threads_utilizadas = threads_alvo;
         metricas_out->total_alocado = par_alocado;
         metricas_out->total_pendente = par_pendente;
+        metricas_out->backend_solicitado = MOTOR_BACKEND_OPENMP;
+        metricas_out->backend_utilizado = (threads_alvo > 1) ? MOTOR_BACKEND_OPENMP : MOTOR_BACKEND_CPU_SEQUENCIAL;
 
         if (threads_alvo > 1 && metricas_out->speedup > 0.0) {
             double k = (double)threads_alvo;
@@ -460,7 +463,6 @@ int otimizar_alocacao_salas(
         } else {
             metricas_out->fracao_amdahl = 1.0;
         }
-        metricas_out->padding = 0;
     }
 
     return 0;

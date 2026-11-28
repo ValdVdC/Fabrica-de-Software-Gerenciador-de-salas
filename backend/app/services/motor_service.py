@@ -115,14 +115,19 @@ class MetricasAlocacaoC(ctypes.Structure):
         ("speedup", ctypes.c_double),
         ("eficiencia", ctypes.c_double),
         ("fracao_amdahl", ctypes.c_double),
+        ("tempo_kernel_ms", ctypes.c_double),
+        ("tempo_transferencia_ms", ctypes.c_double),
         ("threads_utilizadas", ctypes.c_int32),
         ("total_alocado", ctypes.c_int32),
         ("total_pendente", ctypes.c_int32),
-        ("padding", ctypes.c_int32),
+        ("backend_solicitado", ctypes.c_int32),
+        ("backend_utilizado", ctypes.c_int32),
+        ("fallback_ativado", ctypes.c_int32),
+        ("dispositivo_opencl", ctypes.c_char * 64),
     ]
 
 
-for _cls, _expected in ((SalaC, 16), (TurmaC, 32), (AlocacaoItemC, 24), (MetricasAlocacaoC, 56)):
+for _cls, _expected in ((SalaC, 16), (TurmaC, 32), (AlocacaoItemC, 24), (MetricasAlocacaoC, 144)):
     if ctypes.sizeof(_cls) != _expected:
         raise RuntimeError(f"ABI invalida: sizeof({_cls.__name__}) esperado {_expected}, obtido {ctypes.sizeof(_cls)}")
 
@@ -137,7 +142,8 @@ class MotorAlocacaoService:
         return Path(__file__).resolve().parent.parent.parent / "motor_alocacao"
 
     def _compilar_se_necessario(self, destino: Path, dir_motor: Path):
-        fontes = (dir_motor / "motor.c", dir_motor / "motor.h")
+        motor_opencl_c = dir_motor / "motor_opencl.c"
+        fontes = (dir_motor / "motor.c", dir_motor / "motor.h", motor_opencl_c, dir_motor / "motor_opencl.h")
         desatualizado = not destino.exists() or any(
             f.exists() and f.stat().st_mtime > destino.stat().st_mtime for f in fontes
         )
@@ -156,6 +162,8 @@ class MotorAlocacaoService:
                 str(destino),
                 str(dir_motor / "motor.c"),
             ]
+            if motor_opencl_c.exists():
+                cmd.append(str(motor_opencl_c))
             subprocess.run(cmd, check=True, capture_output=True, timeout=30)
 
     def _carregar_biblioteca(self):

@@ -24,6 +24,13 @@ extern "C" {
 #define TURNO_MASK_NOTURNO    (1 << 2)
 #define TURNO_MASK_INTEGRAL   (1 << 3)
 
+typedef enum {
+    MOTOR_BACKEND_AUTO = 0,
+    MOTOR_BACKEND_CPU_SEQUENCIAL = 1,
+    MOTOR_BACKEND_OPENMP = 2,
+    MOTOR_BACKEND_OPENCL = 3
+} MotorBackend;
+
 typedef struct {
     int32_t id;
     int32_t capacidade;
@@ -57,18 +64,40 @@ typedef struct {
     double speedup;
     double eficiencia;
     double fracao_amdahl;
+    double tempo_kernel_ms;
+    double tempo_transferencia_ms;
     int32_t threads_utilizadas;
     int32_t total_alocado;
     int32_t total_pendente;
-    int32_t padding;
+    int32_t backend_solicitado;
+    int32_t backend_utilizado;
+    int32_t fallback_ativado;
+    char dispositivo_opencl[64];
 } MetricasAlocacaoC;
+
+typedef struct {
+    char platform_name[64];
+    char device_name[64];
+    char device_type[16];
+    char opencl_c_version[32];
+    uint32_t compute_units;
+    uint32_t global_mem_mb;
+    uint64_t max_work_group_size;
+} OpenCLDeviceInfoC;
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(SalaC) == 16, "SalaC deve ter 16 bytes");
 _Static_assert(sizeof(TurmaC) == 32, "TurmaC deve ter 32 bytes");
 _Static_assert(sizeof(AlocacaoItemC) == 24, "AlocacaoItemC deve ter 24 bytes");
-_Static_assert(sizeof(MetricasAlocacaoC) == 56, "MetricasAlocacaoC deve ter 56 bytes");
+_Static_assert(sizeof(MetricasAlocacaoC) == 144, "MetricasAlocacaoC deve ter 144 bytes");
+_Static_assert(sizeof(OpenCLDeviceInfoC) == 192, "OpenCLDeviceInfoC deve ter 192 bytes");
 #endif
+
+int otimizar_alocacao_salas_v2(const TurmaC* turmas, int32_t num_turmas, const SalaC* salas, int32_t num_salas, int32_t max_threads, int32_t backend_alvo, int32_t medir_baseline_seq, AlocacaoItemC* resultado_out, MetricasAlocacaoC* metricas_out);
+int executar_benchmark_cenario_v2(int32_t num_turmas, int32_t num_salas, int32_t num_threads, int32_t backend_alvo, MetricasAlocacaoC* metricas_out);
+int obter_status_opencl(int32_t* disponivel_out, char* dispositivo_out, int32_t buf_len);
+int obter_dispositivos_opencl(OpenCLDeviceInfoC* dispositivos_out, int32_t max_dispositivos, int32_t* total_out);
+void liberar_recursos_motor(void);
 
 int otimizar_alocacao_salas(
     const TurmaC* turmas,
