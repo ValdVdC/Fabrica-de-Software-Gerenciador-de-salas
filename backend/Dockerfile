@@ -2,9 +2,13 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Instala dependencias de compilacao C (GCC, Make, libc-dev e OpenMP nativo)
+# Instala dependencias de compilacao C (GCC, Make, OpenMP e OpenCL ICD/PoCL)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    libomp-dev \
+    ocl-icd-opencl-dev \
+    pocl-opencl-icd \
+    clinfo \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia e instala dependencias Python
@@ -14,8 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia codigo do backend
 COPY . /app
 
-# Compila o motor de alocacao C com OpenMP
-RUN cd /app/motor_alocacao && make clean && make
+# Compila o motor de alocacao C com OpenMP e OpenCL
+RUN cd /app/motor_alocacao && make clean && make USE_OPENCL=1
 
 EXPOSE 8000
 

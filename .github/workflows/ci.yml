@@ -89,6 +89,18 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      - name: Instalar compilador e dependencias OpenMP e OpenCL (PoCL)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential libomp-dev ocl-icd-opencl-dev pocl-opencl-icd clinfo
+          clinfo --list || true
+
+      - name: Compilar Motor C com OpenMP e OpenCL
+        run: |
+          cd backend/motor_alocacao
+          make clean
+          make USE_OPENCL=1
+
       - name: Instalar dependencias do Backend
         run: |
           python -m pip install --upgrade pip
@@ -109,16 +121,17 @@ jobs:
       - name: Checkout do codigo
         uses: actions/checkout@v4
 
-      - name: Instalar compilador e dependencias OpenMP
+      - name: Instalar compilador e dependencias OpenMP e OpenCL (PoCL)
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libomp-dev
+          sudo apt-get install -y --no-install-recommends build-essential libomp-dev ocl-icd-opencl-dev pocl-opencl-icd clinfo
+          clinfo --list || true
 
-      - name: Compilar Motor C com OpenMP
+      - name: Compilar Motor C com OpenMP e OpenCL
         run: |
           cd backend/motor_alocacao
           make clean
-          make
+          make USE_OPENCL=1
           ls -la motor_alocacao.so
 
   test-frontend:

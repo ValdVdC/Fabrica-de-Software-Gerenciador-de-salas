@@ -3,6 +3,7 @@
 #include <string.h>
 #include <omp.h>
 #include "motor.h"
+#include "motor_opencl.h"
 
 // Heuristica Construtiva Gulosa Deterministica com Priorizacao de Restricoes Rigidas e Capacidade Minima Viavel.
 // Complexidade O(T * S) por tentativa em paralelo via OpenMP (problema NP-dificil sem garantia de otimo global).
@@ -389,139 +390,138 @@ static int executar_busca_combinatoria(
     return alocacao_falhou ? -2 : 0;
 }
 
-int otimizar_alocacao_salas(
-    const TurmaC* turmas,
-    int num_turmas,
-    const SalaC* salas,
-    int num_salas,
-    int max_threads,
-    AlocacaoItemC* resultado_out,
-    MetricasAlocacaoC* metricas_out
+static int executar_replay_iteracao(
+    const TurmaC* turmas, int32_t num_turmas, const SalaC* salas, int32_t num_salas,
+    const int32_t* ordem_base_bfd, const int32_t* prof_idx, int32_t num_profs, int32_t iteracao,
+    AlocacaoItemC* resultado_out, int* total_alocado_out, int* total_pendente_out
 ) {
-    if (num_turmas <= 0 || num_salas <= 0 || !turmas || !salas || !resultado_out) {
-        return -1;
+    int* ordem = (int*)malloc((size_t)num_turmas * sizeof(int));
+    int32_t* s_head = (int32_t*)malloc((size_t)num_salas * sizeof(int32_t));
+    uint32_t* s_slots = (uint32_t*)malloc((size_t)num_turmas * sizeof(uint32_t));
+    int32_t* s_next = (int32_t*)malloc((size_t)num_turmas * sizeof(int32_t));
+    int32_t* p_head = (num_profs > 0) ? (int32_t*)malloc((size_t)num_profs * sizeof(int32_t)) : NULL;
+    uint32_t* p_slots = (num_profs > 0) ? (uint32_t*)malloc((size_t)num_turmas * sizeof(uint32_t)) : NULL;
+    int32_t* p_next = (num_profs > 0) ? (int32_t*)malloc((size_t)num_turmas * sizeof(int32_t)) : NULL;
+    int ok = ordem && s_head && s_slots && s_next && (num_profs == 0 || (p_head && p_slots && p_next));
+    if (ok) {
+        PoolOcupacao ps = {s_head, s_slots, s_next, num_salas, num_turmas, 0};
+        PoolOcupacao pp = {p_head, p_slots, p_next, num_profs, num_turmas, 0};
+        long long desp = 0;
+        gerar_ordem_turmas(ordem, num_turmas, ordem_base_bfd, iteracao);
+        executar_tentativa(turmas, num_turmas, salas, num_salas, ordem, prof_idx, resultado_out, &ps, &pp, total_alocado_out, total_pendente_out, &desp);
     }
+    free(p_next); free(p_slots); free(p_head); free(s_next); free(s_slots); free(s_head); free(ordem);
+    return ok ? 0 : -2;
+}
 
-    int threads_alvo = max_threads;
-    if (threads_alvo <= 0) {
-        threads_alvo = omp_get_num_procs();
-    }
+int otimizar_alocacao_salas_v2(const TurmaC* turmas, int32_t num_turmas, const SalaC* salas, int32_t num_salas, int32_t max_threads, int32_t backend_alvo, int32_t medir_baseline_seq, AlocacaoItemC* resultado_out, MetricasAlocacaoC* metricas_out) {
+    if (num_turmas <= 0 || num_salas <= 0 || !turmas || !salas || !resultado_out || backend_alvo < MOTOR_BACKEND_AUTO || backend_alvo > MOTOR_BACKEND_OPENCL) return -1;
+    int threads_alvo = (max_threads > 0) ? max_threads : omp_get_num_procs();
     if (threads_alvo < 1) threads_alvo = 1;
-
-    int num_iteracoes = 800;
-    if (num_turmas <= 20) {
-        num_iteracoes = (num_turmas <= 15) ? 6000 : 2500;
-    } else if (num_turmas >= 100) {
-        num_iteracoes = 1200;
-    }
-
-    AlocacaoItemC* res_seq = (AlocacaoItemC*)malloc((size_t)num_turmas * sizeof(AlocacaoItemC));
-    if (!res_seq) return -2;
-
-    int seq_alocado = 0, seq_pendente = 0;
-
-    double t0_seq = omp_get_wtime();
-    int rc_seq = executar_busca_combinatoria(turmas, num_turmas, salas, num_salas, 1, num_iteracoes, res_seq, &seq_alocado, &seq_pendente);
-    double t1_seq = omp_get_wtime();
-    double t_seq_ms = (t1_seq - t0_seq) * 1000.0;
-    if (rc_seq != 0) {
-        free(res_seq);
-        return rc_seq;
-    }
-
+    int num_iteracoes = (num_turmas <= 20) ? ((num_turmas <= 15) ? 6000 : 2500) : ((num_turmas >= 100) ? 1200 : 800);
+    double t_seq_ms = 0.0, t_par_ms = 0.0, t_kernel_ms = 0.0, t_transf_ms = 0.0;
     int par_alocado = 0, par_pendente = 0;
-    double t0_par = omp_get_wtime();
-    int rc_par = executar_busca_combinatoria(turmas, num_turmas, salas, num_salas, threads_alvo, num_iteracoes, resultado_out, &par_alocado, &par_pendente);
-    double t1_par = omp_get_wtime();
-    double t_par_ms = (t1_par - t0_par) * 1000.0;
+    int32_t backend_usado = backend_alvo, fallback = 0;
+    char dev_nome[64] = {0};
 
-    free(res_seq);
-    if (rc_par != 0) return rc_par;
+    if (medir_baseline_seq != 0 && backend_alvo != MOTOR_BACKEND_CPU_SEQUENCIAL) {
+        AlocacaoItemC* res_seq = (AlocacaoItemC*)malloc((size_t)num_turmas * sizeof(AlocacaoItemC));
+        if (!res_seq) return -2;
+        int seq_a = 0, seq_p = 0;
+        double t0 = omp_get_wtime();
+        int rc_seq = executar_busca_combinatoria(turmas, num_turmas, salas, num_salas, 1, num_iteracoes, res_seq, &seq_a, &seq_p);
+        t_seq_ms = (omp_get_wtime() - t0) * 1000.0;
+        free(res_seq);
+        if (rc_seq != 0) return rc_seq;
+    }
+
+    int rc = 0;
+    if (backend_alvo == MOTOR_BACKEND_OPENCL || backend_alvo == MOTOR_BACKEND_AUTO) {
+        int32_t* ordem_base = (int32_t*)malloc((size_t)num_turmas * sizeof(int32_t));
+        int32_t* prof_idx = (int32_t*)malloc((size_t)num_turmas * sizeof(int32_t));
+        int32_t num_profs = 0, best_iter = 0;
+        if (!ordem_base || !prof_idx || mapear_professores(turmas, num_turmas, prof_idx, &num_profs) != 0) { free(ordem_base); free(prof_idx); return -2; }
+        ordenar_turmas_bfd(ordem_base, num_turmas, turmas);
+        double t0 = omp_get_wtime();
+        rc = motor_opencl_executar_busca(turmas, num_turmas, salas, num_salas, ordem_base, prof_idx, num_profs, num_iteracoes, &best_iter, &t_kernel_ms, &t_transf_ms, dev_nome, sizeof(dev_nome));
+        if (rc == 0) {
+            rc = executar_replay_iteracao(turmas, num_turmas, salas, num_salas, ordem_base, prof_idx, num_profs, best_iter, resultado_out, &par_alocado, &par_pendente);
+            t_par_ms = (omp_get_wtime() - t0) * 1000.0;
+            backend_usado = MOTOR_BACKEND_OPENCL;
+        }
+        free(ordem_base); free(prof_idx);
+        if (rc != 0) {
+            if (backend_alvo == MOTOR_BACKEND_OPENCL) return (rc == -2) ? -2 : -3;
+            fallback = 1; t_kernel_ms = 0.0; t_transf_ms = 0.0; dev_nome[0] = '\0';
+        }
+    }
+
+    if (backend_alvo == MOTOR_BACKEND_CPU_SEQUENCIAL || backend_alvo == MOTOR_BACKEND_OPENMP || fallback) {
+        int th = (backend_alvo == MOTOR_BACKEND_CPU_SEQUENCIAL) ? 1 : threads_alvo;
+        double t0 = omp_get_wtime();
+        rc = executar_busca_combinatoria(turmas, num_turmas, salas, num_salas, th, num_iteracoes, resultado_out, &par_alocado, &par_pendente);
+        t_par_ms = (omp_get_wtime() - t0) * 1000.0;
+        if (rc != 0) return rc;
+        if (backend_alvo == MOTOR_BACKEND_CPU_SEQUENCIAL) { threads_alvo = 1; backend_usado = MOTOR_BACKEND_CPU_SEQUENCIAL; if (medir_baseline_seq != 0) t_seq_ms = t_par_ms; }
+        else backend_usado = MOTOR_BACKEND_OPENMP;
+    }
 
     if (metricas_out) {
         memset(metricas_out, 0, sizeof(*metricas_out));
-        if (t_seq_ms < 0.01) t_seq_ms = 0.01;
-        if (t_par_ms < 0.01) t_par_ms = 0.01;
-
-        metricas_out->tempo_sequencial_ms = t_seq_ms;
+        metricas_out->tempo_sequencial_ms = (medir_baseline_seq != 0) ? t_seq_ms : 0.0;
         metricas_out->tempo_paralelo_ms = t_par_ms;
-        metricas_out->speedup = t_seq_ms / t_par_ms;
-        metricas_out->eficiencia = (metricas_out->speedup / (double)threads_alvo) * 100.0;
-        metricas_out->threads_utilizadas = threads_alvo;
+        metricas_out->tempo_kernel_ms = t_kernel_ms;
+        metricas_out->tempo_transferencia_ms = t_transf_ms;
+        metricas_out->threads_utilizadas = (backend_usado == MOTOR_BACKEND_OPENCL) ? 1 : threads_alvo;
         metricas_out->total_alocado = par_alocado;
         metricas_out->total_pendente = par_pendente;
-        metricas_out->backend_solicitado = MOTOR_BACKEND_OPENMP;
-        metricas_out->backend_utilizado = (threads_alvo > 1) ? MOTOR_BACKEND_OPENMP : MOTOR_BACKEND_CPU_SEQUENCIAL;
-
-        if (threads_alvo > 1 && metricas_out->speedup > 0.0) {
-            double k = (double)threads_alvo;
-            double s = metricas_out->speedup;
-            double f = (k * (s - 1.0)) / (s * (k - 1.0));
-            if (f < 0.0) f = 0.0;
-            if (f > 1.0) f = 1.0;
-            metricas_out->fracao_amdahl = f;
-        } else {
-            metricas_out->fracao_amdahl = 1.0;
+        metricas_out->backend_solicitado = backend_alvo;
+        metricas_out->backend_utilizado = backend_usado;
+        metricas_out->fallback_ativado = fallback;
+        memcpy(metricas_out->dispositivo_opencl, dev_nome, sizeof(metricas_out->dispositivo_opencl));
+        if (medir_baseline_seq != 0 && t_seq_ms > 0.0 && t_par_ms > 0.0) {
+            metricas_out->speedup = t_seq_ms / t_par_ms;
+            int32_t k_eff = metricas_out->threads_utilizadas;
+            double k = (double)k_eff;
+            metricas_out->eficiencia = (metricas_out->speedup / k) * 100.0;
+            if (k_eff > 1) {
+                double f = (k * (metricas_out->speedup - 1.0)) / (metricas_out->speedup * (k - 1.0));
+                metricas_out->fracao_amdahl = (f < 0.0) ? 0.0 : ((f > 1.0) ? 1.0 : f);
+            } else metricas_out->fracao_amdahl = 1.0;
         }
     }
-
     return 0;
 }
 
-int executar_benchmark_cenario(
-    int num_turmas,
-    int num_salas,
-    int num_threads,
-    MetricasAlocacaoC* metricas_out
-) {
-    if (num_turmas <= 0 || num_salas <= 0 || !metricas_out) {
-        return -1;
-    }
+int otimizar_alocacao_salas(const TurmaC* turmas, int num_turmas, const SalaC* salas, int num_salas, int max_threads, AlocacaoItemC* resultado_out, MetricasAlocacaoC* metricas_out) {
+    return otimizar_alocacao_salas_v2(turmas, (int32_t)num_turmas, salas, (int32_t)num_salas, (int32_t)max_threads, MOTOR_BACKEND_OPENMP, 1, resultado_out, metricas_out);
+}
 
+int executar_benchmark_cenario_v2(int32_t num_turmas, int32_t num_salas, int32_t num_threads, int32_t backend_alvo, MetricasAlocacaoC* metricas_out) {
+    if (num_turmas <= 0 || num_salas <= 0 || !metricas_out) return -1;
     TurmaC* turmas = (TurmaC*)malloc((size_t)num_turmas * sizeof(TurmaC));
     SalaC* salas = (SalaC*)malloc((size_t)num_salas * sizeof(SalaC));
     AlocacaoItemC* resultados = (AlocacaoItemC*)malloc((size_t)num_turmas * sizeof(AlocacaoItemC));
-
-    if (!turmas || !salas || !resultados) {
-        if (turmas) free(turmas);
-        if (salas) free(salas);
-        if (resultados) free(resultados);
-        return -2;
-    }
-
+    if (!turmas || !salas || !resultados) { free(turmas); free(salas); free(resultados); return -2; }
     for (int j = 0; j < num_salas; j++) {
-        salas[j].id = j + 1;
-        salas[j].capacidade = 30 + (j % 8) * 10;
+        salas[j].id = j + 1; salas[j].capacidade = 30 + (j % 8) * 10;
         salas[j].tipo = (j % 5 == 0) ? TIPO_SALA_LABORATORIO : TIPO_SALA_REGULAR;
         salas[j].turnos_mask = TURNO_MASK_MATUTINO | TURNO_MASK_VESPERTINO | TURNO_MASK_NOTURNO;
     }
-
     for (int i = 0; i < num_turmas; i++) {
-        turmas[i].id = i + 1;
-        turmas[i].num_matriculados = 25 + (i % 6) * 10;
+        turmas[i].id = i + 1; turmas[i].num_matriculados = 25 + (i % 6) * 10;
         turmas[i].tipo_exigido = (i % 5 == 0) ? TIPO_SALA_LABORATORIO : TIPO_SALA_REGULAR;
-        turmas[i].turno = i % 3;
-        turmas[i].dia_semana_sugerido = i % 5;
-        if (turmas[i].turno == TURNO_MATUTINO) {
-            turmas[i].hora_inicio_min = 480;  // 08:00
-            turmas[i].hora_fim_min = 600;     // 10:00
-        } else if (turmas[i].turno == TURNO_VESPERTINO) {
-            turmas[i].hora_inicio_min = 840;  // 14:00
-            turmas[i].hora_fim_min = 960;     // 16:00
-        } else {
-            turmas[i].hora_inicio_min = 1140; // 19:00
-            turmas[i].hora_fim_min = 1260;    // 21:00
-        }
-        turmas[i].professor_id = 0;
+        turmas[i].turno = i % 3; turmas[i].dia_semana_sugerido = i % 5; turmas[i].professor_id = 0;
+        turmas[i].hora_inicio_min = (turmas[i].turno == TURNO_MATUTINO) ? 480 : ((turmas[i].turno == TURNO_VESPERTINO) ? 840 : 1140);
+        turmas[i].hora_fim_min = turmas[i].hora_inicio_min + 120;
     }
-
-    int rc = otimizar_alocacao_salas(turmas, num_turmas, salas, num_salas, num_threads, resultados, metricas_out);
-
-    free(resultados);
-    free(salas);
-    free(turmas);
-
+    int rc = otimizar_alocacao_salas_v2(turmas, num_turmas, salas, num_salas, num_threads, backend_alvo, 1, resultados, metricas_out);
+    free(resultados); free(salas); free(turmas);
     return rc;
+}
+
+int executar_benchmark_cenario(int num_turmas, int num_salas, int num_threads, MetricasAlocacaoC* metricas_out) {
+    return executar_benchmark_cenario_v2((int32_t)num_turmas, (int32_t)num_salas, (int32_t)num_threads, MOTOR_BACKEND_OPENMP, metricas_out);
 }
 
 const char* obter_versao_motor(void) {
