@@ -23,7 +23,7 @@ describe('AdminComponent', () => {
     { id: 10, nome: 'Projetor HD', descricao: 'Sala de aula', created_at: '2026-03-01T10:00:00Z' },
   ]);
   // prettier-ignore
-  const mockCurrentUser = signal<UserSummary | null>({ id: 1, nome: 'Admin Master', email: 'admin@ufma.br', perfil: 'admin', campus_id: 2 });
+  const mockCurrentUser = signal<UserSummary | null>({ id: 1, nome: 'Admin Master', email: 'admin@sigaas.edu', perfil: 'admin', campus_id: 2 });
   const mockLoading = signal(false);
 
   const mockAlocacaoLoading = signal(false);
@@ -68,7 +68,7 @@ describe('AdminComponent', () => {
     mockCurrentUser.set({
       id: 1,
       nome: 'Admin Master',
-      email: 'admin@ufma.br',
+      email: 'admin@sigaas.edu',
       perfil: 'admin',
       campus_id: 2,
     });
@@ -514,7 +514,7 @@ describe('AdminComponent', () => {
     mockCurrentUser.set({
       id: 10,
       nome: 'Visitante Leitura',
-      email: 'leitura@ufma.br',
+      email: 'leitura@sigaas.edu',
       perfil: 'professor',
       campus_id: 2,
     });
@@ -532,5 +532,71 @@ describe('AdminComponent', () => {
     component.selecionarAba('remanejamento');
     fixture.detectChanges();
     expect(el.querySelector('.sugestao-decisao')).toBeNull();
+  });
+
+  it('deve exibir indicador de backend OpenCL com dispositivo e tempos de kernel e transferencia', () => {
+    mockMetricas.set({
+      tempo_sequencial_ms: 18.5,
+      tempo_paralelo_ms: 4.2,
+      speedup: 4.4,
+      eficiencia_pct: 110.0,
+      fracao_amdahl: 0.95,
+      threads: 4,
+      total_turmas: 120,
+      alocadas: 120,
+      conflitos: 0,
+      backend_usado: 'opencl',
+      dispositivo_opencl: 'AMD Radeon(TM) Graphics',
+      tempo_kernel_ms: 1.45,
+      tempo_transferencia_ms: 0.32,
+    });
+    component.selecionarAba('alocacao');
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const label = el.querySelector('[data-testid="alocacao-backend-label"]');
+    const tempos = el.querySelector('[data-testid="alocacao-backend-tempos"]');
+    expect(label?.textContent?.trim()).toBe('Backend: OpenCL (AMD Radeon(TM) Graphics)');
+    expect(tempos?.textContent?.trim()).toBe('Kernel: 1.45 ms | Transf.: 0.32 ms');
+  });
+
+  it('deve exibir backend OpenMP (CPU) sem tempos de kernel quando ausentes e omitir card sem backend_usado', () => {
+    mockMetricas.set({
+      tempo_sequencial_ms: 12.0,
+      tempo_paralelo_ms: 3.5,
+      speedup: 3.43,
+      eficiencia_pct: 85.7,
+      fracao_amdahl: 0.91,
+      threads: 4,
+      total_turmas: 50,
+      alocadas: 50,
+      conflitos: 0,
+      backend_usado: 'openmp',
+      dispositivo_opencl: null,
+      tempo_kernel_ms: 0,
+      tempo_transferencia_ms: 0,
+    });
+    component.selecionarAba('alocacao');
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-testid="alocacao-backend-label"]')?.textContent?.trim()).toBe(
+      'Backend: OpenMP (CPU)',
+    );
+    expect(el.querySelector('[data-testid="alocacao-backend-tempos"]')).toBeNull();
+
+    mockMetricas.set({
+      tempo_sequencial_ms: 12.0,
+      tempo_paralelo_ms: 3.5,
+      speedup: 3.43,
+      eficiencia_pct: 85.7,
+      fracao_amdahl: 0.91,
+      threads: 4,
+      total_turmas: 50,
+      alocadas: 50,
+      conflitos: 0,
+    });
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="alocacao-backend-card"]')).toBeNull();
   });
 });

@@ -206,7 +206,7 @@ describe('AdminService', () => {
         r.params.get('q') === 'maria',
     );
     reqUser.flush([
-      { id: 7, campus_id: 1, nome: 'Maria', email: 'm@ufma.br', perfil: 'professor', ativo: true },
+      { id: 7, campus_id: 1, nome: 'Maria', email: 'm@sigaas.edu', perfil: 'professor', ativo: true },
     ]);
     expect(service.usuarios().length).toBe(1);
   });

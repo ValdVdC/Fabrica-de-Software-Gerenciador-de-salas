@@ -11,7 +11,7 @@ import {
   EquipamentoCreate,
 } from '../../services/admin.service';
 import { AuthService } from '../../services/auth.service';
-import { AlocacaoService } from '../../services/alocacao.service';
+import { AlocacaoService, MetricasAlocacao } from '../../services/alocacao.service';
 import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
 
 @Component({
@@ -219,6 +219,15 @@ import { IaService, SugestaoRemanejamento } from '../../services/ia.service';
               <span class="stat-value tabular-nums">{{ m.alocadas }}/{{ m.total_turmas }}</span>
               <small>{{ m.conflitos }} turmas sem vaga</small>
             </div>
+            @if (m.backend_usado) {
+              <div class="stat-card" data-testid="alocacao-backend-card">
+                <span class="stat-label">Backend de Execucao</span>
+                <span class="stat-value" style="font-size: 1rem;" data-testid="alocacao-backend-label">Backend: {{ formatarBackendExecucao(m) }}</span>
+                @if ((m.tempo_kernel_ms ?? 0) > 0 || (m.tempo_transferencia_ms ?? 0) > 0) {
+                  <small class="tabular-nums" data-testid="alocacao-backend-tempos">Kernel: {{ (m.tempo_kernel_ms || 0).toFixed(2) }} ms | Transf.: {{ (m.tempo_transferencia_ms || 0).toFixed(2) }} ms</small>
+                }
+              </div>
+            }
           </div>
         }
 
@@ -684,6 +693,21 @@ export class AdminComponent implements OnInit {
         },
         error: () => {},
       });
+  }
+
+  formatarBackendExecucao(m: MetricasAlocacao): string {
+    const backend = (m.backend_usado || '').trim().toLowerCase();
+    if (backend === 'opencl') {
+      const dispositivo = m.dispositivo_opencl?.trim();
+      return dispositivo ? `OpenCL (${dispositivo})` : 'OpenCL (GPU)';
+    }
+    if (backend === 'openmp') {
+      return 'OpenMP (CPU)';
+    }
+    if (backend === 'cpu_sequencial') {
+      return 'CPU Sequencial';
+    }
+    return m.backend_usado?.trim() || 'OpenMP (CPU)';
   }
 
   formatarDiaSemana(dia: number | null | undefined): string {

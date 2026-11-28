@@ -26,14 +26,14 @@ describe('SecretariaComponent', () => {
   // prettier-ignore
   const mockMatriculas = signal<Matricula[]>([{ id: 50, aluno_id: 5, turma_id: 100, data_matricula: '2026-09-09', status: 'ativa' }]);
   // prettier-ignore
-  const mockCurrentUser = signal<UserSummary | null>({ id: 1, nome: 'Secretaria Geral', email: 'sec@ufma.br', perfil: 'secretaria', campus_id: 2 });
+  const mockCurrentUser = signal<UserSummary | null>({ id: 1, nome: 'Secretaria Geral', email: 'sec@sigaas.edu', perfil: 'secretaria', campus_id: 2 });
   // prettier-ignore
   const mockLoading = signal(false), mockError = signal<string | null>(null);
 
   // prettier-ignore
   beforeEach(async () => {
     mockLoading.set(false); mockError.set(null);
-    mockCurrentUser.set({ id: 1, nome: 'Secretaria Geral', email: 'sec@ufma.br', perfil: 'secretaria', campus_id: 2 });
+    mockCurrentUser.set({ id: 1, nome: 'Secretaria Geral', email: 'sec@sigaas.edu', perfil: 'secretaria', campus_id: 2 });
     secretariaServiceSpy = jasmine.createSpyObj('SecretariaService', [
       'listarCursos', 'criarCurso', 'listarDisciplinas', 'criarDisciplina',
       'listarTurmas', 'criarTurma', 'listarMatriculas', 'matricularAluno', 'cancelarMatricula', 'limparErro',
@@ -191,7 +191,7 @@ describe('SecretariaComponent', () => {
     mockCurrentUser.set({
       id: 9,
       nome: 'Prof Consulta',
-      email: 'prof@ufma.br',
+      email: 'prof@sigaas.edu',
       perfil: 'professor',
       campus_id: 2,
     });
