@@ -12,6 +12,10 @@ export interface MetricasAlocacao {
   total_turmas: number;
   alocadas: number;
   conflitos: number;
+  backend_usado?: string;
+  dispositivo_opencl?: string | null;
+  tempo_kernel_ms?: number;
+  tempo_transferencia_ms?: number;
 }
 
 export interface AlocacaoItem {
